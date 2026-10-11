@@ -95,6 +95,8 @@ the tray and stays on top of other windows. Hover it to show a drag bar with set
 quit buttons. It widens itself when a second team shows up.
 `Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has notifications, start with Windows, demo mode and size reset.
 
+The installed app starts with Windows by default. Until your first Claude Code session opens it waits in a small window above the tray with a morning scene (your avatar with a coffee, a sleeping cat, the sky at the real time of day); when a session appears, or you click it, it opens into the full office. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.
+
 
 ## How it works
 

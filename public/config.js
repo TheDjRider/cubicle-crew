@@ -55,6 +55,7 @@ const T_BG = {
   connecting: 'свързване…',
   connected: 'свързан',
   waitingActivity: 'Чакам активност от Claude Code…',
+  wait: { morning: 'Добро утро!', day: 'Добър ден!', evening: 'Добър вечер!', msg: 'Чакам първата сесия на Claude Code…', hint: 'Кликни, за да отвориш офиса' },
   reconnecting: 'връзката падна, опитвам пак…',
   demo: 'ДЕМО',
   agents: 'Агенти',
@@ -129,6 +130,7 @@ const T_EN = {
   connecting: 'connecting…',
   connected: 'connected',
   waitingActivity: 'Waiting for Claude Code activity…',
+  wait: { morning: 'Good morning!', day: 'Good afternoon!', evening: 'Good evening!', msg: 'Waiting for the first Claude Code session…', hint: 'Click to open the office' },
   reconnecting: 'connection lost, retrying…',
   demo: 'DEMO',
   agents: 'Agents',
@@ -245,5 +247,6 @@ export const PARAMS = {
   wander: Q.has('wander') ? Number(Q.get('wander')) * 1000 : null,
   seed: Q.has('seed') ? Number(Q.get('seed')) : null,
   desktop: Q.has('desktop'),   // отворено от Electron приложението
+  wait: Q.has('wait'),         // сутрешен екран, докато няма сесия (Electron при старт с Windows)
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
