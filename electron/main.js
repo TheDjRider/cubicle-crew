@@ -4,6 +4,7 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, Notificat
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { drawIcon16 } from './icon-art.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MARGIN = 8;                  // разстояние от ръба на работния плот (над лентата със задачи)
@@ -141,15 +142,12 @@ function toggleWindow(force) {
   refreshTray();
 }
 
-// ---------------------------------------------------------------- икона в трея (рисувана в кода: малък монитор)
+// ---------------------------------------------------------------- икона в трея: рисунката 16x16 от icon-art.js (x2 за остър HiDPI)
 function trayIcon(alert) {
   const S = 32, buf = Buffer.alloc(S * S * 4);
   const px = (x, y, [r, g, b, a = 255]) => { if (x < 0 || y < 0 || x >= S || y >= S) return; const i = (y * S + x) * 4; buf[i] = b; buf[i + 1] = g; buf[i + 2] = r; buf[i + 3] = a; };
   const rect = (x, y, w, h, c) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(x + i, y + j, c); };
-  rect(2, 4, 28, 20, [23, 18, 31]);          // рамка
-  rect(4, 6, 24, 16, [74, 194, 107]);        // екран (зелено = пише)
-  rect(6, 9, 10, 2, [230, 255, 230]); rect(6, 13, 14, 2, [200, 240, 210]); rect(6, 17, 8, 2, [230, 255, 230]);
-  rect(13, 24, 6, 3, [23, 18, 31]); rect(9, 27, 14, 3, [23, 18, 31]);
+  drawIcon16((x, y, w, h, c) => rect(x * 2, y * 2, w * 2, h * 2, c));
   if (alert) { rect(20, 0, 12, 12, [42, 10, 20]); rect(21, 1, 10, 10, [224, 74, 107]); rect(25, 3, 2, 4, [255, 255, 255]); rect(25, 8, 2, 2, [255, 255, 255]); }
   return nativeImage.createFromBitmap(buf, { width: S, height: S, scaleFactor: 2 });
 }

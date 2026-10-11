@@ -11,7 +11,7 @@ npm start                 # server + web UI on http://localhost:4317  (PORT=, CL
 npm run debug             # same, logs every parsed event and how sub-agent parents were resolved
 npm run desktop           # Electron widget (runs its own server; 4317 busy -> 4318..4320 -> random)
 npm run dist              # Windows NSIS installer -> release/CubicleCrew-Setup-<version>.exe (bump "version" first; predist wipes release/)
-npm run icon              # regenerate build/icon.png (code-drawn, no deps)
+npm run icon              # regenerate build/icon.png + icon.ico from electron/icon-art.js (32x32 art for big sizes, 16x16 for 16/48 px + tray; no deps)
 node scripts/shot.cjs "<url>" <outPrefix> <w> <h> <dpr> <ms,ms,...> [evalJs] [preEvalJs]
                           # headless Chrome screenshots + console errors + external requests (see Testing)
 ```
