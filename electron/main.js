@@ -9,6 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MARGIN = 8;                  // разстояние от ръба на работния плот (над лентата със задачи)
 const TARGET = { w: 790, h: 470 }; // физически пиксели – един екип в мащаб 2 (растe автоматично при втори)
 const SHORTCUT = 'CommandOrControl+Alt+P';
+const COMPACT = { w: 300, h: 170 }; // сутрешното прозорче (DIP), докато няма сесия
+// пуснато от Windows при вход (записът в Run носи този аргумент)
+const AUTOSTART = process.argv.includes('--autostart');
 
 // дневник за проблеми при старт: %APPDATA%/pixel-office/desktop.log
 let LOG = null;
@@ -26,10 +29,11 @@ app.setAppUserModelId('com.pixeloffice.desktop');
 
 let win = null, tray = null, port = 4317, stats = { agents: 0, subs: 0, tools: 0, waiting: [] };
 let quitting = false;
+let waiting = false; // сутрешен екран: малко прозорче до първата сесия
 
 // ---------------------------------------------------------------- настройки
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, autoSize: true, lang: null };
+let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, autoSize: true, lang: null, waitWindow: true, loginInit: false };
 let programmatic = 0; // setBounds от нас – да не се брои като ръчно преоразмеряване
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* първо пускане */ }
@@ -59,25 +63,54 @@ function visible(b) {
 const lang = () => settings.lang || (/^bg/i.test(app.getLocale() || '') ? 'bg' : 'en');
 const L = {
   bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
-    autoSize: 'Разширявай при втори екип', demo: 'Демо режим', login: 'Стартирай с Windows', lang: 'Език / Language', resetSize: 'Нулирай размера',
+    autoSize: 'Разширявай при втори екип', demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', lang: 'Език / Language', resetSize: 'Нулирай размера',
     resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход',
     tip: (a, s, w) => `агенти ${a} · под-агенти ${s}${w ? ` · чакат те ${w}` : ''}`, one: (n) => `${n} чака теб`, many: (k) => `${k} агента чакат теб` },
   en: { hide: 'Hide', show: 'Show', shop: 'Shop', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
-    autoSize: 'Widen for a second team', demo: 'Demo mode', login: 'Start with Windows', lang: 'Language / Език', resetSize: 'Reset size',
+    autoSize: 'Widen for a second team', demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', lang: 'Language / Език', resetSize: 'Reset size',
     resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit',
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
 };
 const tr = () => L[lang()];
 function setLang(l) { settings.lang = l; saveSettings(); win?.loadURL(pageUrl()); refreshTray(); }
-function pageUrl() { return `http://localhost:${port}/?desktop${settings.demo ? '&demo' : ''}&lang=${lang()}`; }
+function pageUrl() { return `http://localhost:${port}/?desktop${settings.demo ? '&demo' : ''}${waiting ? '&wait' : ''}&lang=${lang()}`; }
+// презареждане винаги с актуалния адрес (reload() би запазил &wait и след събуждане)
+const reloadPage = () => win?.loadURL(pageUrl());
+
+// малкото прозорче: долният му десен ъгъл съвпада с този на нормалния прозорец
+function compactBounds(n) {
+  const wa = screen.getDisplayMatching(n).workArea;
+  const w = Math.min(COMPACT.w, wa.width - 2 * MARGIN), h = Math.min(COMPACT.h, wa.height - 2 * MARGIN);
+  return { x: n.x + n.width - w, y: n.y + n.height - h, width: w, height: h };
+}
+
+// първата сесия (или клик / меню): нормалният размер, закотвен в долния десен ъгъл на прозорчето (ако е местено – там)
+function wake() {
+  if (!waiting || !win) return;
+  waiting = false;
+  const c = win.getBounds(), wa = screen.getDisplayMatching(c).workArea;
+  const n = visible(settings.bounds) ? settings.bounds : defaultBounds();
+  const w = Math.min(n.width, wa.width - 2 * MARGIN), h = Math.min(n.height, wa.height - 2 * MARGIN);
+  const x = Math.max(wa.x + MARGIN, Math.min(c.x + c.width, wa.x + wa.width - MARGIN) - w);
+  const y = Math.max(wa.y + MARGIN, Math.min(c.y + c.height, wa.y + wa.height - MARGIN) - h);
+  programmatic = Date.now();
+  win.setMinimumSize(320, 190);
+  win.setResizable(true);
+  win.setBounds({ x, y, width: w, height: h });
+  settings.bounds = win.getBounds(); saveSettings();
+  win.webContents.send('wake');
+  log('wake', JSON.stringify(settings.bounds));
+  refreshTray();
+}
 
 function createWindow() {
-  const b = visible(settings.bounds) ? settings.bounds : defaultBounds();
+  const n = visible(settings.bounds) ? settings.bounds : defaultBounds();
+  const b = waiting ? compactBounds(n) : n;
   win = new BrowserWindow({
     ...b,
-    minWidth: 320, minHeight: 190,
+    minWidth: waiting ? 200 : 320, minHeight: waiting ? 120 : 190,
     // maximizable: false – двоен клик върху лентата за местене иначе разпъва прозореца на цял екран
-    frame: false, resizable: true, maximizable: false, fullscreenable: false, skipTaskbar: true, show: false,
+    frame: false, resizable: !waiting, maximizable: false, fullscreenable: false, skipTaskbar: true, show: false,
     alwaysOnTop: settings.onTop, backgroundColor: '#0e0c14', title: 'Cubicle Crew',
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
   });
@@ -86,10 +119,10 @@ function createWindow() {
   win.loadURL(pageUrl());
   win.once('ready-to-show', () => win.showInactive());
   // временният размер на магазина не се помни
-  const remember = () => { if (!win.isMinimized() && !shopRestore) { settings.bounds = win.getBounds(); saveSettings(); } };
+  const remember = () => { if (!win.isMinimized() && !shopRestore && !waiting) { settings.bounds = win.getBounds(); saveSettings(); } };
   win.on('moved', remember);
   // ръчно преоразмеряване = нов базов размер (автоматичното само го увеличава временно)
-  win.on('resized', () => { if (Date.now() - programmatic > 600) { const nb = win.getBounds(); settings.baseSize = { w: nb.width, h: nb.height }; } remember(); });
+  win.on('resized', () => { if (Date.now() - programmatic > 600 && !waiting) { const nb = win.getBounds(); settings.baseSize = { w: nb.width, h: nb.height }; } remember(); });
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win.hide(); refreshTray(); } });
   win.webContents.on('did-finish-load', sendState);
   // скрит/минимизиран прозорец -> страницата спира да рисува (backgroundThrottling е изключен)
@@ -129,13 +162,20 @@ function migrateLoginItem() {
   try {
     const s = app.getLoginItemSettings();
     const old = (s.launchItems || []).some((i) => i.enabled && i.path && /pixel office/i.test(i.path) && path.resolve(i.path) !== path.resolve(process.execPath));
-    if (!s.openAtLogin && old) { app.setLoginItemSettings({ openAtLogin: true }); log('login item -> ' + process.execPath); }
+    if (!s.openAtLogin && old) { loginItem().set(true); log('login item -> ' + process.execPath); }
   } catch (e) { log('login item migrate', e?.message || e); }
 }
 
 function loginItem() {
-  const opts = app.isPackaged ? {} : { path: process.execPath, args: [app.getAppPath()] };
+  const opts = app.isPackaged ? { args: ['--autostart'] } : { path: process.execPath, args: [app.getAppPath(), '--autostart'] };
   return { get: () => app.getLoginItemSettings(opts).openAtLogin, set: (v) => app.setLoginItemSettings({ openAtLogin: v, ...opts }) };
+}
+
+// Стартирането с Windows е включено по подразбиране: веднъж, при първото пускане на тази версия.
+// После решава само потребителят (отметката в менюто).
+function initLoginItem() {
+  if (!app.isPackaged || settings.loginInit) return;
+  try { loginItem().set(true); settings.loginInit = true; saveSettings(); log('login item on by default'); } catch (e) { log('login item init', e?.message || e); }
 }
 
 function createTray() {
@@ -146,6 +186,7 @@ function createTray() {
 
 // размерът по подразбиране, без да мести прозореца: долният десен ъгъл остава на място
 function resetSize() {
+  wake();
   const b = win.getBounds();
   const d = screen.getDisplayMatching(b), wa = d.workArea, k = d.scaleFactor || 1;
   const w = Math.min(Math.ceil(TARGET.w / k), wa.width - 2 * MARGIN), h = Math.min(Math.ceil(TARGET.h / k), wa.height - 2 * MARGIN);
@@ -154,14 +195,15 @@ function resetSize() {
   win.setBounds({ x: Math.max(wa.x + MARGIN, right - w), y: Math.max(wa.y + MARGIN, bottom - h), width: w, height: h });
   settings.bounds = win.getBounds(); settings.baseSize = { w, h }; saveSettings();
   toggleWindow(true);
-  win.webContents.reload(); // страницата отново казва дали иска повече място (втори екип)
+  reloadPage(); // страницата отново казва дали иска повече място (втори екип)
 }
 function resetPlace() {
+  wake();
   programmatic = Date.now();
   win.setBounds(defaultBounds());
   settings.bounds = win.getBounds(); settings.baseSize = { w: settings.bounds.width, h: settings.bounds.height }; saveSettings();
   toggleWindow(true);
-  win.webContents.reload();
+  reloadPage();
 }
 
 // едно и също меню: в трея и от бутона ⚙ в прозореца
@@ -169,14 +211,15 @@ function menuTemplate() {
   const li = loginItem(), t = tr();
   return [
     { label: win?.isVisible() ? t.hide : t.show, accelerator: SHORTCUT, click: () => toggleWindow() },
-    { label: t.shop, click: () => { toggleWindow(true); win.focus(); win.webContents.send('open-shop'); } },
+    { label: t.shop, click: () => { wake(); toggleWindow(true); win.focus(); win.webContents.send('open-shop'); } },
     { type: 'separator' },
     { label: t.onTop, type: 'checkbox', checked: settings.onTop, click: (m) => { settings.onTop = m.checked; applyOnTop(); saveSettings(); } },
     { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => { settings.through = m.checked; applyThrough(); saveSettings(); } },
     { label: t.notify, type: 'checkbox', checked: settings.notify, click: (m) => { settings.notify = m.checked; saveSettings(); } },
-    { label: t.autoSize, type: 'checkbox', checked: settings.autoSize, click: (m) => { settings.autoSize = m.checked; saveSettings(); if (m.checked) win.webContents.reload(); } },
+    { label: t.autoSize, type: 'checkbox', checked: settings.autoSize, click: (m) => { settings.autoSize = m.checked; saveSettings(); if (m.checked) reloadPage(); } },
     { label: t.demo, type: 'checkbox', checked: settings.demo, click: (m) => { settings.demo = m.checked; saveSettings(); win.loadURL(pageUrl()); } },
     { label: t.login, type: 'checkbox', checked: li.get(), click: (m) => li.set(m.checked) },
+    { label: t.waitWindow, type: 'checkbox', checked: settings.waitWindow, click: (m) => { settings.waitWindow = m.checked; saveSettings(); if (!m.checked) wake(); } },
     { label: t.lang, submenu: [
       { label: 'English', type: 'radio', checked: lang() === 'en', click: () => setLang('en') },
       { label: 'Български', type: 'radio', checked: lang() === 'bg', click: () => setLang('bg') },
@@ -207,6 +250,7 @@ ipcMain.on('action', (_e, act) => {
   else if (act === 'through') { settings.through = true; applyThrough(); saveSettings(); refreshTray(); }
   else if (act === 'settings') Menu.buildFromTemplate(menuTemplate()).popup({ window: win });
   else if (act === 'reset-size') resetSize();
+  else if (act === 'wake') wake();
 });
 
 // страницата казва какъв размер дава мащаб 2 (напр. при втори екип). Ръчно избраният размер е минимумът:
@@ -216,6 +260,7 @@ const SHOP_SIZE = { w: 820, h: 620 };
 let shopRestore = null;
 ipcMain.on('shop', (_e, open) => {
   if (!win) return;
+  if (open) wake();
   if (open && !shopRestore) {
     const b = win.getBounds(), wa = screen.getDisplayMatching(b).workArea;
     shopRestore = b;
@@ -234,7 +279,7 @@ ipcMain.on('shop', (_e, open) => {
 });
 
 ipcMain.on('prefer-size', (_e, sz) => {
-  if (!settings.autoSize || !win || shopRestore) return;
+  if (!settings.autoSize || !win || shopRestore || waiting) return;
   const b = win.getBounds();
   const wa = screen.getDisplayMatching(b).workArea;
   const base = settings.baseSize || { w: b.width, h: b.height };
@@ -261,15 +306,18 @@ ipcMain.on('stats', (_e, s) => {
 });
 
 // ---------------------------------------------------------------- старт
-app.on('second-instance', () => toggleWindow(true));
+app.on('second-instance', () => { wake(); toggleWindow(true); });
 app.on('window-all-closed', () => { /* остава в трея */ });
 let flushWallet = () => {};
 app.on('before-quit', () => { quitting = true; flushWallet(); });
 app.on('will-quit', () => globalShortcut.unregisterAll());
 
 app.whenReady().then(async () => {
-  migrateLoginItem();
   loadSettings();
+  initLoginItem();
+  migrateLoginItem();
+  // пуснато от Windows: малко прозорче със сутрешна сцена, докато не се появи сесия
+  waiting = AUTOSTART && settings.waitWindow !== false;
   const server = await import('../server.js');
   const { startServer } = server;
   flushWallet = server.flushWallet; // токените се записват преди изход

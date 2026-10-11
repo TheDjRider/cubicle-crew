@@ -9,6 +9,7 @@ import { setCharacterSheet, buildAtlas, lookFor } from './sprites.js';
 import { startDemo } from './demo.js';
 import { Tokens, demoWallet } from './tokens.js';
 import { Shop } from './shop.js';
+import { Morning } from './morning.js';
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d', { alpha: false });
@@ -27,6 +28,10 @@ model.on('join', (a) => office.join(a, performance.now()));
 model.on('leave', (a) => office.leave(a));
 model.on('link', (p, c) => office.link(p, c));
 model.on('celebrate', (a) => office.celebrate(a));
+
+// ?wait: сутрешен екран, докато не се появи първият агент (или клик) – после Electron връща нормалния размер
+const morning = PARAMS.wait ? new Morning(office, () => { lastSpecKey = ''; window.pixelOffice?.action('wake'); resize(); }) : null;
+window.pixelOffice?.onWake?.(() => morning?.wake());
 
 // ---------------------------------------------------------------- мащаб
 let appliedVersion = -1;
@@ -84,9 +89,11 @@ function frame(now) {
   while (dt > 0) { const s = Math.min(0.1, dt); office.update(s, now); fx.update(s); dt -= s; } // стъпки ≤0.1 s и при скрит прозорец
   if (office.layoutVersion !== appliedVersion) applyCanvas();
   tokens.update(now);
+  if (morning?.active && model.agents.size) morning.wake();
   if (shown) {
     const date = nowDate();
-    office.render(ctx, now, timeOfDay(date), date);
+    if (morning?.active) morning.render(now, date);
+    else office.render(ctx, now, timeOfDay(date), date);
   }
   ui.sync(now);
   schedule();

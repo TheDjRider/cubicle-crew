@@ -96,6 +96,15 @@
   body.desktop #legend { right: 4px; bottom: 4px; font-size: 11px; }
   body.desktop #card { top: 30px; }
   /* в малкия прозорец HUD-ът се показва при посочване; червеното "чакат те" и токените остават винаги */
+  /* сутрешен екран (?wait): сцената е отделен канвас над офиса, текстът е DOM лента долу */
+  #morning { position: fixed; left: 0; top: 0; z-index: 15; image-rendering: pixelated; cursor: pointer; transition: opacity .6s; }
+  #wait { position: fixed; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 16; max-width: calc(100vw - 16px); box-sizing: border-box;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 3px; padding: 2px 9px 3px; box-shadow: 2px 2px 0 rgba(0,0,0,.3);
+    font-size: 12px; line-height: 15px; text-align: center; cursor: pointer; transition: opacity .6s; }
+  #wait b { display: block; color: #ffe27a; }
+  #wait span { color: var(--ui-text); white-space: nowrap; }
+  #morning.gone, #wait.gone { opacity: 0; pointer-events: none; }
+  body.waiting #hud, body.waiting #legend, body.waiting #empty, body.waiting #card, body.waiting #tooltip { visibility: hidden; }
   body.desktop #hud span { transition: opacity .2s; }
   body.desktop:not(:hover) #hud span:not(.alert):not(.tok) { opacity: 0; }
   body.desktop #empty { font-size: 12px; padding: 5px 10px; }
