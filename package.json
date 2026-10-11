@@ -1,6 +1,6 @@
 {
   "name": "cubicle-crew",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "debug": "node server.js --debug",
     "desktop": "electron .",
     "icon": "node scripts/make-icon.mjs",
+    "predist": "node -e \"fs.rmSync('release', { recursive: true, force: true })\"",
     "dist": "electron-builder --win nsis"
   },
   "engines": {

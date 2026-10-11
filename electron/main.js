@@ -10,8 +10,6 @@ const MARGIN = 8;                  // разстояние от ръба на р
 const TARGET = { w: 790, h: 470 }; // физически пиксели – един екип в мащаб 2 (растe автоматично при втори)
 const SHORTCUT = 'CommandOrControl+Alt+P';
 const COMPACT = { w: 300, h: 170 }; // сутрешното прозорче (DIP), докато няма сесия
-// пуснато от Windows при вход (записът в Run носи този аргумент)
-const AUTOSTART = process.argv.includes('--autostart');
 
 // дневник за проблеми при старт: %APPDATA%/pixel-office/desktop.log
 let LOG = null;
@@ -20,10 +18,10 @@ const log = (...a) => {
 };
 process.on('uncaughtException', (e) => log('ERR', e.stack || e));
 process.on('unhandledRejection', (e) => log('REJ', e?.stack || e));
-log('start', process.argv.join(' '));
 // Папката с настройките остава старата (%APPDATA%/pixel-office) и след преименуването – иначе се губят размер, позиция, настройки.
-// --user-data-dir (втори екземпляр за тестове) е с предимство.
+// --user-data-dir (втори екземпляр за тестове) е с предимство. Първият log() е след това – иначе дневникът отива в %APPDATA%/cubicle-crew.
 if (!app.commandLine.hasSwitch('user-data-dir')) app.setPath('userData', path.join(app.getPath('appData'), 'pixel-office'));
+log('start', process.argv.join(' '));
 if (!app.requestSingleInstanceLock()) { log('second instance – exit'); app.quit(); }
 app.setAppUserModelId('com.pixeloffice.desktop');
 
@@ -316,8 +314,9 @@ app.whenReady().then(async () => {
   loadSettings();
   initLoginItem();
   migrateLoginItem();
-  // пуснато от Windows: малко прозорче със сутрешна сцена, докато не се появи сесия
-  waiting = AUTOSTART && settings.waitWindow !== false;
+  // при всяко пускане (от Windows, от инсталатора, ръчно): малко прозорче със сутрешна сцена, докато не се появи сесия.
+  // Ако вече има сесия, страницата го събужда веднага.
+  waiting = settings.waitWindow !== false;
   const server = await import('../server.js');
   const { startServer } = server;
   flushWallet = server.flushWallet; // токените се записват преди изход
