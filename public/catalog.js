@@ -18,9 +18,10 @@ export const SLOTS = {
   plants:        { group: 'plants',   def: 'plants.ficus' },
   posters:       { group: 'posters',  def: 'posters.classic' },
   lamp:          { group: 'lamp',     def: 'lamp.floor' },
-  cat:           { group: 'cat',      def: 'cat.grey' },
+  cat:           { group: 'cat',      def: 'cat.grey' },   // котка 1 (безплатна); шарките са обща група за трите котки
   window:        { group: 'window',   def: 'window.city' },
-  cat2:          { group: 'cat2',     def: null },
+  cat2:          { group: 'cat',      def: null, need: 'cat2.tabby' }, // котка 2/3: празно = няма котка; отключват се с покупка
+  cat3:          { group: 'cat',      def: null, need: 'cat3.extra' },
   neon:          { group: 'neon',     def: null },
   aquarium:      { group: 'aquarium', def: null },
   arcade:        { group: 'arcade',   def: null },
@@ -33,7 +34,7 @@ export const TABS = [
   { id: 'floor', groups: ['floor', 'rug', 'lrug'] },
   { id: 'furniture', groups: ['sofa', 'chair', 'lamp'] },
   { id: 'decor', groups: ['plants', 'posters', 'window'] },
-  { id: 'pets', groups: ['cat', 'cat2'] },
+  { id: 'pets', groups: ['cat', 'catslot'] },
   { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade'], merge: true },
   { id: 'avatar', groups: [] },
   { id: 'weather', groups: [] },
@@ -126,7 +127,14 @@ export const ITEMS = [
   I('cat.ginger', 'cat', 150, 'Рижа котка', { c: '#c0703a', hi: '#e0985a', eye: '#4ac26b' }),
   I('cat.black', 'cat', 150, 'Черна котка', { c: '#1c1820', hi: '#34303a', eye: '#e0c24a' }),
   I('cat.white', 'cat', 150, 'Бяла котка', { c: '#d8d4cc', hi: '#f4f2ec', eye: '#4a8fe0' }),
-  I('cat2.tabby', 'cat2', 600, 'Втора котка', { c: '#8a7a64', hi: '#a8987e', eye: '#4ac26b' }),
+  I('cat.tabby', 'cat', 150, 'Тигрова котка', { c: '#8a7a64', hi: '#a8987e', eye: '#4ac26b', pat: 'tabby', p: '#5a4a3a' }),
+  I('cat.tuxedo', 'cat', 200, 'Котка смокинг', { c: '#1c1820', hi: '#34303a', eye: '#e0c24a', pat: 'tuxedo', p: '#f0ece4' }),
+  I('cat.calico', 'cat', 250, 'Трицветна котка', { c: '#ece6da', hi: '#fffaf0', eye: '#4ac26b', pat: 'calico', p: '#d0783a', p2: '#2a2228' }),
+  I('cat.siamese', 'cat', 250, 'Сиамска котка', { c: '#e8dcc4', hi: '#f6eedc', eye: '#4a8fe0', pat: 'siamese', p: '#4a3428' }),
+  I('cat.tortie', 'cat', 250, 'Котка костенурка', { c: '#2a2026', hi: '#40323a', eye: '#e0a040', pat: 'tortie', p: '#c0703a', p2: '#e0a060' }),
+  // още котки: отключват мястото и идват с една шарка (cat2.tabby е старата "Втора котка" – id-то остава)
+  I('cat2.tabby', 'catslot', 600, 'Втора котка', { slot: 'cat2', gives: 'cat.tabby' }),
+  I('cat3.extra', 'catslot', 900, 'Трета котка', { slot: 'cat3', gives: 'cat.tuxedo' }),
   // изглед през прозорците
   I('window.city', 'window', 0, 'Град', { style: 'city' }),
   I('window.sea', 'window', 500, 'Море', { style: 'sea' }),
@@ -161,19 +169,28 @@ export const ACHIEVEMENTS = [
 ];
 
 // ---- правила (едни и същи на сървъра и в демото) ----
-export const owns = (save, id) => ITEM[id] && (ITEM[id].price === 0 || (save.owned || []).includes(id));
+// шарка, която идва с отключена котка, се води купена
+const BUNDLED = {};
+for (const it of ITEMS) if (it.gives) BUNDLED[it.gives] = it.id;
+export const owns = (save, id) => !!ITEM[id] && (ITEM[id].price === 0 || (save.owned || []).includes(id) || (!!BUNDLED[id] && (save.owned || []).includes(BUNDLED[id])));
+/** Мястото е отключено (котки 2 и 3 се купуват). */
+export const unlocked = (save, slot) => !SLOTS[slot]?.need || owns(save, SLOTS[slot].need);
+// стари записи: на мястото cat2 стоеше самият 'cat2.tabby'
+const LEGACY = { 'cat2.tabby': 'cat.tabby' };
 
 /** Купува предмет. Връща { ok, error } и променя save на място. Купен предмет от слот с един вариант се слага веднага. */
-export function buyItem(save, id) {
+export function buyItem(save, id, slot = null) {
   const it = ITEM[id];
   if (!it) return { ok: false, error: 'unknown' };
   if (owns(save, id)) return { ok: false, error: 'owned' };
   if (save.tokens < it.price) return { ok: false, error: 'funds' };
   save.tokens -= it.price;
   (save.owned ||= []).push(id);
-  // първото място за групата, което още е на подразбиране, получава новия предмет
-  const slots = GROUP_SLOTS[it.group] || [];
-  const target = slots.find((s) => !save.equipped?.[s] || save.equipped[s] === SLOTS[s].def) || slots[0];
+  // отключена котка: идва веднага със своята шарка
+  if (it.slot) { (save.equipped ||= {})[it.slot] = it.gives; return { ok: true, slot: it.slot }; }
+  // посоченото място (напр. коя котка), иначе първото, което още е на подразбиране
+  const slots = (GROUP_SLOTS[it.group] || []).filter((s) => unlocked(save, s));
+  const target = (slot && slots.includes(slot) && slot) || slots.find((s) => !save.equipped?.[s] || save.equipped[s] === SLOTS[s].def) || slots[0];
   if (target) (save.equipped ||= {})[target] = id;
   return { ok: true, slot: target };
 }
@@ -189,7 +206,7 @@ export function equipItem(save, slot, id) {
   }
   const it = ITEM[id];
   if (!it || it.group !== s.group) return { ok: false, error: 'slot' };
-  if (!owns(save, id)) return { ok: false, error: 'locked' };
+  if (!owns(save, id) || !unlocked(save, slot)) return { ok: false, error: 'locked' };
   (save.equipped ||= {})[slot] = id;
   return { ok: true };
 }
@@ -211,7 +228,7 @@ export function grantAchievements(save, today) {
 export function resolveDecor(equipped = {}) {
   const out = {};
   for (const [slot, s] of Object.entries(SLOTS)) {
-    const it = ITEM[equipped[slot]];
+    const it = ITEM[LEGACY[equipped[slot]] || equipped[slot]];
     out[slot] = it && it.group === s.group ? it : s.def ? ITEM[s.def] : null;
   }
   return out;

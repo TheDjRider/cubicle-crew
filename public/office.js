@@ -24,7 +24,9 @@ export class Office {
     this.spec = { teams: 1, rows: 1 };
     this.teams = new Array(CFG.MAX_TEAMS).fill(null); // id на оркестратора за всеки екип
     this.decor = resolveDecor({});   // обзавеждането (catalog.js); setDecor() го сменя
-    this.cats = [new Cat(this.decor.cat)];
+    this.catBySlot = [];              // котка 1..3 (празно място = null)
+    this.cats = [];
+    this.syncCats();
     this.avatar = AVATAR.def;        // външният вид на потребителя (портфейлът го сменя)
     this.avatarId = null;            // кой оркестратор го носи: първият дошъл; щом излезе – следващият по ред
     this.joinSeq = 0;
@@ -91,11 +93,19 @@ export class Office {
   /** Ново обзавеждане (от портфейла или прегледа в магазина): котките + прерисуване на стаята. */
   setDecor(decor) {
     this.decor = decor;
-    this.cats[0].look = decor.cat;
-    if (decor.cat2 && !this.cats[1]) this.cats.push(new Cat(decor.cat2, 0.2));
-    else if (!decor.cat2 && this.cats[1]) this.cats.length = 1;
-    if (this.cats[1]) this.cats[1].look = decor.cat2;
+    this.syncCats();
     if (this.L) this.relayout();
+  }
+
+  /** До три котки – всяка със своята шарка; запазват мястото си при смяна на шарката. */
+  syncCats() {
+    const d = this.decor;
+    [d.cat, d.cat2, d.cat3].forEach((look, i) => {
+      if (!look) { this.catBySlot[i] = null; return; }
+      if (!this.catBySlot[i]) this.catBySlot[i] = new Cat(look, [0.5, 0.2, 0.82][i]);
+      this.catBySlot[i].look = look;
+    });
+    this.cats = this.catBySlot.filter(Boolean);
   }
 
   /** Расте веднага; смалява се само когато никой не върви (иначе героите "прескачат"). */

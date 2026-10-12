@@ -90,7 +90,7 @@ export class Tokens {
 function serverBackend() {
   const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then((r) => r.json()).catch(() => ({ ok: false, error: 'offline' }));
-  return { buy: (item) => post('api/buy', { item }), equip: (slot, item) => post('api/equip', { slot, item }), avatar: (a) => post('api/avatar', a) };
+  return { buy: (item, slot) => post('api/buy', { item, slot }), equip: (slot, item) => post('api/equip', { slot, item }), avatar: (a) => post('api/avatar', a) };
 }
 
 /** ?demo: същите правила, но в паметта (истинският save.json не се пипа) и 10 пъти по-бързо, за да се вижда. */
@@ -120,7 +120,7 @@ export function demoWallet(tokens) {
   }, 1000);
   const act = (r, kind) => { if (r.ok) { push(0, kind); achievements(); } return Promise.resolve(r); };
   tokens.backend = {
-    buy: (item) => act(buyItem(save, item), 'buy'),
+    buy: (item, slot) => act(buyItem(save, item, slot), 'buy'),
     equip: (slot, item) => act(equipItem(save, slot, item), 'equip'),
     avatar: (a) => act(setAvatar(save, a), 'avatar'),
   };

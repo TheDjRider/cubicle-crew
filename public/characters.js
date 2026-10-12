@@ -316,7 +316,47 @@ export class Cat {
       R(ctx, C, x - 4 + f, y - 2, 1, 2); R(ctx, C, x - 1 - f, y - 2, 1, 2); R(ctx, C, x + 1 + f, y - 2, 1, 2); R(ctx, C, x + 3 - f, y - 2, 1, 2);
       R(ctx, C, x - 7, y - 8, 2, 1); R(ctx, C, x - 6, y - 7, 1, 1);
     }
+    if (this.look.pat) catPattern(ctx, this.look, this.mode, x, y, now, Math.floor(this.dist / 2) % 2);
     ctx.restore();
+  }
+}
+
+// шарки на котките (pat от catalog.js; p/p2 = цветовете на петната). Координатите са като в Cat.draw (гледа надясно).
+function mottle(ctx, x0, y0, w, h, a, b) {
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const k = ((x0 + i) * 7 + (y0 + j) * 3) & 7;
+    if (k === 0 || k === 5) R(ctx, a, x0 + i, y0 + j, 1, 1); else if (k === 2 && b) R(ctx, b, x0 + i, y0 + j, 1, 1);
+  }
+}
+function catPattern(ctx, lk, mode, x, y, now, f) {
+  const P = lk.p, P2 = lk.p2;
+  const tw = mode === 'sit' && frameAt(now, 600) ? 1 : 0;
+  switch (lk.pat) {
+    case 'tabby':
+      if (mode === 'sit') { R(ctx, P, x - 3, y - 4, 6, 1); R(ctx, P, x - 3, y - 2, 5, 1); R(ctx, P, x + 2, y - 10, 1, 1); R(ctx, P, x - 6, y - 3 - tw, 1, 1); }
+      else if (mode === 'sleep') { for (const sx of [-4, -1, 2]) R(ctx, P, x + sx, y - 4, 1, 3); R(ctx, P, x + 4, y - 6, 1, 1); }
+      else { for (const sx of [-4, -1, 2]) R(ctx, P, x + sx, y - 6, 1, 3); R(ctx, P, x + 4, y - 8, 1, 1); R(ctx, P, x - 7, y - 8, 1, 1); }
+      break;
+    case 'tuxedo':
+      if (mode === 'sit') { R(ctx, P, x + 1, y - 6, 2, 4); R(ctx, P, x, y - 1, 1, 1); R(ctx, P, x + 2, y - 1, 1, 1); R(ctx, P, x + 3, y - 8, 2, 1); }
+      else if (mode === 'sleep') { R(ctx, P, x + 5, y - 4, 2, 1); R(ctx, P, x + 2, y - 2, 2, 2); }
+      else { R(ctx, P, x + 2, y - 4, 2, 2); R(ctx, P, x + 5, y - 6, 2, 1); for (const lx of [-4 + f, -1 - f, 1 + f, 3 - f]) R(ctx, P, x + lx, y - 1, 1, 1); }
+      break;
+    case 'siamese':
+      if (mode === 'sit') { R(ctx, P, x + 2, y - 9, 1, 1); R(ctx, P, x + 1, y - 8, 3, 1); R(ctx, P, x + 2, y - 7, 1, 1); R(ctx, P, x, y - 11, 1, 1); R(ctx, P, x + 4, y - 11, 1, 1); R(ctx, P, x - 5, y - 2 - tw, 2, 1); R(ctx, P, x - 6, y - 3 - tw, 1, 2); R(ctx, P, x, y - 1, 1, 1); R(ctx, P, x + 2, y - 1, 1, 1); }
+      else if (mode === 'sleep') { R(ctx, P, x + 5, y - 5, 2, 2); R(ctx, P, x + 3, y - 7, 1, 1); R(ctx, P, x + 6, y - 7, 1, 1); R(ctx, P, x - 6, y - 2, 2, 2); }
+      else { R(ctx, P, x + 6, y - 7, 1, 2); R(ctx, P, x + 5, y - 6, 1, 1); R(ctx, P, x + 3, y - 9, 1, 1); R(ctx, P, x + 6, y - 9, 1, 1); R(ctx, P, x - 7, y - 8, 2, 1); R(ctx, P, x - 6, y - 7, 1, 1); }
+      break;
+    case 'calico':
+      if (mode === 'sit') { R(ctx, P, x - 3, y - 6, 3, 2); R(ctx, P2, x, y - 3, 2, 2); R(ctx, P, x + 3, y - 10, 2, 1); R(ctx, P2, x + 4, y - 11, 1, 1); R(ctx, P, x - 6, y - 3 - tw, 1, 2); }
+      else if (mode === 'sleep') { R(ctx, P, x - 5, y - 4, 3, 2); R(ctx, P2, x + 1, y - 3, 2, 2); R(ctx, P, x + 5, y - 6, 2, 1); }
+      else { R(ctx, P, x - 5, y - 6, 3, 2); R(ctx, P2, x, y - 5, 2, 2); R(ctx, P, x + 5, y - 8, 2, 1); R(ctx, P2, x - 7, y - 8, 2, 1); }
+      break;
+    case 'tortie':
+      if (mode === 'sit') { mottle(ctx, x - 3, y - 6, 6, 6, P, P2); mottle(ctx, x, y - 10, 5, 1, P, P2); }
+      else if (mode === 'sleep') { mottle(ctx, x - 5, y - 4, 10, 4, P, P2); mottle(ctx, x + 3, y - 6, 4, 2, P, P2); }
+      else { mottle(ctx, x - 5, y - 6, 9, 4, P, P2); mottle(ctx, x + 3, y - 8, 4, 1, P, P2); }
+      break;
   }
 }
 

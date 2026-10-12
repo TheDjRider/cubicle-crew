@@ -120,7 +120,7 @@ export class Wallet {
         return r;
       } catch { return { ok: false, error: 'busy' }; }
     }
-    const r = kind === 'buy' ? buyItem(this.save, String(body.item))
+    const r = kind === 'buy' ? buyItem(this.save, String(body.item), body.slot ? String(body.slot) : null)
       : kind === 'avatar' ? setAvatar(this.save, body)
       : equipItem(this.save, String(body.slot), body.item == null ? null : String(body.item));
     if (r.ok) {

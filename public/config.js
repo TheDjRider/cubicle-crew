@@ -96,6 +96,10 @@ const T_BG = {
     reward: (n) => `+${n} токена`,
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'отключено',
+    pets: {
+      cats: ['Котка 1', 'Котка 2', 'Котка 3'], away: 'Без тази котка', back: 'Върни котката',
+      unlock: (p) => `Идва с шарка „${p}“; после можеш да ѝ избереш всяка купена шарка.`,
+    },
     avatar: {
       body: 'Тяло', male: 'Мъж', female: 'Жена', style: 'Прическа',
       styles: { m: ['Къса', 'На път', 'Перчем', 'Щръкнала'], f: ['Дълга', 'Опашка', 'Каре', 'Кок'] },
@@ -185,6 +189,10 @@ const T_EN = {
     reward: (n) => `+${n} tokens`,
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'unlocked',
+    pets: {
+      cats: ['Cat 1', 'Cat 2', 'Cat 3'], away: 'No cat here', back: 'Bring the cat back',
+      unlock: (p) => `Comes as a ${p.toLowerCase()}; then you can give it any pattern you own.`,
+    },
     avatar: {
       body: 'Body', male: 'Man', female: 'Woman', style: 'Hairstyle',
       styles: { m: ['Short', 'Side part', 'Quiff', 'Spiky'], f: ['Long', 'Ponytail', 'Bob', 'Bun'] },
@@ -241,7 +249,8 @@ const T_EN = {
     'plants.ficus': 'Ficus', 'plants.cactus': 'Cacti', 'plants.monstera': 'Monstera', 'plants.flowers': 'Flowering',
     'posters.classic': 'Classic', 'posters.space': 'Space', 'posters.nature': 'Nature', 'posters.code': 'Code',
     'lamp.floor': 'Floor lamp', 'lamp.arc': 'Arc lamp',
-    'cat.grey': 'Grey cat', 'cat.ginger': 'Ginger cat', 'cat.black': 'Black cat', 'cat.white': 'White cat', 'cat2.tabby': 'Second cat',
+    'cat.grey': 'Grey cat', 'cat.ginger': 'Ginger cat', 'cat.black': 'Black cat', 'cat.white': 'White cat', 'cat2.tabby': 'Second cat', 'cat3.extra': 'Third cat',
+    'cat.tabby': 'Tabby cat', 'cat.tuxedo': 'Tuxedo cat', 'cat.calico': 'Calico cat', 'cat.siamese': 'Siamese cat', 'cat.tortie': 'Tortoiseshell cat',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',
     'neon.code': 'Neon sign', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet',
   },

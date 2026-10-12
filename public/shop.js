@@ -2,7 +2,7 @@
 // покупките минават през сървъра (или демо портфейла) – правилата са в catalog.js.
 import { T, itemName, LANG, PARAMS } from './config.js';
 import { wxFrom } from './weather.js';
-import { ITEMS, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf } from './catalog.js';
+import { ITEMS, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, unlocked, resolveDecor } from './catalog.js';
 import { CharacterSprites, avatarLook, AVATAR_TOPS, AVATAR_BOTTOMS, DRESS_TOPS } from './sprites.js';
 import { SKINS, HAIRS } from './palette.js';
 import { thumb } from './environment.js';
@@ -110,6 +110,7 @@ export class Shop {
     if (tab.id === 'trophies') this.renderTrophies();
     else if (tab.id === 'avatar') this.renderAvatar();
     else if (tab.id === 'weather') this.renderWeather();
+    else if (tab.id === 'pets') this.renderPets();
     else if (tab.merge) this.renderGroup(tab.groups, T.shop.tabs[tab.id]); // по един предмет на група – обща решетка
     else for (const g of tab.groups) this.renderGroup([g], T.shop.groups[g]);
     this.body.scrollTop = scroll;
@@ -208,6 +209,54 @@ export class Shop {
     el('p', 'hint', opts, A.hint);
   }
 
+  /** Любимци: по един ред за всяка котка – избор на шарка; котки 2 и 3 се отключват. Шарките се купуват веднъж. */
+  renderPets() {
+    const s = this.tokens.save, eq = s.equipped || {}, P = T.shop.pets, decor = resolveDecor(eq);
+    const pats = ITEMS.filter((x) => x.group === 'cat');
+    const card = (grid, it, slot, on) => {
+      const c = el('div', `card${owns(s, it.id) ? ' owned' : ''}${on ? ' on' : ''}`, grid);
+      c.dataset.id = it.id; c.dataset.slot = slot;
+      c.appendChild(this.thumb(it));
+      el('div', 'nm', c, itemName(it));
+      return c;
+    };
+    ['cat', 'cat2', 'cat3'].forEach((slot, i) => {
+      const sec = el('section', null, this.body);
+      el('h3', null, sec, P.cats[i]);
+      const grid = el('div', 'grid', sec);
+      if (!unlocked(s, slot)) {
+        const it = ITEMS.find((x) => x.id === SLOTS[slot].need);
+        const c = card(grid, it, slot, false);
+        el('div', 'pr', c, `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
+        const short = it.price - (this.tokens.tokens ?? 0);
+        const b = el('button', 'buy', el('div', 'act', c), short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
+        b.dataset.buy = it.id; b.disabled = short > 0;
+        el('p', 'hint', sec, P.unlock(itemName(ITEMS.find((x) => x.id === it.gives))));
+        return;
+      }
+      const cur = decor[slot]?.id || null;
+      for (const it of pats) {
+        const c = card(grid, it, slot, cur === it.id);
+        const have = owns(s, it.id);
+        el('div', 'pr', c, it.price === 0 ? T.shop.free : have ? T.shop.owned : `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
+        const act = el('div', 'act', c);
+        if (!have) {
+          const short = it.price - (this.tokens.tokens ?? 0);
+          const b = el('button', 'buy', act, short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
+          b.dataset.buy = it.id; b.dataset.slot = slot; b.disabled = short > 0;
+        } else {
+          const b = el('button', cur === it.id ? 'on' : '', act, cur === it.id ? T.shop.equipped : T.shop.equip);
+          b.dataset.equip = it.id; b.dataset.slot = slot; b.disabled = cur === it.id;
+        }
+      }
+      if (slot !== 'cat') {
+        const b = el('button', null, el('div', 'act', sec), cur ? P.away : P.back);
+        if (cur) { b.dataset.remove = '1'; b.dataset.slot = slot; }
+        else { b.dataset.equip = ITEMS.find((x) => x.slot === slot).gives; b.dataset.slot = slot; }
+      }
+    });
+  }
+
   /** Времето навън: избран град + търсене; текстът от интернет се слага само като textContent. */
   renderWeather() {
     const W = T.weather, m = this.weather;
@@ -251,7 +300,7 @@ export class Shop {
 
   thumb(it) {
     let src = this.thumbs.get(it.id);
-    if (!src) { src = it.group === 'cat' || it.group === 'cat2' ? catThumb(it) : thumb(it); this.thumbs.set(it.id, src); }
+    if (!src) { src = it.group === 'cat' ? catThumb(it) : it.group === 'catslot' ? catThumb(ITEMS.find((x) => x.id === it.gives)) : thumb(it); this.thumbs.set(it.id, src); }
     // цяло число пъти увеличение (пиксел арт), около 84x66
     const k = Math.max(1, Math.min(4, Math.round(Math.min(84 / src.width, 66 / src.height))));
     const c = makeCanvas(src.width, src.height);
@@ -268,6 +317,9 @@ export class Shop {
     this.hoverId = id;
     if (!id) { this.tokens.setPreview(null); return; }
     const it = ITEMS.find((x) => x.id === id), eq = this.tokens.save.equipped || {};
+    if (it.slot) { this.tokens.setPreview({ ...eq, [it.slot]: it.gives }); return; } // отключване на котка
+    const slot = card.dataset.slot; // котка 1/2/3
+    if (slot) { this.tokens.setPreview(eq[slot] === id || (!eq[slot] && SLOTS[slot].def === id) ? null : { ...eq, [slot]: id }); return; }
     const slots = GROUP_SLOTS[it.group];
     if (slots.some((sl) => (eq[sl] || SLOTS[sl].def) === id)) { this.tokens.setPreview(null); return; } // вече е сложено
     this.tokens.setPreview({ ...eq, [slots[0]]: id });
@@ -288,7 +340,7 @@ export class Shop {
       return;
     }
     if (b.dataset.av) { if (!b.classList.contains('on') && be.avatar) r = await be.avatar(JSON.parse(b.dataset.av)); }
-    else if (b.dataset.buy) r = await be.buy(b.dataset.buy);
+    else if (b.dataset.buy) r = await be.buy(b.dataset.buy, b.dataset.slot || null);
     else if (b.dataset.remove) r = await be.equip(b.dataset.slot, null);
     else if (b.dataset.equip && !b.classList.contains('on')) r = await be.equip(b.dataset.slot, b.dataset.equip);
     if (!r) return;
