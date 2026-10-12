@@ -286,7 +286,7 @@ export class UI {
     // токените са първи – в малкия прозорец остават сами в ъгъла, когато останалото се скрие
     const html =
       (this.tokens != null ? `<span class="tok${now - (this.tokenFlash ?? -1e9) < 1500 ? ' gain' : ''}" title="${T.shop.open}"><i style="background-image:url(${this.coin ||= coinUrl()})"></i><b>${this.fmtTokens()}</b></span>` +
-        `<span class="shopbtn" title="${T.shop.open}"><i style="background-image:url(${this.bag ||= bagUrl()})"></i>${T.shop.title}</span>` : '') +
+        `<span class="shopbtn" title="${T.shop.open}"><i style="background-image:url(${this.bag ||= bagUrl()})"></i></span>` : '') +
       `<span class="conn ${this.conn}"><i></i>${connTxt}</span>` +
       `<span>${T.agents} <b>${s.agents - s.subs}</b></span>` +
       `<span>${T.subagents} <b>${s.subs}</b></span>` +

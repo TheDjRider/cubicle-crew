@@ -58,7 +58,7 @@
   #hud .tok, #hud .shopbtn { pointer-events: auto; cursor: pointer; }
   #hud .shopbtn { border-color: #6a3a8a; color: #f0e0ff; }
   #hud .shopbtn:hover, #hud .tok:hover { filter: brightness(1.25); }
-  #hud .shopbtn i { display: inline-block; width: 13px; height: 13px; margin-right: 5px; vertical-align: -2px; background-size: 100% 100%; image-rendering: pixelated; }
+  #hud .shopbtn i { display: inline-block; width: 13px; height: 13px; vertical-align: -2px; background-size: 100% 100%; image-rendering: pixelated; }
 
   #legend { position: fixed; right: 8px; bottom: 8px; justify-content: flex-end; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center;
     background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 3px; padding: 3px 9px; font-size: 12px; pointer-events: none; max-width: 46vw; }
@@ -96,6 +96,7 @@
   #winbar button.on { color: #e0c24a; }
   #winbar button[data-act="quit"]:hover { background: #e04a6b; }
   body.desktop #hud { left: 4px; bottom: 4px; gap: 3px; font-size: 11px; }
+  body.desktop:has(#legend[hidden]) #hud { max-width: calc(100vw - 8px); } /* скрита легенда (по подразбиране в малкия прозорец) – целият ред е за HUD-а */
   body.desktop #hud span { padding: 1px 5px; }
   body.desktop #legend { right: 4px; bottom: 4px; font-size: 11px; }
   body.desktop #card { top: 30px; }
