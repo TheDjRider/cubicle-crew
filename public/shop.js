@@ -159,9 +159,9 @@ export class Shop {
     }
   }
 
-  /** Аватарът: голям преглед + кожа, коса, очила. Всеки избор се записва веднага (безплатно). */
+  /** Аватарът: голям преглед + тяло, прическа, кожа, коса, очила. Всеки избор се записва веднага (безплатно). */
   renderAvatar() {
-    const av = avatarOf(this.tokens.save), A = T.shop.avatar;
+    const av = { body: 0, style: 0, ...avatarOf(this.tokens.save) }, A = T.shop.avatar;
     const sec = el('section', 'avatar', this.body);
     const pv = el('div', 'pv', sec);
     for (const pose of ['stand', 'couchSit']) {
@@ -183,6 +183,8 @@ export class Shop {
         if (color) { b.classList.add('dot'); b.style.background = color; }
       }
     };
+    row(A.body, [[A.male, { body: 0 }, null, av.body !== 1], [A.female, { body: 1 }, null, av.body === 1]]);
+    row(A.style, A.styles[av.body === 1 ? 'f' : 'm'].map((s, i) => [s, { style: i }, null, av.style === i]));
     row(A.skin, SKINS.map((s, i) => [A.skins[i] || '', { skin: i }, s[1], av.skin === i]));
     row(A.hair, HAIRS.map((h, i) => [A.hairs[i] || '', { hair: i }, h[1], av.hair === i]));
     row(A.glasses, [[A.without, { glasses: false }, null, !av.glasses], [A.with, { glasses: true }, null, !!av.glasses]]);

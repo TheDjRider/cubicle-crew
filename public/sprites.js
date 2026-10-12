@@ -5,16 +5,18 @@
 //
 // Override: ако има sprites/characters.png (+ по желание characters.json), кадрите се
 // взимат от него – вж. README, раздел "Формат на спрайт-листа".
-import { SKINS, HAIRS, PANTS, SHOES, ACCENTS, MUGS, OUTLINE, INK, ramp, mix, shade, hex2rgb } from './palette.js';
+import { SKINS, HAIRS, PANTS, SHOES, SKIRTS, TIGHTS, IRIS, ACCENTS, MUGS, OUTLINE, INK, ramp, mix, shade, hex2rgb } from './palette.js';
 import { hashStr, rng, makeCanvas } from './util.js';
 
 export const FW = 24, FH = 32;
 
 // ---------------------------------------------------------------------
 // Пикселни карти. '.' = прозрачно. Ключове:
-//  h/s/S кожа (светло/средно/сянка)   y/r/R коса   k/c/C риза (= цвета на състоянието)
-//  p/P панталон  b/B обувки  e очи  m уста  u руменина  g рамки  l стъкла
-//  H лента на слушалки  j акцент  n/N/v шапка  w/W хартия  i мастило  M/x чаша  L бадж  t химикал
+//  h/s/S кожа (светло/средно/сянка)   y/r/R/Q коса (+ най-тъмна)   E ирис   Z набола брада
+//  k/c/C риза (= цвета на състоянието)   K бяла яка/връзки   j/J акцент (вратовръзка, панделка)
+//  q/p/P панталон или пола   G/F чорапогащник   O колан  Y катарама   b/B/V обувки (+ отблясък)
+//  e очи  m уста  u руменина  A обеци/верижка  g рамки  l стъкла
+//  H лента на слушалки  n/N/v шапка  w/W хартия  i мастило  M/x чаша  L бадж  t химикал
 // ---------------------------------------------------------------------
 const HEAD = [
   '..hsssssss..',
@@ -31,88 +33,170 @@ const HEAD = [
 ];
 const HEAD_X = 6, HEAD_Y = 3;
 
-// Коса: 14 колони, започва от x=5, ред 0 = y0
+// Прически: map = 14 колони от x=5, ред 0 = y0 (главата е x6..17, y3..13; очите на y8).
+//  behind – редове дълга коса зад тялото (от y9 надолу); strands – кичури отпред по раменете до този y;
+//  tail – 'pony' (опашка) | 'braid' (плитка през рамо); bun – кок на темето (за изгледа отзад).
+const H = (map, o = {}) => ({ map, behind: 0, strands: 0, tail: null, bun: false, ...o });
 export const HAIR_STYLES = {
-  short: [
+  short: H([
     '..............',
-    '....rrrrrr....',
+    '....rryyrr....',
     '..rryyyyyyrr..',
-    '.rryyrrrrrrrR.',
-    '.rrrrrrrrrrrR.',
-    '.rrrrrrrrrrRR.',
-    '.rRr......rRR.',
-    '.rR........R..',
-    '.R..........R.',
-  ],
-  spiky: [
-    '....r...r.....',
-    '...rr.rrr..r..',
-    '..ryyrryyrrr..',
+    '.rryyyrrrrrrR.',
+    '.ryyrrrrrrrRR.',
+    '.rrrrRrrrRrRR.',
+    '.rRrr.r...rRR.',
+    '.rR........RQ.',
+    '.Q..........Q.',
+  ]),
+  spiky: H([
+    '...r..y..r....',
+    '..ry.ryy.ry.r.',
+    '..ryyryyyrryr.',
     '.rryyyyrrrrrR.',
-    '.rrrrrrrrrrrR.',
-    '.rrRrrrRrrrRR.',
+    '.ryrrrrrrrrRR.',
+    '.rrRrrRrrrRRR.',
     '.rR.r..r..rRR.',
-    '.r..........R.',
-  ],
-  bob: [
+    '.R..........Q.',
+  ]),
+  side: H([
     '..............',
-    '....rrrrrr....',
-    '..rryyyyyyrr..',
-    '.ryyyrrrrrrrR.',
-    'rryrrrrrrrrrRR',
-    'rrrrrrrrrrrrRR',
-    'rrr........rRR',
-    'rr..........RR',
-    'rr..........RR',
-    'rR..........RR',
-    'rR..........RR',
-    'RR..........RR',
-    '.R..........R.',
-  ],
-  bun: [
-    '.....ryrr.....',
-    '.....rrrR.....',
-    '..rryyyyyyrr..',
-    '.ryyyrrrrrrrR.',
-    '.rrrrrrrrrrrR.',
+    '...rrryyrr....',
+    '..ryyyyyyrrr..',
+    '.ryyyyyrrrrrR.',
     '.rrrrrrrrrrRR.',
-    '.rr........RR.',
-    '.r..........R.',
-  ],
-  curly: [
-    '...rryrryr....',
-    '..ryyrryyrrr..',
-    '.rryrrrrrrrrR.',
-    'rryrrrryrrrrRR',
-    'rrrrrrrrrrrrRR',
-    'rrRrrRrrrRrrRR',
-    'rrR........RRR',
-    'rR..........RR',
-    'rR..........RR',
+    '.rrrrrrrrrRRR.',
+    '.rrrrrrR..rRR.',
+    '.rRrr......RQ.',
+    '.Q..........Q.',
+  ]),
+  quiff: H([
+    '.....ryyyr....',
+    '...rryyyyyrr..',
+    '..rryyyrrrrrR.',
+    '.rrrrrrrrrrrR.',
+    '.rRrrrrrrrrRR.',
+    '.rR.rRrrrR.RR.',
     '.R..........R.',
-  ],
-  buzz: [
+    '.Q..........Q.',
+  ]),
+  buzz: H([
     '..............',
     '..............',
     '...RRRRRRRR...',
     '..RrrrrrrrrR..',
-    '.RrrrrrrrrrrR.',
+    '.RrrRrrrRrrrR.',
     '.R..........R.',
-  ],
-  side: [
+  ]),
+  curly: H([
+    '...ryrrryr....',
+    '..ryyrryyrrr..',
+    '.rryrrryrrrrR.',
+    'rryrrrryrrrrRR',
+    'rrrrRrrrrRrrRR',
+    'rrRrrRrrRrrRRR',
+    'rrR.r.....rRRR',
+    'rR..........RR',
+    'rR..........RR',
+    '.Q..........Q.',
+  ]),
+  long: H([
     '..............',
-    '...rrrrrrr....',
-    '..ryyyyyrrrr..',
+    '....rrrrrr....',
+    '..rryyyyyyrr..',
+    '.ryyyyrryyyrR.',
+    'rryyrrRrrrrrRR',
+    'ryrrrR.RrrrrRR',
+    'rrrR......rRRR',
+    'rrR........RRR',
+    'rr..........RR',
+    'rr..........RR',
+    'rR..........RQ',
+    'rR..........RQ',
+    'RQ..........QQ',
+  ], { behind: 9, strands: 19 }),
+  wavy: H([
+    '..............',
+    '....rryyrr....',
+    '..rryyyyyyrr..',
     '.ryyyyrrrrrrR.',
-    '.rrrrrrrrrrrR.',
-    '.rrrrrrrrrRRR.',
-    '.rrrrrr...rRR.',
-    '.rr........R..',
+    'rryyrrrrrrrrRR',
+    'ryrrrrrrrrrRRR',
+    'rrrRr.....rRRR',
+    'ryR........RRR',
+    'rr..........yR',
+    'Rr..........rR',
+    'ry..........RR',
+    'rr..........yR',
+    'RQ..........QQ',
+  ], { behind: 8, strands: 18, wave: true }),
+  bob: H([
+    '..............',
+    '....rryyrr....',
+    '..rryyyyyyrr..',
+    '.ryyyyrrrrrrR.',
+    'rryrrrrrrrrrRR',
+    'ryrrrrrrrrrrRR',
+    'rrrrrrrRRrrRRR',
+    'rrR.r.....rRRR',
+    'rr..........RR',
+    'rr..........RR',
+    'rR..........RR',
+    'rR..........RQ',
+    'RQr........rQQ',
+    '.QQ........QQ.',
+  ]),
+  pony: H([
+    '..............',
+    '....rryyrr....',
+    '..rryyyyyyrr..',
+    '.ryyyyyrrrrrR.',
+    '.ryyrrrrrrrRR.',
+    '.rrrrrrrrrrRR.',
+    '.rRr.....rrRR.',
+    '.rR.......RR..',
     '.R..........R.',
-  ],
+  ], { tail: 'pony' }),
+  braid: H([
+    '..............',
+    '....rryyrr....',
+    '..rryyyyyyrr..',
+    '.ryyyrryyyyrR.',
+    '.rrrrRRrrrrRR.',
+    '.rrrR..RrrrRR.',
+    '.rRr......rRR.',
+    '.rR........RR.',
+    '.R..........R.',
+  ], { tail: 'braid' }),
+  bun: H([
+    '.....ryyrR....',
+    '....ryyyrrR...',
+    '....QjjjjQ....',
+    '.rryyyyyrrrrR.',
+    '.ryyrrrrrrrRR.',
+    '.rrrrrrrrrrRR.',
+    '.rRr......rRR.',
+    '.rR........R..',
+    '.r..........R.',
+  ], { bun: true }),
+  pixie: H([
+    '..............',
+    '....rryyrr....',
+    '..rryyyyyyrr..',
+    '.ryyyyyyrrrrR.',
+    '.ryyrrrrrrrRR.',
+    '.rrrrrrrrrRRR.',
+    '.rrrrrRR..rRR.',
+    '.rRrR......RR.',
+    '.rR.........R.',
+    '.Q..........Q.',
+  ]),
 };
-HAIR_STYLES.long = HAIR_STYLES.bob; // + кичури отпред (виж по-долу)
-export const HAIR_NAMES = ['short', 'spiky', 'bob', 'long', 'bun', 'curly', 'buzz', 'side'];
+export const HAIR_MALE = ['short', 'spiky', 'side', 'quiff', 'buzz', 'curly'];
+export const HAIR_FEMALE = ['long', 'wavy', 'bob', 'pony', 'braid', 'bun', 'pixie', 'curly'];
+export const HAIR_NAMES = Object.keys(HAIR_STYLES);
+// прическите, от които избира аватарът (по 4 за тяло; индексът е save data)
+export const AVATAR_HAIR = { m: ['short', 'side', 'quiff', 'spiky'], f: ['long', 'pony', 'bob', 'bun'] };
 
 const BEANIE = [
   '......vv......',
@@ -241,7 +325,7 @@ class Grid {
 
 const mirrorX = (x, w) => FW - x - w;
 
-function drawArm(g, mode, side, dy) {
+function drawArm(g, mode, side, dy, short) {
   const segs = ARMS[mode] || [];
   for (const s of segs) {
     let x = s.x, w = s.w;
@@ -250,98 +334,272 @@ function drawArm(g, mode, side, dy) {
     const prevLayer = g.layer;
     if (s.layer) g.layer = 1;
     if (s.k === 'S') {
-      // ляв ръкав – светъл, десен – в сянка
-      g.rect(side === 'L' ? 'c' : 'C', x, y, w, s.h);
-      if (side === 'L') g.rect('k', x, y, 1, s.h); else g.rect('c', x, y, 1, s.h);
+      // ляв ръкав – светъл, десен – в сянка. Къс ръкав: под рамото (y 14..17) е кожа, с подгъв.
+      for (let j = 0; j < s.h; j++) {
+        const yy = y + j;
+        if (short && (yy > 17 + dy || yy < 14 + dy)) {
+          g.rect('s', x, yy, w, 1); g.set(side === 'L' ? x : x + w - 1, yy, 'S');
+          continue;
+        }
+        g.rect(side === 'L' ? 'c' : 'C', x, yy, w, 1);
+        g.set(x, yy, side === 'L' ? 'k' : 'c');
+        if (short && yy === 17 + dy) g.rect('C', x, yy, w, 1);
+      }
     } else {
       g.rect('s', x, y, w, s.h);
       g.rect('S', side === 'L' ? x : x + w - 1, y + s.h - 1, 1, 1);
+      if (s.h >= 2 && s.w >= 3) g.set(side === 'L' ? x + w - 1 : x, y, 'h'); // палецът хваща светлина
     }
     g.layer = prevLayer;
   }
 }
 const isBackArm = (mode) => (ARMS[mode] || []).some((s) => s.back);
 
-function drawLegs(g, pose, top) {
+const shoe = (g, x, y, w, near = true) => {
+  if (!near) { g.rect('B', x, y, w, 2); return; }
+  g.rect('b', x, y, w, 2); g.rect('B', x, y + 1, w, 1); g.set(x + 1, y, 'V');
+};
+
+function drawLegs(g, pose, top, look) {
   const legs = pose.legs;
+  const skirt = look.bottom !== 'pants';
+  const L = ['G', 'F']; // крака под пола (чорапогащник или кожа – решава палитрата)
   if (legs === 'sit' || legs === 'couch') {
     g.rect('p', 6, top, 12, 3); g.rect('q', 6, top, 12, 1); g.rect('P', 15, top + 1, 3, 2);
+    if (skirt) { g.set(5, top + 1, 'p'); g.set(5, top + 2, 'q'); g.set(18, top + 1, 'P'); g.set(18, top + 2, 'P'); g.rect('P', 10, top + 1, 1, 2); }
+    else g.rect('P', 11, top + 1, 2, 2); // шев между бедрата
     if (legs === 'couch') {
       // подбедрици надолу пред седалката + обувки
       for (const [x, r] of [[7, false], [13, true]]) {
-        g.rect('p', x, top + 3, 4, 3); g.rect(r ? 'P' : 'q', r ? x + 3 : x, top + 3, 1, 3);
-        g.rect('b', x - (r ? 0 : 1), top + 6, 5, 2); g.rect('B', x - (r ? 0 : 1), top + 7, 5, 1);
+        if (skirt) {
+          g.rect(L[0], x + (r ? 0 : 1), top + 3, 3, 3); g.rect(L[1], r ? x + 2 : x + 1, top + 3, 1, 3);
+          shoe(g, x, top + 6, 4);
+        } else {
+          g.rect('p', x, top + 3, 4, 3); g.rect(r ? 'P' : 'q', r ? x + 3 : x, top + 3, 1, 3);
+          shoe(g, x - (r ? 0 : 1), top + 6, 5);
+        }
       }
     }
     return;
   }
   if (legs === 'stand' || legs === 'walkF') {
     const lift = pose.lift;
-    const leg = (x, lifted, isRight) => {
+    if (skirt) {
+      // разкроена пола с гънки, отдолу крака и обувки
+      g.rect('p', 6, top, 12, 2); g.rect('p', 5, top + 2, 14, 2);
+      g.rect('q', 6, top, 1, 2); g.rect('q', 5, top + 2, 1, 2); g.rect('q', 7, top, 3, 1);
+      g.rect('P', 16, top, 2, 2); g.rect('P', 16, top + 2, 3, 2);
+      g.rect('P', 10, top + 1, 1, 3); g.rect('P', 13, top + 2, 1, 2);
+      const leg = (x, lifted, right) => {
+        const len = lifted ? 1 : 2;
+        g.rect(L[0], x, top + 4, 3, len); g.rect(L[1], right ? x + 2 : x, top + 4, 1, len);
+        shoe(g, right ? x : x - 1, top + 4 + len, 4);
+      };
+      leg(8, lift === 'L', false); leg(13, lift === 'R', true);
+      return;
+    }
+    const leg = (x, lifted, right) => {
       const len = lifted ? 5 : 6;
-      g.rect('p', x, top, 4, len); g.rect(isRight ? 'P' : 'q', isRight ? x + 3 : x, top, 1, len);
-      g.rect('b', x - (isRight ? 0 : 1), top + len, 5, 2); g.rect('B', x - (isRight ? 0 : 1), top + len + 1, 5, 1);
+      g.rect('p', x, top, 4, len); g.rect(right ? 'P' : 'q', right ? x + 3 : x, top, 1, len);
+      g.set(right ? x + 1 : x + 2, top + 3, right ? 'P' : 'p'); // коляно
+      g.rect('P', x, top + len - 1, 4, 1); // подгъв
+      shoe(g, x - (right ? 0 : 1), top + len, 5);
     };
     leg(7, lift === 'L', false); leg(13, lift === 'R', true);
     g.rect('P', 11, top, 2, 2);
+    g.set(8, top, 'P'); g.set(15, top, 'q'); // джобове
     return;
   }
   // страничен ход (надясно). Кадри 0/2 – крачка, 1/3 – краката заедно
   const f = Number(legs.slice(-1));
+  if (skirt) {
+    g.rect('p', 8, top, 8, 1); g.rect('p', 7, top + 1, 9, 1); g.rect('p', 7, top + 2, 10, 2);
+    g.rect('q', 8, top, 2, 1); g.rect('q', 7, top + 1, 1, 3);
+    g.rect('P', 15, top + 1, 1, 1); g.rect('P', 15, top + 2, 2, 2); g.rect('P', 11, top + 1, 1, 3);
+    const nearL = f === 2 ? L[1] : L[0], farL = f === 2 ? L[0] : L[1];
+    if (f % 2 === 0) {
+      g.rect(farL, 8, top + 4, 2, 2); shoe(g, 6, top + 6, 4, f === 2);
+      g.rect(nearL, 13, top + 4, 2, 2); shoe(g, 13, top + 6, 5, f !== 2);
+    } else {
+      g.rect(L[1], 10, top + 4, 2, 2); shoe(g, 9, top + 6, 4, false);
+      g.rect(L[0], 12, top + 4, 2, 2); shoe(g, 12, top + 6, 5);
+    }
+    return;
+  }
   const far = f === 2 ? 'p' : 'P', near = f === 2 ? 'P' : 'p';
   if (f % 2 === 0) {
-    g.rect(far, 8, top, 4, 3); g.rect(far, 6, top + 3, 4, 3); g.rect('B', 4, top + 6, 5, 2);
-    g.rect(near, 12, top, 4, 3); g.rect(near, 14, top + 3, 4, 3); g.rect('b', 14, top + 6, 6, 2); g.rect('B', 14, top + 7, 6, 1);
+    g.rect(far, 8, top, 4, 3); g.rect(far, 6, top + 3, 4, 3); shoe(g, 4, top + 6, 5, f === 2);
+    g.rect(near, 12, top, 4, 3); g.rect(near, 14, top + 3, 4, 3); shoe(g, 14, top + 6, 6, f !== 2);
   } else {
-    g.rect(far, 9, top, 4, 6); g.rect('B', 8, top + 6, 5, 2);
-    g.rect(near, 11, top, 4, 6); g.rect('b', 11, top + 6, 6, 2); g.rect('B', 11, top + 7, 6, 1);
+    g.rect(far, 9, top, 4, 6); shoe(g, 8, top + 6, 5, false);
+    g.rect(near, 11, top, 4, 6); g.set(14, top + 3, 'P'); shoe(g, 11, top + 6, 6);
   }
 }
 
-function drawTorso(g, face, dy, look) {
-  const y0 = 14 + dy;
+function drawTorso(g, look, face, dy) {
+  const y0 = 14 + dy, top = look.top, dress = look.bottom === 'dress';
   g.rect('c', 6, y0, 12, 9);
   g.rect('k', 6, y0 + 1, 2, 7); g.rect('k', 7, y0, 3, 1);
   g.rect('C', 15, y0 + 1, 3, 8); g.rect('C', 6, y0 + 8, 12, 1);
   g.clear(6, y0); g.clear(17, y0);
-  if (face === 'front') { g.rect('s', 10, y0, 4, 1); g.rect('S', 11, y0 + 1, 2, 1); g.set(9, y0, 'k'); g.set(14, y0, 'k'); }
-  else if (face === 'side') { g.rect('s', 12, y0, 3, 1); g.set(13, y0 + 1, 'S'); }
-  else { g.rect('C', 9, y0, 6, 1); }
-  g.rect('P', 6, y0 + 9, 12, 24 - (y0 + 9)); // колан – запълва дупката при подскачане
-  void look;
+  // гънки на плата
+  if (look.fem && face !== 'side') for (const yy of [y0 + 5, y0 + 6]) { g.clear(6, yy); g.clear(17, yy); g.set(7, yy, 'k'); g.set(16, yy, 'C'); } // талия
+  // колан / пояс + запълване до панталона (за да няма дупка при подскачане)
+  const low = top === 'hoodie' || dress ? 'C' : 'P';
+  g.rect(low, 6, y0 + 9, 12, 24 - (y0 + 9));
+  if (top === 'hoodie') { g.rect('c', 6, y0 + 8, 12, 24 - (y0 + 8) - 1); g.rect('C', 6, 23, 12, 1); g.rect('k', 6, y0 + 8, 2, 24 - (y0 + 8) - 1); g.rect('C', 15, y0 + 8, 3, 24 - (y0 + 8)); }
+  else if (dress) { g.rect('j', 6, 23, 12, 1); g.rect('J', 15, 23, 3, 1); }
+  else { g.rect('O', 6, 23, 12, 1); if (face === 'front') g.rect('Y', 11, 23, 2, 1); else if (face === 'side') g.set(14, 23, 'Y'); }
+
+  if (face === 'back') {
+    if (top === 'hoodie') { g.rect('C', 8, y0, 8, 3); g.rect('c', 9, y0, 6, 2); g.rect('k', 9, y0, 2, 1); }
+    else if (top === 'collar' || top === 'tie' || top === 'blouse') g.rect('K', 9, y0, 6, 1);
+    else g.rect('C', 9, y0, 6, 1);
+    return;
+  }
+  if (face === 'side') {
+    g.rect('s', 12, y0, 3, 1); g.set(13, y0 + 1, 'S');
+    if (top === 'hoodie') { g.rect('C', 7, y0, 4, 2); g.rect('k', 7, y0, 2, 1); g.rect('K', 15, y0 + 1, 1, 3); }
+    else if (top === 'collar' || top === 'tie' || top === 'blouse') { g.set(11, y0, 'K'); g.set(15, y0, 'K'); if (top === 'tie') g.rect('j', 15, y0 + 1, 1, 5); }
+    else if (top === 'scoop') g.set(15, y0 + 1, 'A');
+    return;
+  }
+  // отпред: деколте и детайли според дрехата
+  switch (top) {
+    case 'collar': case 'tie':
+      g.rect('s', 11, y0, 2, 1);
+      g.rect('K', 9, y0, 2, 1); g.set(10, y0 + 1, 'K'); g.rect('K', 13, y0, 2, 1); g.set(13, y0 + 1, 'K');
+      if (top === 'tie') {
+        g.rect('j', 11, y0 + 1, 2, 1); g.rect('j', 11, y0 + 2, 2, 5); g.rect('J', 12, y0 + 2, 1, 5); g.set(11, y0 + 7, 'J');
+      } else {
+        g.rect('C', 12, y0 + 2, 1, 6); g.set(12, y0 + 3, 'K'); g.set(12, y0 + 6, 'K');
+        g.rect('C', 7, y0 + 3, 3, 1); g.set(8, y0 + 2, 't'); // джоб с химикал
+      }
+      break;
+    case 'hoodie':
+      g.rect('C', 8, y0, 8, 1); g.rect('s', 10, y0, 4, 1); g.rect('C', 9, y0 + 1, 6, 1); g.rect('S', 11, y0 + 1, 2, 1);
+      g.rect('K', 10, y0 + 2, 1, 3); g.rect('K', 13, y0 + 2, 1, 2);
+      g.rect('C', 8, y0 + 6, 8, 1); g.set(8, y0 + 7, 'C'); g.set(15, y0 + 7, 'C');
+      break;
+    case 'vneck':
+      g.set(9, y0, 'C'); g.rect('s', 10, y0, 4, 1); g.set(14, y0, 'C');
+      g.set(10, y0 + 1, 'C'); g.set(11, y0 + 1, 's'); g.set(12, y0 + 1, 'S'); g.set(13, y0 + 1, 'C');
+      g.rect('C', 11, y0 + 2, 2, 1);
+      break;
+    case 'blouse':
+      g.rect('K', 8, y0, 2, 1); g.rect('s', 10, y0, 4, 1); g.rect('K', 14, y0, 2, 1);
+      g.rect('K', 9, y0 + 1, 2, 1); g.rect('S', 11, y0 + 1, 2, 1); g.rect('K', 13, y0 + 1, 2, 1);
+      g.rect('j', 11, y0 + 2, 2, 1); g.set(10, y0 + 2, 'J'); g.set(13, y0 + 2, 'J'); // панделка
+      g.set(12, y0 + 4, 'C'); g.set(12, y0 + 6, 'C');
+      break;
+    case 'scoop':
+      g.rect('s', 9, y0, 6, 1); g.rect('s', 10, y0 + 1, 4, 1); g.set(13, y0 + 1, 'S');
+      g.set(10, y0 + 1, 'A'); g.set(13, y0 + 1, 'A'); g.rect('A', 11, y0 + 2, 2, 1); // верижка с висулка
+      g.set(9, y0 + 1, 'C'); g.set(14, y0 + 1, 'C');
+      break;
+    default: // tee, stripe
+      g.rect('s', 10, y0, 4, 1); g.rect('S', 11, y0 + 1, 2, 1); g.set(9, y0, 'C'); g.set(14, y0, 'C');
+      if (top === 'stripe') for (const yy of [y0 + 3, y0 + 6]) { g.rect('K', 7, yy, 8, 1); g.rect('W', 15, yy, 2, 1); }
+  }
 }
 
-function drawHead(g, look, face, headDy, eyes, mouth) {
-  const hy = HEAD_Y + headDy;
+// брада/мустак отпред: 12 колони от x6, редове от hy+6
+const BEARD = [
+  'r..........R',
+  'rr..rrrR..RR',
+  'rrrr....rRRR',
+  '.rrrrrrrRRR.',
+  '..rrrrrRRR..',
+];
+
+function drawHead(g, look, dir, face, headDy, eyes, mouth) {
+  const hy = HEAD_Y + headDy, fem = look.fem;
   g.map(HEAD, HEAD_X, hy);
-  if (face !== 'side') { g.rect('s', 5, hy + 5, 1, 2); g.rect('S', 18, hy + 5, 1, 2); }
+  if (face !== 'side') {
+    g.rect('s', 5, hy + 5, 1, 2); g.rect('S', 18, hy + 5, 1, 2);
+    if (look.earrings) { g.set(5, hy + 7, 'A'); g.set(18, hy + 7, 'A'); }
+  } else if (look.earrings) g.set(9, hy + 8, 'A');
   if (face === 'back') return;
   const ex = face === 'side' ? [12, 16] : [9, 14];
-  const ey = hy + 5 + (look === 'down' ? 1 : 0) - (look === 'up' ? 1 : 0);
+  const ey = hy + 5 + (dir === 'down' ? 1 : 0) - (dir === 'up' ? 1 : 0);
+  // вежди (под косата – бретонът ги покрива)
+  g.rect('R', ex[0] - 1, hy + 3 - (dir === 'up' ? 1 : 0), 2, 1); g.rect('R', ex[1], hy + 3 - (dir === 'up' ? 1 : 0), face === 'side' ? 1 : 2, 1);
   if (eyes === 'closed') {
     g.rect('e', ex[0] - 1, hy + 6, 2, 1); g.rect('e', ex[1], hy + 6, 2, 1);
+    if (fem) { g.set(ex[0] - 1, hy + 7, 'e'); if (face !== 'side') g.set(ex[1] + 1, hy + 7, 'e'); }
   } else {
-    g.rect('e', ex[0], ey, 1, 2); g.rect('e', ex[1], ey, 1, 2);
+    for (const x of ex) { g.set(x, ey, 'e'); g.set(x, ey + 1, 'E'); }
+    if (fem) { g.set(ex[0] - 1, ey, 'e'); if (face !== 'side') g.set(ex[1] + 1, ey, 'e'); } // мигли
+  }
+  if (face === 'front' && fem) { g.set(7, hy + 7, 'u'); g.set(16, hy + 7, 'u'); }
+  if (face === 'side') g.set(18, hy + 6, 's'); // нос
+  // брада / набола брада / мустак
+  if (look.beard) {
+    const k = look.beard === 'stubble' ? 'Z' : null;
+    if (face === 'front') {
+      const rows = look.beard === 'mustache' ? [BEARD[1].replace(/^rr|RR$/g, '..')] : BEARD;
+      const oy = look.beard === 'mustache' ? hy + 7 : hy + 6;
+      for (let j = 0; j < rows.length; j++) for (let i = 0; i < 12; i++) { const ch = rows[j][i]; if (ch !== '.') g.set(6 + i, oy + j, k || ch); }
+    } else {
+      if (look.beard !== 'mustache') { g.rect(k || 'r', 9, hy + 6, 2, 3); g.rect(k || 'r', 10, hy + 9, 7, 1); g.rect(k || 'R', 11, hy + 10, 5, 1); g.rect(k || 'r', 16, hy + 8, 2, 1); }
+      g.rect(k || 'R', 15, hy + 7, 3, 1);
+    }
   }
   const mx = face === 'side' ? 15 : 11;
   if (mouth === 'o') { g.rect('m', mx, hy + 8, 2, 2); }
   else if (mouth === 'flat') g.rect('m', mx, hy + 8, 2, 1);
-  else { g.rect('m', mx, hy + 8, 2, 1); g.set(mx - 1, hy + 7, 'S'); g.set(mx + 2, hy + 7, 'S'); }
-  if (face === 'front' && !look) { g.set(7, hy + 7, 'u'); g.set(16, hy + 7, 'u'); }
-  if (face === 'side') g.set(18, hy + 6, 's'); // нос
+  else { g.rect('m', mx, hy + 8, 2, 1); if (!look.beard) { g.set(mx - 1, hy + 7, 'S'); g.set(mx + 2, hy + 7, 'S'); } }
+}
+
+/** Дълга коса зад тялото и опашка/плитка зад главата (рисува се преди тялото). */
+function drawHairBehind(g, st, face, oy) {
+  if (face === 'back') return;
+  if (st.behind) { g.rect('R', 5, 9 + oy, 14, st.behind); g.rect('r', 5, 9 + oy, 2, st.behind - 1); }
+  if (st.tail === 'pony' || (st.tail === 'braid' && face === 'side')) {
+    if (face === 'side') { g.rect('j', 5, 6 + oy, 1, 2); g.rect('r', 3, 7 + oy, 2, 7); g.rect('R', 3, 9 + oy, 1, 5); g.set(4, 14 + oy, 'R'); g.set(4, 7 + oy, 'y'); }
+    else { g.rect('r', 18, 6 + oy, 2, 7); g.rect('R', 19, 7 + oy, 1, 6); g.set(18, 13 + oy, 'R'); g.set(18, 6 + oy, 'y'); }
+  }
 }
 
 function drawHair(g, look, face, headDy) {
-  const style = HAIR_STYLES[look.hair] || HAIR_STYLES.short;
+  const st = HAIR_STYLES[look.hair] || HAIR_STYLES.short;
   const oy = headDy;
   if (face === 'back') {
-    // тила е изцяло коса
-    g.rect('r', 6, 3 + oy, 12, 10); g.rect('R', 15, 4 + oy, 3, 9); g.rect('y', 7, 3 + oy, 4, 1);
+    // тила е изцяло коса, с кичури
+    g.rect('r', 6, 3 + oy, 12, 10); g.rect('R', 15, 4 + oy, 3, 9); g.rect('y', 7, 3 + oy, 4, 1); g.rect('y', 8, 4 + oy, 2, 1);
+    g.rect('y', 8, 5 + oy, 1, 3); g.rect('R', 13, 7 + oy, 1, 4); g.rect('R', 10, 9 + oy, 1, 3);
     if (look.hair === 'buzz') { g.rect('R', 6, 3 + oy, 12, 10); g.rect('r', 7, 4 + oy, 9, 7); }
-    if (look.hair === 'bun') { g.rect('r', 10, 0 + oy, 4, 3); g.rect('y', 10, 0 + oy, 2, 1); }
+    if (st.bun) { g.rect('r', 9, 0 + oy, 6, 2); g.rect('y', 10, 0 + oy, 2, 1); g.rect('R', 14, 0 + oy, 1, 2); g.rect('j', 9, 2 + oy, 6, 1); }
+    if (st.behind) {
+      const n = st.behind - 3;
+      g.rect('r', 6, 13 + oy, 12, n); g.rect('R', 15, 13 + oy, 3, n); g.rect('y', 7, 13 + oy, 1, n - 1);
+      g.rect('R', 10, 13 + oy, 1, n - 1); g.rect('y', 13, 14 + oy, 1, n - 3);
+      g.rect('R', 7, 13 + oy + n, 10, 1);
+    }
+    if (st.tail) {
+      g.rect('j', 10, 9 + oy, 4, 1);
+      if (st.tail === 'pony') { g.rect('r', 10, 10 + oy, 4, 6); g.rect('R', 13, 10 + oy, 1, 6); g.set(10, 10 + oy, 'y'); g.rect('r', 11, 16 + oy, 2, 2); g.set(12, 17 + oy, 'R'); }
+      else for (let y = 10; y < 20; y++) { g.set(11, y + oy, y % 2 ? 'r' : 'R'); g.set(12, y + oy, y % 2 ? 'R' : 'r'); }
+      if (st.tail === 'braid') { g.rect('j', 11, 20 + oy, 2, 1); g.rect('r', 11, 21 + oy, 2, 1); }
+    }
   }
-  g.map(style, 5, oy);
-  if (face === 'back') g.rect('R', 6, 12 + oy, 12, 1);
+  g.map(st.map, 5, oy);
+  if (face === 'back' && !st.behind) g.rect('R', 6, 12 + oy, 12, 1);
+}
+
+/** Кичури пред раменете / плитка през рамо (само отпред, след тялото). */
+function drawHairFront(g, st, oy) {
+  if (st.strands) {
+    for (let y = 12 + oy; y < st.strands + oy; y++) {
+      const w = st.wave && (y & 1);
+      g.set(5, y, w ? 'y' : 'r'); g.set(6, y, 'r'); g.set(17, y, 'R'); g.set(18, y, w ? 'r' : 'R');
+    }
+    g.clear(6, st.strands + oy - 1); g.set(17, st.strands + oy - 1, 'Q');
+  }
+  if (st.tail === 'braid') {
+    for (let y = 12; y < 21; y++) { g.set(16, y + oy, y % 2 ? 'r' : 'y'); g.set(17, y + oy, y % 2 ? 'R' : 'r'); }
+    g.rect('j', 16, 21 + oy, 2, 1); g.set(16, 22 + oy, 'r'); g.set(17, 22 + oy, 'R');
+  }
 }
 
 function drawAccessories(g, look, face, headDy) {
@@ -350,7 +608,7 @@ function drawAccessories(g, look, face, headDy) {
     const y = 7 + oy;
     if (face === 'side') { g.rect('g', 11, y, 4, 1); g.rect('l', 12, y + 1, 2, 2); g.rect('g', 11, y + 1, 1, 2); g.rect('g', 14, y + 1, 1, 2); g.rect('g', 11, y + 3, 4, 1); g.rect('g', 6, y + 1, 5, 1); }
     else {
-      for (const x0 of [8, 13]) { g.rect('g', x0, y, 4, 1); g.rect('g', x0, y + 3, 4, 1); g.rect('g', x0, y + 1, 1, 2); g.rect('g', x0 + 3, y + 1, 1, 2); g.rect('l', x0 + 1, y + 1, 2, 2); }
+      for (const x0 of [8, 13]) { g.rect('g', x0, y, 4, 1); g.rect('g', x0, y + 3, 4, 1); g.rect('g', x0, y + 1, 1, 2); g.rect('g', x0 + 3, y + 1, 1, 2); g.rect('l', x0 + 1, y + 1, 2, 2); g.set(x0 + 1, y + 1, 'K'); }
       g.set(12, y + 1, 'g');
     }
   }
@@ -411,25 +669,25 @@ function compose(look, poseName, eyesOverride) {
   const dy = pose.dy || 0;
   const headDy = dy + (pose.headDy || 0);
   const eyes = eyesOverride || pose.eyes || 'open';
-  const lookDir = pose.look || null;
+  const dir = pose.look || null;
   const [armL, armR] = pose.arms;
+  const st = HAIR_STYLES[look.hair] || HAIR_STYLES.short;
 
-  // коса отзад (дълга)
-  if (look.hair === 'long' && face !== 'side') { g.rect('R', 5, 9 + dy, 14, 9); g.rect('r', 5, 9 + dy, 2, 8); }
+  drawHairBehind(g, st, face, headDy);
   // ръце зад главата
-  if (isBackArm(armL)) drawArm(g, armL, 'L', 0);
-  if (isBackArm(armR)) drawArm(g, armR, 'R', 0);
-  drawLegs(g, pose, 24);
-  drawTorso(g, face, dy, lookDir);
+  if (isBackArm(armL)) drawArm(g, armL, 'L', 0, look.short);
+  if (isBackArm(armR)) drawArm(g, armR, 'R', 0, look.short);
+  drawLegs(g, pose, 24, look);
+  drawTorso(g, look, face, dy);
   if (look.badge) drawBadge(g, dy, face);
-  drawHead(g, look, face, headDy, eyes, pose.mouth);
+  drawHead(g, look, dir, face, headDy, eyes, pose.mouth);
   drawHair(g, look, face, headDy);
-  if (look.hair === 'long' && face === 'front') { g.rect('r', 5, 12 + headDy, 2, 6); g.rect('R', 17, 12 + headDy, 2, 6); }
+  if (face === 'front') drawHairFront(g, st, headDy);
   drawAccessories(g, look, face, headDy);
   const held = PROPS_IN_HANDS.has(pose.prop); // държи се с двете ръце – ръцете са отгоре
   drawProp(g, held ? pose.prop : null, dy);
-  if (!isBackArm(armL)) drawArm(g, armL, 'L', 0);
-  if (!isBackArm(armR)) drawArm(g, armR, 'R', 0);
+  if (!isBackArm(armL)) drawArm(g, armL, 'L', 0, look.short);
+  if (!isBackArm(armR)) drawArm(g, armR, 'R', 0, look.short);
   if (pose.prop && !held) drawProp(g, pose.prop, 0);
   return g;
 }
@@ -437,8 +695,13 @@ function compose(look, poseName, eyesOverride) {
 // ---------------------------------------------------------------------
 // Външен вид от id (детерминирано)
 // ---------------------------------------------------------------------
+const TOPS_M = ['tee', 'collar', 'tie', 'hoodie', 'vneck', 'stripe'];
+const TOPS_F = ['blouse', 'scoop', 'vneck', 'tee', 'hoodie', 'stripe'];
+const SHORT_OK = new Set(['tee', 'vneck', 'scoop', 'blouse', 'stripe']);
+
 export function lookFor(id, isSub) {
   const r = rng(hashStr(String(id)));
+  const fem = r() < 0.5;
   const accRoll = r();
   const acc = [];
   if (accRoll < 0.26) acc.push('glasses');
@@ -449,13 +712,24 @@ export function lookFor(id, isSub) {
   const hairIdx = r.int(HAIRS.length);
   // ярките бои за коса по-рядко
   const hair = hairIdx >= 6 && r() < 0.6 ? HAIRS[r.int(6)] : HAIRS[hairIdx];
+  const styles = r() < 0.08 ? (fem ? ['buzz', 'side'] : ['pony', 'long']) : (fem ? HAIR_FEMALE : HAIR_MALE);
+  const bottom = fem ? r.pick(['pants', 'skirt', 'skirt', 'dress']) : 'pants';
+  let top = r.pick(fem ? TOPS_F : TOPS_M);
+  if (bottom === 'dress' && (top === 'hoodie' || top === 'stripe')) top = 'scoop';
+  const fh = r();
   return {
-    id,
+    id, fem,
     skin: r.pick(SKINS),
     hairColor: hair,
-    hair: r.pick(HAIR_NAMES),
-    pants: r.pick(PANTS),
+    hair: r.pick(styles),
+    top, bottom,
+    short: SHORT_OK.has(top) && r() < 0.6,
+    pants: bottom === 'pants' ? r.pick(PANTS) : r.pick(SKIRTS),
+    tights: r.pick(TIGHTS),
     shoes: r.pick(SHOES),
+    iris: r.pick(IRIS),
+    beard: fem ? null : fh < 0.14 ? 'beard' : fh < 0.26 ? 'stubble' : fh < 0.34 ? 'mustache' : null,
+    earrings: fem && r() < 0.65,
     accent: r.pick(ACCENTS),
     mug: r.pick(MUGS),
     acc,
@@ -465,15 +739,24 @@ export function lookFor(id, isSub) {
   };
 }
 
-/** Аватарът на оркестраторите: кожа, цвят на косата и очила от потребителя; останалото е фиксирано (същото всеки път). */
+/** Аватарът на оркестраторите: тяло, прическа, кожа, цвят на косата и очила от потребителя; останалото е фиксирано. */
 export function avatarLook(av, id) {
+  const fem = av.body === 1;
+  const styles = AVATAR_HAIR[fem ? 'f' : 'm'];
   return {
-    id,
+    id, fem,
     skin: SKINS[av.skin] || SKINS[1],
     hairColor: HAIRS[av.hair] || HAIRS[1],
-    hair: 'short',
-    pants: PANTS[0],
-    shoes: SHOES[0],
+    hair: styles[av.style] || styles[0],
+    top: fem ? 'blouse' : 'collar',
+    bottom: fem ? 'skirt' : 'pants',
+    short: false,
+    pants: fem ? SKIRTS[0] : PANTS[0],
+    tights: null,
+    shoes: fem ? SHOES[3] : SHOES[0],
+    iris: IRIS[0],
+    beard: null,
+    earrings: fem,
     accent: ACCENTS[1],
     mug: MUGS[2],
     acc: av.glasses ? ['glasses'] : [],
@@ -486,15 +769,21 @@ export function avatarLook(av, id) {
 function paletteFor(look, shirt) {
   const sh = ramp(shirt);
   const ac = ramp(look.accent);
+  const bot = look.bottom === 'dress' ? [sh.hi, sh.mid, sh.lo] : look.pants;
+  const legs = look.tights || [look.skin[1], look.skin[2]];
   return {
     h: look.skin[0], s: look.skin[1], S: look.skin[2],
-    y: look.hairColor[0], r: look.hairColor[1], R: look.hairColor[2],
-    k: sh.hi, c: sh.mid, C: sh.lo,
-    q: look.pants[0], p: look.pants[1], P: look.pants[2],
-    b: look.shoes[0], B: look.shoes[1],
-    e: INK, m: '#7a3440', u: mix(look.skin[1], '#ff7a8a', 0.35),
+    y: look.hairColor[0], r: look.hairColor[1], R: look.hairColor[2], Q: shade(look.hairColor[2], 0.72),
+    Z: mix(look.skin[1], look.hairColor[2], 0.45),
+    k: sh.hi, c: sh.mid, C: sh.lo, K: '#f4f0e6',
+    q: bot[0], p: bot[1], P: bot[2],
+    G: legs[0], F: legs[1],
+    O: '#3a2a26', Y: '#e0c068', A: '#f2d266',
+    b: look.shoes[0], B: look.shoes[1], V: mix(look.shoes[0], '#ffffff', 0.4),
+    e: INK, E: look.iris || INK,
+    m: look.fem ? mix('#d04a64', look.skin[1], 0.2) : '#7a3440', u: mix(look.skin[1], '#ff7a8a', 0.35),
     g: '#22202a', l: '#a8d0f0',
-    H: '#2a2a36', j: look.accent,
+    H: '#2a2a36', j: look.accent, J: shade(look.accent, 0.7),
     n: ac.mid, N: ac.lo, v: ac.hi,
     w: '#f6f3ea', W: '#c9c2b0', i: '#5a6a9a', t: '#2a6ad0',
     M: look.mug, x: shade(look.mug, 0.72),

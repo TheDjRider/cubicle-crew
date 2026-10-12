@@ -97,6 +97,8 @@ const T_BG = {
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'отключено',
     avatar: {
+      body: 'Тяло', male: 'Мъж', female: 'Жена', style: 'Прическа',
+      styles: { m: ['Къса', 'На път', 'Перчем', 'Щръкнала'], f: ['Дълга', 'Опашка', 'Каре', 'Кок'] },
       skin: 'Кожа', hair: 'Цвят на косата', glasses: 'Очила', without: 'Без', with: 'С очила',
       hint: 'Безплатно. Това си ти: първият оркестратор (★) в офиса изглежда така при всяко пускане; останалите са случайни.',
       skins: ['Много светла', 'Светла', 'Средна', 'Мургава', 'Тъмна', 'Много тъмна'],
@@ -172,6 +174,8 @@ const T_EN = {
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'unlocked',
     avatar: {
+      body: 'Body', male: 'Man', female: 'Woman', style: 'Hairstyle',
+      styles: { m: ['Short', 'Side part', 'Quiff', 'Spiky'], f: ['Long', 'Ponytail', 'Bob', 'Bun'] },
       skin: 'Skin', hair: 'Hair colour', glasses: 'Glasses', without: 'None', with: 'Glasses',
       hint: 'Free. This is you: the first orchestrator (★) in the office always looks like this; everyone else is random.',
       skins: ['Very light', 'Light', 'Medium', 'Tan', 'Dark', 'Very dark'],

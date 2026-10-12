@@ -42,7 +42,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. There's a cat too. |
 | 🌇 **Real sky** | The windows follow your local clock: dawn, golden hour, night. Lamps, monitors and the neon sign glow after dark. |
 | 🪙 **Tokens & shop** | Active agents earn tokens. Spend them on ~50 decor items: floors, walls, rugs, sofas, a throne for the lead, a neon sign, an aquarium, an arcade cabinet, a second cat. There are also 14 achievements. |
-| 🧍 **Your avatar** | Pick the skin, hair and glasses of your own character: the first orchestrator in the office. Everyone else stays random. |
+| 🧍 **Your avatar** | Pick a man or a woman, the hairstyle, skin, hair colour and glasses of your own character: the first orchestrator in the office. Everyone else stays random (men and women, different hair, clothes, beards, skirts and dresses). |
 | 🖥️ **Desktop widget** | A frameless, always-on-top Windows app above the tray, with a tray menu, `Ctrl+Alt+P`, notifications and start with Windows. |
 | 🧩 **Moddable art** | Everything is drawn in code, but you can replace it with your own PNG character sheet and tileset without touching any code. |
 
