@@ -129,9 +129,13 @@ export class UI {
     this.canvas.addEventListener('click', (e) => {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
+      if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
   }
+
+  /** Мишката е върху метеостанцията на стената. */
+  onPlaque(m) { const p = this.office.room?.wxPlaque; return !!p && m.x >= p.x && m.x < p.x + p.w && m.y >= p.y && m.y < p.y + p.h; }
 
   focus(id) { this.office.focusId = id; this.card.hidden = !id; }
 
@@ -243,7 +247,11 @@ export class UI {
           (this.tokens != null ? `<div class="dim">${T.tokensHint}</div>` : '');
       }
     }
-    this.canvas.style.cursor = a ? 'pointer' : '';
+    if (!a && !html && this.onPlaque(m)) {
+      const wm = this.office.weatherMsg, c = wm?.city;
+      html = (c ? `<div class="title">${esc(c.name)}</div>` : '') + `<div class="dim">${T.weather.tip}</div>`;
+    }
+    this.canvas.style.cursor = a || this.onPlaque(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
     this.tip.hidden = false;

@@ -1,6 +1,6 @@
 {
   "name": "cubicle-crew",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -37,6 +37,7 @@
       "package.json",
       "server.js",
       "wallet.js",
+      "weather.js",
       "electron/**",
       "public/**",
       "!public/sprites/*.psd"

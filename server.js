@@ -9,6 +9,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { Wallet } from './wallet.js';
+import { Weather } from './weather.js';
 
 const PORT = Number(process.env.PORT) || 4317;
 const ROOT = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
@@ -66,6 +67,34 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  // времето навън: състояние, търсене на град, избор/изключване
+  if (urlPath === '/api/weather' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(weather.msg()));
+    return;
+  }
+  if (urlPath === '/api/weather/search') {
+    const q = new URL(req.url, 'http://x').searchParams;
+    weather.search(q.get('q'), q.get('lang')).then((list) => ({ ok: true, list }), () => ({ ok: false, error: 'offline', list: [] })).then((r) => {
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(r));
+    });
+    return;
+  }
+  if (urlPath === '/api/weather') {
+    const origin = req.headers.origin;
+    if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
+    let body = '';
+    req.on('data', (d) => { body += d; if (body.length > 4096) req.destroy(); });
+    req.on('end', async () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch { /* празно */ }
+      const r = await weather.set(data);
+      res.writeHead(r.ok ? 200 : 400, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(r));
+    });
+    return;
+  }
   const file = path.normalize(path.join(PUBLIC, urlPath === '/' ? 'index.html' : urlPath));
   if (file !== PUBLIC && !file.startsWith(PUBLIC + path.sep)) { res.writeHead(403).end(); return; }
   fs.readFile(file, (err, data) => {
@@ -82,10 +111,12 @@ const broadcast = (evt) => {
   for (const c of wss.clients) if (c.readyState === 1) c.send(msg);
 };
 const wallet = new Wallet(broadcast, (m) => console.log(m));
+const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
 // нов клиент веднага вижда портфейла и живите сесии
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify(wallet.msg(0, 'sync', null, null, true)));
   ws.send(JSON.stringify({ type: 'sessions', list: live }));
+  ws.send(JSON.stringify(weather.msg()));
 });
 
 // ---------- живи сесии ----------
@@ -336,6 +367,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   scanSessions();
   wallet.port = actual;
   wallet.start();
+  weather.start();
   process.once('exit', () => wallet.close());
   console.log(`Cubicle Crew: http://localhost:${actual}   (демо без Claude: /?demo   витрина: /?demo=showcase)`);
   console.log(`Следя: ${ROOT}`);

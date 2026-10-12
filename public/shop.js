@@ -1,8 +1,9 @@
 // Магазин: DOM панел (острия текст, кирилица) с раздели; посочен предмет се вижда веднага в офиса (преглед),
 // покупките минават през сървъра (или демо портфейла) – правилата са в catalog.js.
-import { T, itemName, LANG } from './config.js';
+import { T, itemName, LANG, PARAMS } from './config.js';
+import { wxFrom } from './weather.js';
 import { ITEMS, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf } from './catalog.js';
-import { CharacterSprites, avatarLook } from './sprites.js';
+import { CharacterSprites, avatarLook, AVATAR_TOPS, AVATAR_BOTTOMS, DRESS_TOPS } from './sprites.js';
 import { SKINS, HAIRS } from './palette.js';
 import { thumb } from './environment.js';
 import { Cat } from './characters.js';
@@ -48,7 +49,12 @@ export class Shop {
       else if (e.key === 'Escape' && !this.root.hidden) this.close();
     });
     window.pixelOffice?.onOpenShop?.(() => this.open());
+    window.pixelOffice?.onOpenWeather?.(() => this.open('weather'));
+    this.weather = null; // последното {type:'weather'} от сървъра
   }
+
+  /** Ново време от сървъра (WS или след POST). */
+  setWeather(m) { this.weather = m; if (!this.root.hidden && this.tab === 'weather') { this.key = ''; this.render(); } }
 
   build() {
     const r = this.root;
@@ -73,7 +79,8 @@ export class Shop {
     this.body.addEventListener('click', (e) => this.click(e.target.closest('button')));
   }
 
-  open() {
+  open(tab) {
+    if (tab) this.tab = tab;
     if (this.tokens.tokens == null) return;
     this.root.hidden = false; this.key = ''; this.render();
     window.pixelOffice?.shop?.(true);
@@ -95,13 +102,14 @@ export class Shop {
     // пълно прерисуване само ако нещо видимо се е променило (иначе посочването "мига")
     const afford = ITEMS.filter((it) => tab.groups.includes(it.group) && !owns(s, it.id) && it.price <= t.tokens).map((it) => it.id).join();
     const key = [this.tab, JSON.stringify(s.owned), JSON.stringify(s.equipped), JSON.stringify(s.achievements), afford,
-      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', JSON.stringify(s.avatar)].join('|');
+      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', JSON.stringify(s.avatar), tab.id === 'weather' ? JSON.stringify(this.weather) : ''].join('|');
     if (key === this.key) return;
     this.key = key;
     const scroll = this.body.scrollTop;
     this.body.innerHTML = '';
     if (tab.id === 'trophies') this.renderTrophies();
     else if (tab.id === 'avatar') this.renderAvatar();
+    else if (tab.id === 'weather') this.renderWeather();
     else if (tab.merge) this.renderGroup(tab.groups, T.shop.tabs[tab.id]); // по един предмет на група – обща решетка
     else for (const g of tab.groups) this.renderGroup([g], T.shop.groups[g]);
     this.body.scrollTop = scroll;
@@ -161,7 +169,8 @@ export class Shop {
 
   /** Аватарът: голям преглед + тяло, прическа, кожа, коса, очила. Всеки избор се записва веднага (безплатно). */
   renderAvatar() {
-    const av = { body: 0, style: 0, ...avatarOf(this.tokens.save) }, A = T.shop.avatar;
+    const av = { body: 0, style: 0, top: 0, bottom: 0, ...avatarOf(this.tokens.save) }, A = T.shop.avatar;
+    const gk = av.body === 1 ? 'f' : 'm', dress = AVATAR_BOTTOMS[gk][av.bottom] === 'dress';
     const sec = el('section', 'avatar', this.body);
     const pv = el('div', 'pv', sec);
     for (const pose of ['stand', 'couchSit']) {
@@ -184,11 +193,60 @@ export class Shop {
       }
     };
     row(A.body, [[A.male, { body: 0 }, null, av.body !== 1], [A.female, { body: 1 }, null, av.body === 1]]);
-    row(A.style, A.styles[av.body === 1 ? 'f' : 'm'].map((s, i) => [s, { style: i }, null, av.style === i]));
+    row(A.style, A.styles[gk].map((s, i) => [s, { style: i }, null, av.style === i]));
+    // горнище; с рокля се показват само съвместимите (avatarLook пак пази)
+    const tops = A.tops[gk].map((s, i) => [s, { top: i }, null, av.top === i]).filter((_, i) => !dress || DRESS_TOPS.has(AVATAR_TOPS[gk][i]));
+    row(A.top, tops);
+    if (gk === 'f') row(A.bottom, A.bottoms.map((s, i) => {
+      // към рокля с несъвместимо горнище -> блуза
+      const patch = AVATAR_BOTTOMS.f[i] === 'dress' && !DRESS_TOPS.has(AVATAR_TOPS.f[av.top] || 'blouse') ? { bottom: i, top: 0 } : { bottom: i };
+      return [s, patch, null, av.bottom === i];
+    }));
     row(A.skin, SKINS.map((s, i) => [A.skins[i] || '', { skin: i }, s[1], av.skin === i]));
     row(A.hair, HAIRS.map((h, i) => [A.hairs[i] || '', { hair: i }, h[1], av.hair === i]));
     row(A.glasses, [[A.without, { glasses: false }, null, !av.glasses], [A.with, { glasses: true }, null, !!av.glasses]]);
     el('p', 'hint', opts, A.hint);
+  }
+
+  /** Времето навън: избран град + търсене; текстът от интернет се слага само като textContent. */
+  renderWeather() {
+    const W = T.weather, m = this.weather;
+    const sec = el('section', 'weather', this.body);
+    if (PARAMS.demo) { el('p', 'hint', sec).textContent = W.demo; return; }
+    el('h3', null, sec, W.city);
+    const cur = el('p', 'cur', sec);
+    if (m?.city) {
+      const c = m.city, wx = wxFrom(m.now);
+      el('b', null, cur).textContent = [c.name, c.admin1 && c.admin1 !== c.name ? c.admin1 : '', c.country].filter(Boolean).join(', ');
+      const st = !m.enabled ? W.off : wx ? [W.kinds[wx.kind], wx.temp != null ? `${Math.round(wx.temp)}°` : '', wx.pop != null ? W.pop(Math.round(wx.pop)) : ''].filter(Boolean).join(' · ') : W.loading;
+      cur.appendChild(document.createTextNode(' · ' + st));
+    } else cur.textContent = W.none;
+    const form = el('form', 'find', sec);
+    const inp = el('input', null, form); inp.placeholder = W.placeholder; inp.maxLength = 60; inp.value = this.wxQuery || '';
+    el('button', null, form, W.search).type = 'submit';
+    const list = el('div', 'sw', sec);
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const q = inp.value.trim(); this.wxQuery = q;
+      if (q.length < 2) return;
+      list.textContent = W.searching;
+      let r = null;
+      try { r = await (await fetch(`api/weather/search?q=${encodeURIComponent(q)}&lang=${LANG}`)).json(); } catch { /* */ }
+      list.textContent = '';
+      if (!r || !r.ok) { list.textContent = W.offline; return; }
+      if (!r.list.length) { list.textContent = W.nothing; return; }
+      for (const c of r.list) {
+        const b = el('button', null, list);
+        b.textContent = [c.name, c.admin1 && c.admin1 !== c.name ? c.admin1 : '', c.country].filter(Boolean).join(', ');
+        b.dataset.wx = JSON.stringify({ city: c });
+      }
+    };
+    if (m?.city) {
+      const act = el('div', 'sw', sec);
+      el('button', null, act, m.enabled ? W.disable : W.enable).dataset.wx = JSON.stringify({ enabled: !m.enabled });
+      el('button', null, act, W.remove).dataset.wx = JSON.stringify({ city: null });
+    }
+    el('p', 'hint', sec).textContent = W.hint;
   }
 
   thumb(it) {
@@ -219,6 +277,16 @@ export class Shop {
     if (!b || b.disabled) return;
     const be = this.tokens.backend;
     let r = null;
+    if (b.dataset.wx) {
+      b.disabled = true;
+      try {
+        const res = await fetch('api/weather', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: b.dataset.wx });
+        const j = await res.json();
+        if (j.ok) { this.wxQuery = ''; this.setWeather(j); this.onWeather?.(j); } else this.flash(T.weather.nothing);
+      } catch { this.flash(T.shop.errors.offline); }
+      b.disabled = false;
+      return;
+    }
     if (b.dataset.av) { if (!b.classList.contains('on') && be.avatar) r = await be.avatar(JSON.parse(b.dataset.av)); }
     else if (b.dataset.buy) r = await be.buy(b.dataset.buy);
     else if (b.dataset.remove) r = await be.equip(b.dataset.slot, null);

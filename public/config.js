@@ -81,7 +81,7 @@ const T_BG = {
   shop: {
     title: 'Магазин',
     open: 'Магазин (B)',
-    tabs: { walls: 'Стени', floor: 'Под и килими', furniture: 'Мебели', decor: 'Декор', pets: 'Любимци', special: 'Специални', avatar: 'Аватар', trophies: 'Постижения' },
+    tabs: { walls: 'Стени', floor: 'Под и килими', furniture: 'Мебели', decor: 'Декор', pets: 'Любимци', special: 'Специални', avatar: 'Аватар', weather: 'Времето', trophies: 'Постижения' },
     groups: {
       wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под екипа', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
@@ -99,11 +99,23 @@ const T_BG = {
     avatar: {
       body: 'Тяло', male: 'Мъж', female: 'Жена', style: 'Прическа',
       styles: { m: ['Къса', 'На път', 'Перчем', 'Щръкнала'], f: ['Дълга', 'Опашка', 'Каре', 'Кок'] },
+      top: 'Горнище', bottom: 'Долнище',
+      tops: { m: ['Риза с яка', 'Тениска', 'Вратовръзка', 'Суитшърт', 'V-деколте', 'Райе'], f: ['Блуза', 'Деколте с верижка', 'V-деколте', 'Тениска', 'Суитшърт', 'Райе'] },
+      bottoms: ['Пола', 'Панталон', 'Рокля'],
       skin: 'Кожа', hair: 'Цвят на косата', glasses: 'Очила', without: 'Без', with: 'С очила',
       hint: 'Безплатно. Това си ти: първият оркестратор (★) в офиса изглежда така при всяко пускане; останалите са случайни.',
       skins: ['Много светла', 'Светла', 'Средна', 'Мургава', 'Тъмна', 'Много тъмна'],
       hairs: ['Черна', 'Кестенява', 'Светлокестенява', 'Руса', 'Рижа', 'Сива', 'Синя', 'Розова', 'Зелена', 'Лилава'],
     },
+  },
+  weather: {
+    city: 'Град', none: 'Не е избран – навън винаги е ясно, без заявки към интернет.',
+    search: 'Търси', placeholder: 'напр. София', searching: 'Търся…', nothing: 'Няма такъв град.', offline: 'Няма връзка с интернет.',
+    pick: 'Избери:', loading: 'взимам времето…', off: 'изключено', enable: 'Включи', disable: 'Изключи', remove: 'Премахни града',
+    pop: (n) => `валежи ${n}%`, tip: 'Времето навън – клик за настройки',
+    kinds: { clear: 'ясно', cloudy: 'облачно', overcast: 'мрачно', fog: 'мъгла', drizzle: 'ръми', rain: 'дъжд', snow: 'сняг', storm: 'гръмотевици' },
+    hint: 'Времето идва от Open-Meteo (open-meteo.com) на всеки 20 минути; изпращат се само координатите на града. Без избран град приложението не прави нито една заявка навън.',
+    demo: 'В демото времето се задава с адреса: ?weather=clear, cloudy, overcast, fog, drizzle, rain, snow или storm.',
   },
   achievements: {
     'tokens.100': ['Първите 100', 'Спечели 100 токена'],
@@ -158,7 +170,7 @@ const T_EN = {
   shop: {
     title: 'Shop',
     open: 'Shop (B)',
-    tabs: { walls: 'Walls', floor: 'Floor & rugs', furniture: 'Furniture', decor: 'Decor', pets: 'Pets', special: 'Special', avatar: 'Avatar', trophies: 'Achievements' },
+    tabs: { walls: 'Walls', floor: 'Floor & rugs', furniture: 'Furniture', decor: 'Decor', pets: 'Pets', special: 'Special', avatar: 'Avatar', weather: 'Weather', trophies: 'Achievements' },
     groups: {
       wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Team rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',
@@ -176,11 +188,23 @@ const T_EN = {
     avatar: {
       body: 'Body', male: 'Man', female: 'Woman', style: 'Hairstyle',
       styles: { m: ['Short', 'Side part', 'Quiff', 'Spiky'], f: ['Long', 'Ponytail', 'Bob', 'Bun'] },
+      top: 'Top', bottom: 'Bottom',
+      tops: { m: ['Collar shirt', 'T-shirt', 'Tie', 'Hoodie', 'V-neck', 'Stripes'], f: ['Blouse', 'Scoop neck', 'V-neck', 'T-shirt', 'Hoodie', 'Stripes'] },
+      bottoms: ['Skirt', 'Trousers', 'Dress'],
       skin: 'Skin', hair: 'Hair colour', glasses: 'Glasses', without: 'None', with: 'Glasses',
       hint: 'Free. This is you: the first orchestrator (★) in the office always looks like this; everyone else is random.',
       skins: ['Very light', 'Light', 'Medium', 'Tan', 'Dark', 'Very dark'],
       hairs: ['Black', 'Brown', 'Light brown', 'Blonde', 'Ginger', 'Grey', 'Blue', 'Pink', 'Green', 'Purple'],
     },
+  },
+  weather: {
+    city: 'City', none: 'Not set – it is always clear outside and nothing is sent to the internet.',
+    search: 'Search', placeholder: 'e.g. London', searching: 'Searching…', nothing: 'No such city.', offline: 'No internet connection.',
+    pick: 'Pick one:', loading: 'getting the weather…', off: 'off', enable: 'Turn on', disable: 'Turn off', remove: 'Remove city',
+    pop: (n) => `${n}% chance of rain`, tip: 'Weather outside – click for settings',
+    kinds: { clear: 'clear', cloudy: 'cloudy', overcast: 'overcast', fog: 'fog', drizzle: 'drizzle', rain: 'rain', snow: 'snow', storm: 'thunderstorm' },
+    hint: 'Weather comes from Open-Meteo (open-meteo.com) every 20 minutes; only the city coordinates are sent. With no city set, the app makes no requests to the internet at all.',
+    demo: 'In the demo, set the weather in the address: ?weather=clear, cloudy, overcast, fog, drizzle, rain, snow or storm.',
   },
   achievements: {
     'tokens.100': ['First 100', 'Earn 100 tokens'],
@@ -252,5 +276,6 @@ export const PARAMS = {
   seed: Q.has('seed') ? Number(Q.get('seed')) : null,
   desktop: Q.has('desktop'),   // отворено от Electron приложението
   wait: Q.has('wait'),         // сутрешен екран, докато няма сесия (Electron при старт с Windows)
+  weather: Q.get('weather'),   // ?weather=clear|cloudy|overcast|fog|drizzle|rain|snow|storm — фалшиво време (за тестове/демото)
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;

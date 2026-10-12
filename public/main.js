@@ -5,6 +5,7 @@ import { Particles } from './particles.js';
 import { Office } from './office.js';
 import { UI } from './ui.js';
 import { timeOfDay, parseFakeTime, TILES } from './environment.js';
+import { applyWeather, wxFrom, fakeNow } from './weather.js';
 import { setCharacterSheet, buildAtlas, lookFor } from './sprites.js';
 import { startDemo } from './demo.js';
 import { Tokens, demoWallet } from './tokens.js';
@@ -22,6 +23,7 @@ if (PARAMS.seed != null) office.seed = PARAMS.seed;
 const tokens = new Tokens(office, ui);
 const shop = new Shop(tokens, ui);
 ui.onShop = () => shop.open();
+ui.onWeather = () => shop.open('weather');
 if (PARAMS.debug) window.__shop = shop;
 
 model.on('join', (a) => office.join(a, performance.now()));
@@ -62,6 +64,13 @@ resize();
 // ---------------------------------------------------------------- време (истинско или ?time=)
 const fake = parseFakeTime(PARAMS.time);
 const t0 = Date.now();
+// ---------------------------------------------------------------- времето навън (сървър или ?weather=)
+let weatherMsg = null;
+const fakeWx = PARAMS.weather ? fakeNow(PARAMS.weather) : null;
+const currentWx = () => wxFrom(fakeWx || weatherMsg?.now);
+function onWeather(m) { weatherMsg = m; office.weatherMsg = m; }
+shop.onWeather = onWeather;
+
 function nowDate() {
   if (!fake) return new Date();
   const d = new Date();
@@ -92,8 +101,8 @@ function frame(now) {
   if (morning?.active && model.agents.size) morning.wake();
   if (shown) {
     const date = nowDate();
-    if (morning?.active) morning.render(now, date);
-    else office.render(ctx, now, timeOfDay(date), date);
+    if (morning?.active) morning.render(now, date, currentWx());
+    else office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date);
   }
   ui.sync(now);
   schedule();
@@ -149,6 +158,7 @@ if (PARAMS.demo) {
       try { e = JSON.parse(m.data); } catch { return; /* лош ред */ }
       if (e.type === 'wallet') tokens.onWallet(e);
       else if (e.type === 'sessions') model.sessions(e.list);
+      else if (e.type === 'weather') { onWeather(e); shop.setWeather(e); }
       else ingest(e);
     };
     ws.onclose = () => { ui.setConnection('down'); setTimeout(connect, retry); retry = Math.min(8000, retry * 1.5); };

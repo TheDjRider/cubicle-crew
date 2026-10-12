@@ -61,11 +61,11 @@ function visible(b) {
 // език: изричен избор от менюто, иначе езикът на Windows (български -> bg, всичко друго -> en)
 const lang = () => settings.lang || (/^bg/i.test(app.getLocale() || '') ? 'bg' : 'en');
 const L = {
-  bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
+  bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', weather: 'Времето навън…', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
     autoSize: 'Разширявай при втори екип', demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', lang: 'Език / Language', resetSize: 'Нулирай размера',
     resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход',
     tip: (a, s, w) => `агенти ${a} · под-агенти ${s}${w ? ` · чакат те ${w}` : ''}`, one: (n) => `${n} чака теб`, many: (k) => `${k} агента чакат теб` },
-  en: { hide: 'Hide', show: 'Show', shop: 'Shop', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
+  en: { hide: 'Hide', show: 'Show', shop: 'Shop', weather: 'Weather outside…', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
     autoSize: 'Widen for a second team', demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', lang: 'Language / Език', resetSize: 'Reset size',
     resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit',
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
@@ -208,6 +208,7 @@ function menuTemplate() {
   return [
     { label: win?.isVisible() ? t.hide : t.show, accelerator: SHORTCUT, click: () => toggleWindow() },
     { label: t.shop, click: () => { wake(); toggleWindow(true); win.focus(); win.webContents.send('open-shop'); } },
+    { label: t.weather, click: () => { wake(); toggleWindow(true); win.focus(); win.webContents.send('open-weather'); } },
     { type: 'separator' },
     { label: t.onTop, type: 'checkbox', checked: settings.onTop, click: (m) => { settings.onTop = m.checked; applyOnTop(); saveSettings(); } },
     { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => { settings.through = m.checked; applyThrough(); saveSettings(); } },

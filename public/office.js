@@ -2,6 +2,9 @@
 import { CFG, STATES } from './config.js';
 import { computeLayout, POD } from './layout.js';
 import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, glow, drawAquariumFish, drawArcadeScreen } from './environment.js';
+import { flashAt } from './weather.js';
+// без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
+const NO_WX = { kind: 'cloudy', temp: null, pop: null };
 import { resolveDecor, AVATAR } from './catalog.js';
 import { drawScreen } from './screens.js';
 import { Actor, Cat, DART_CYCLE, DART_RELEASE } from './characters.js';
@@ -580,7 +583,7 @@ export class Office {
     drawSky(ctx, room, tod, now);
     ctx.drawImage(room.bg, 0, 0);
     const st = this.model.stats();
-    drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: this.tokens ?? null }, now);
+    drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
     drawShafts(ctx, room, tod, now);
@@ -623,6 +626,9 @@ export class Office {
     this.drawDarts(ctx, now, 'air');
     // 5) нощен/вечерен оттенък
     drawTint(ctx, room, tod);
+    // светкавица при буря – цялата стая проблясва за миг
+    const fl = flashAt(tod.wx, now);
+    if (fl) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(170,180,230,${0.09 * fl})`; ctx.fillRect(0, 0, room.W, room.H); ctx.restore(); }
     // 6) светлини
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';

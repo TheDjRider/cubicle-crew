@@ -36,19 +36,23 @@ export const TABS = [
   { id: 'pets', groups: ['cat', 'cat2'] },
   { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade'], merge: true },
   { id: 'avatar', groups: [] },
+  { id: 'weather', groups: [] },
   { id: 'trophies', groups: [] },
 ];
 
 // Аватар на оркестраторите (★) – безплатен, един и същ всеки път. Индекси в SKINS / HAIRS от palette.js;
-// body: 0 = мъж, 1 = жена; style: индекс в AVATAR_HAIR[m|f] от sprites.js (по 4 прически). Старите записи нямат body/style -> 0.
+// body: 0 = мъж, 1 = жена; style/top/bottom: индекси в AVATAR_HAIR/AVATAR_TOPS/AVATAR_BOTTOMS[m|f] от sprites.js.
+// Старите записи нямат тези полета -> 0. Мъжът винаги е с панталон (avatarLook пренебрегва bottom).
 // Под-агентите остават случайни (по id).
-export const AVATAR = { skins: 6, hairs: 10, styles: 4, def: { skin: 1, hair: 1, glasses: false, body: 0, style: 0 } };
+export const AVATAR = { skins: 6, hairs: 10, styles: 4, tops: 6, bottoms: 3, def: { skin: 1, hair: 1, glasses: false, body: 0, style: 0, top: 0, bottom: 0 } };
 export const avatarOf = (save) => save?.avatar || AVATAR.def;
 export function setAvatar(save, a) {
   const skin = Number(a?.skin), hair = Number(a?.hair), body = Number(a?.body ?? 0), style = Number(a?.style ?? 0);
+  const top = Number(a?.top ?? 0), bottom = Number(a?.bottom ?? 0);
+  const idx = (v, n) => Number.isInteger(v) && v >= 0 && v < n;
   if (!Number.isInteger(skin) || skin < 0 || skin >= AVATAR.skins || !Number.isInteger(hair) || hair < 0 || hair >= AVATAR.hairs) return { ok: false, error: 'avatar' };
-  if ((body !== 0 && body !== 1) || !Number.isInteger(style) || style < 0 || style >= AVATAR.styles) return { ok: false, error: 'avatar' };
-  save.avatar = { skin, hair, glasses: !!a.glasses, body, style };
+  if ((body !== 0 && body !== 1) || !idx(style, AVATAR.styles) || !idx(top, AVATAR.tops) || !idx(bottom, AVATAR.bottoms)) return { ok: false, error: 'avatar' };
+  save.avatar = { skin, hair, glasses: !!a.glasses, body, style, top, bottom: body === 1 ? bottom : 0 };
   return { ok: true };
 }
 

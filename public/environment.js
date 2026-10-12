@@ -8,6 +8,7 @@ import { POD } from './layout.js';
 import { drawText, textWidth, compactNum } from './pixelfont.js';
 import { drawCoin } from './tokens.js';
 import { SLOTS, resolveDecor } from './catalog.js';
+import { drawWindowWeather, drawWeatherPlaque, plaqueWidth } from './weather.js';
 
 // =====================================================================
 // Обзавеждане (decor): предметите от catalog.js -> цветове/стилове за рисуване
@@ -500,10 +501,18 @@ function drawWindowFrame(ctx, x, y, w, h) {
   ctx.clearRect(x + 1, y + 1, w - 2, h - 2);            // стъклото е прозрачно – небето се рисува отдолу
   const mx = x + Math.floor(w / 2);
   R(ctx, FD, mx - 1, y + 1, 2, h - 2); R(ctx, F, mx - 1, y + 1, 1, h - 2);
-  R(ctx, FD, x + 1, y + Math.floor(h / 2) - 1, w - 2, 2); R(ctx, F, x + 1, y + Math.floor(h / 2) - 1, w - 2, 1);
-  // перваз
-  R(ctx, FD, x - 4, y + h + 1, w + 8, 3); R(ctx, F, x - 4, y + h + 1, w + 8, 1);
-  R(ctx, 'rgba(20,14,30,0.35)', x - 3, y + h + 4, w + 6, 2);
+  if (h >= 36) {
+    // френски прозорец: две крила до пода, по две летви, дръжки и праг
+    for (const by of [Math.round(h * 0.34), Math.round(h * 0.67)]) { R(ctx, FD, x + 1, y + by, w - 2, 2); R(ctx, F, x + 1, y + by, w - 2, 1); }
+    const hy = y + Math.round(h * 0.5);
+    R(ctx, '#d8c070', mx - 3, hy, 1, 3); R(ctx, '#d8c070', mx + 2, hy, 1, 3); R(ctx, '#8a7440', mx - 3, hy + 2, 1, 1); R(ctx, '#8a7440', mx + 2, hy + 2, 1, 1);
+    R(ctx, FD, x - 3, y + h + 1, w + 6, 2); R(ctx, F, x - 3, y + h + 1, w + 6, 1);
+  } else {
+    R(ctx, FD, x + 1, y + Math.floor(h / 2) - 1, w - 2, 2); R(ctx, F, x + 1, y + Math.floor(h / 2) - 1, w - 2, 1);
+    // перваз
+    R(ctx, FD, x - 4, y + h + 1, w + 8, 3); R(ctx, F, x - 4, y + h + 1, w + 8, 1);
+    R(ctx, 'rgba(20,14,30,0.35)', x - 3, y + h + 4, w + 6, 2);
+  }
   // отблясък по стъклото
   ctx.fillStyle = 'rgba(255,255,255,0.10)';
   for (let i = 0; i < 6; i++) ctx.fillRect(x + 3 + i, y + 9 - i, 1, 1);
@@ -768,12 +777,12 @@ function drawNeon(g, x, y, c) {
 }
 
 /** Височини на силуета зад прозорците (град, планини; при море – не се ползва). */
-function skylineFor(view, n) {
+function skylineFor(view, n, k = 1) {
   const out = [];
   for (let i = 0; i < n; i++) {
-    if (view === 'mountains') out.push(Math.round(7 + 4 * Math.sin(i / 23) + 3 * Math.sin(i / 9 + 1.3) + 1.5 * Math.sin(i / 4.1))); // два реда върхове
+    if (view === 'mountains') out.push(Math.round(k * (7 + 4 * Math.sin(i / 23) + 3 * Math.sin(i / 9 + 1.3) + 1.5 * Math.sin(i / 4.1)))); // два реда върхове
     else if (view === 'sea') out.push(4);
-    else out.push(3 + (hashStr('b' + Math.floor(i / 5)) % 6));
+    else out.push(Math.round(k * (3 + (hashStr('b' + Math.floor(i / 5)) % 6))));
   }
   return out;
 }
@@ -866,14 +875,14 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   }
   const windows = [];
   const posters = [];
-  const WW = 34, WHH = 26, GAP = 16;
+  const WW = 34, WY = 5, WHH = WH - 11, GAP = 16; // френски прозорци: от тавана до прага над первазa на пода
   const span = ax1 - 6 - cursor - (lo.darts.w + 10); // място за дъската за дартс
   const nWin = Math.max(1, Math.floor((span + GAP) / (WW + GAP)));
   const free = span - nWin * WW;
   const gap = nWin > 1 ? free / (nWin - 1) : 0;
   for (let i = 0; i < nWin; i++) {
     const x = Math.round(nWin > 1 ? cursor + i * (WW + gap) : cursor + free / 2);
-    windows.push({ x, y: 7, w: WW, h: WHH });
+    windows.push({ x, y: WY, w: WW, h: WHH });
     if (i < nWin - 1 && gap >= 22 && i % 2 === 0) posters.push({ x: Math.round(x + WW + gap / 2 - 8), y: 12, kind: decor.posters.kinds[posters.length % 3] });
   }
   for (const w of windows) drawWindowFrame(g, w.x, w.y, w.w, w.h);
@@ -940,13 +949,15 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   const stars = [];
   for (const w of windows) for (let i = 0; i < 7; i++) stars.push({ x: w.x + 2 + r.int(w.w - 4), y: w.y + 2 + r.int(w.h - 12), ph: r() * 6.28, big: r() < 0.15 });
   const clouds = [];
-  for (let i = 0; i < Math.max(3, windows.length * 1.5); i++) clouds.push({ x: r() * (skyX1 - skyX0 + 60), y: 9 + r.int(10), w: 8 + r.int(10), v: 0.6 + r() * 1.2 });
+  // облаци: rank решава кои се виждат – при ясно ~1/3, при облачно всички (вж. drawSky)
+  for (let i = 0; i < Math.max(8, windows.length * 4.5); i++) clouds.push({ x: r() * (skyX1 - skyX0 + 60), y: WY + 2 + r.int(Math.round(WHH * 0.5)), w: 8 + r.int(12), v: 0.6 + r() * 1.2, rank: r() });
   const view = decor.window.style;
-  const skyline = skylineFor(view, skyX1 - skyX0);
+  const k = WHH / 26;
+  const skyline = skylineFor(view, skyX1 - skyX0, k);
 
   return {
     W, H, bg, objects, windows, posters, board, clock, door: L.door, layout: L,
-    sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view },
+    sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
     lampGlow, aquarium, arcade, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 17, c: decor.neon.c } : null,
     doorOpen: 0,
   };
@@ -957,6 +968,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
 // =====================================================================
 export function drawSky(ctx, room, tod, t) {
   const { windows, sky } = room;
+  const wx = tod.wx || null, cover = tod.cover || 0;
   if (!windows.length) return;
   const h = windows[0].h;
   const rows = [];
@@ -967,23 +979,23 @@ export function drawSky(ctx, room, tod, t) {
     ctx.beginPath(); ctx.rect(w.x, w.y, w.w, w.h); ctx.clip();
     for (let y = 0; y < h; y++) R(ctx, rows[y], w.x, w.y + y, w.w, 1);
     // звезди
-    if (tod.night > 0.25) {
+    if (tod.night > 0.25 && cover < 0.9) {
       for (const s of sky.stars) {
         if (s.x < w.x || s.x >= w.x + w.w) continue;
-        const a = (tod.night - 0.25) * 1.3 * (0.55 + 0.45 * Math.sin(t / 700 + s.ph));
+        const a = (tod.night - 0.25) * 1.3 * (0.55 + 0.45 * Math.sin(t / 700 + s.ph)) * (1 - cover);
         ctx.fillStyle = rgba('#f4f0ff', Math.min(1, a));
         ctx.fillRect(s.x, s.y, 1, 1);
         if (s.big && a > 0.6) { ctx.fillStyle = rgba('#f4f0ff', a * 0.4); ctx.fillRect(s.x - 1, s.y, 3, 1); ctx.fillRect(s.x, s.y - 1, 1, 3); }
       }
     }
     // луна / слънце
-    if (tod.moon != null && tod.night > 0.3) {
+    if (tod.moon != null && tod.night > 0.3 && cover < 0.75) {
       const mx = Math.round(sky.x0 + tod.moon * span), my = Math.round(w.y + 5 + Math.abs(tod.moon - 0.5) * 10);
       ctx.fillStyle = rgba('#f0ecd8', 0.15); ctx.fillRect(mx - 4, my - 4, 9, 9);
       R(ctx, '#f0ecd8', mx - 2, my - 3, 5, 7); R(ctx, '#f0ecd8', mx - 3, my - 2, 7, 5);
       R(ctx, '#c8c4b0', mx, my - 1, 2, 2); R(ctx, '#c8c4b0', mx - 2, my + 1, 1, 1);
     }
-    if (tod.sun != null && tod.daylight > 0.15) {
+    if (tod.sun != null && tod.daylight > 0.15 && cover < 0.7) {
       const sx = Math.round(sky.x0 + tod.sun * span);
       const sy = Math.round(w.y + 3 + Math.pow(Math.abs(tod.sun - 0.5) * 2, 2) * 15);
       const sc = mix('#fff6c0', '#ffa860', tod.warm);
@@ -991,40 +1003,48 @@ export function drawSky(ctx, room, tod, t) {
       R(ctx, sc, sx - 2, sy - 3, 5, 7); R(ctx, sc, sx - 3, sy - 2, 7, 5);
     }
     // облаци
-    const ca = 0.25 + tod.daylight * 0.7;
-    const cc = mix(mix('#f8f8ff', '#ffb8a0', tod.warm * 0.8), '#3a3e66', tod.night * 0.8);
+    const ca = Math.min(1, 0.25 + tod.daylight * 0.7 + cover * 0.25);
+    let cc = mix(mix('#f8f8ff', '#ffb8a0', tod.warm * 0.8), '#3a3e66', tod.night * 0.8);
+    if (cover > 0.5) cc = mix(cc, mix('#8a90a0', '#24263a', tod.night), (cover - 0.5) * 1.4); // сиви, дъждовни
+    const seen = 0.34 + cover * 0.7;
     for (const c of sky.clouds) {
+      if (c.rank != null && c.rank > seen) continue;
       const x = Math.round(sky.x0 - 20 + ((c.x + t / 1000 * c.v) % (span + 40)));
       if (x + c.w < w.x || x > w.x + w.w) continue;
       ctx.fillStyle = rgba(cc, ca);
       ctx.fillRect(x, c.y + 4, c.w, 3); ctx.fillRect(x + 2, c.y + 2, c.w - 5, 2); ctx.fillRect(x + 4, c.y + 1, Math.max(2, c.w - 10), 1);
       ctx.fillStyle = rgba(shade(cc, 0.85), ca); ctx.fillRect(x + 1, c.y + 7, c.w - 2, 1);
     }
-    if (sky.view === 'sea') { drawSea(ctx, w, sky, tod, t); ctx.restore(); continue; }
-    if (sky.view === 'mountains') { drawMountains(ctx, w, sky, tod); ctx.restore(); continue; }
-    // силует на града
-    const cityC = mix(tod.skyBottom, '#141428', 0.65);
-    for (let x = w.x; x < w.x + w.w; x++) {
-      const hh = sky.skyline[x - sky.x0] || 3;
-      R(ctx, cityC, x, w.y + w.h - hh, 1, hh);
-      if (tod.night > 0.4 && hh > 4 && (x * 7 + hh * 13) % 9 === 0) {
-        ctx.fillStyle = rgba('#f8d880', tod.night * (0.6 + 0.4 * Math.sin(t / 3000 + x)));
-        ctx.fillRect(x, w.y + w.h - hh + 2, 1, 1);
+    if (sky.view === 'sea') drawSea(ctx, w, sky, tod, t);
+    else if (sky.view === 'mountains') drawMountains(ctx, w, sky, tod);
+    else {
+      // силует на града (по-високите сгради имат няколко реда светещи прозорци)
+      const cityC = mix(tod.skyBottom, '#141428', 0.65);
+      for (let x = w.x; x < w.x + w.w; x++) {
+        const hh = sky.skyline[x - sky.x0] || 3;
+        R(ctx, cityC, x, w.y + w.h - hh, 1, hh);
+        if (tod.night > 0.4 && hh > 4) for (let yy = 2; yy < hh - 1; yy += 3) {
+          if ((x * 7 + hh * 13 + yy * 5) % 9 !== 0) continue;
+          ctx.fillStyle = rgba('#f8d880', tod.night * (0.6 + 0.4 * Math.sin(t / 3000 + x + yy)));
+          ctx.fillRect(x, w.y + w.h - hh + yy, 1, 1);
+        }
       }
     }
+    drawWindowWeather(ctx, w, wx, tod, t);
     ctx.restore();
   }
 }
 
 function drawSea(ctx, w, sky, tod, t) {
-  const top = w.y + w.h - 8;
+  const sh = Math.round(8 * (sky.k || 1)), top = w.y + w.h - sh;
   const water = mix(mix('#2a6ab0', '#3a4a8a', tod.warm), '#0c1430', tod.night * 0.85);
-  R(ctx, water, w.x, top, w.w, 8);
+  R(ctx, water, w.x, top, w.w, sh);
+  if (sh > 10) R(ctx, shade(water, 0.85), w.x, top + Math.round(sh * 0.6), w.w, sh - Math.round(sh * 0.6));
   R(ctx, mix(water, '#ffffff', 0.25), w.x, top, w.w, 1);
   // отблясъци, които се местят
   const glint = mix('#ffffff', '#ffd8a0', tod.warm);
   for (let i = 0; i < 6; i++) {
-    const x = w.x + ((i * 11 + Math.floor(t / 400) * (i % 2 ? 1 : -1)) % w.w + w.w) % w.w, y = top + 2 + (i % 3) * 2;
+    const x = w.x + ((i * 11 + Math.floor(t / 400) * (i % 2 ? 1 : -1)) % w.w + w.w) % w.w, y = top + 2 + (i % 3) * Math.round(2 * (sky.k || 1));
     ctx.fillStyle = rgba(tod.night > 0.5 ? '#c8d0f0' : glint, 0.35 + 0.3 * Math.sin(t / 300 + i));
     ctx.fillRect(x, y, 2, 1);
   }
@@ -1039,20 +1059,21 @@ function drawMountains(ctx, w, sky, tod) {
   const far = mix(mix(tod.skyBottom, '#5a6a9a', 0.5), '#141428', tod.night * 0.6);
   const near = mix(mix(tod.skyBottom, '#2a3a48', 0.75), '#0c0e1c', tod.night * 0.6);
   const snow = mix('#f4f6ff', '#5a6088', tod.night * 0.7);
+  const k = sky.k || 1;
   for (let x = w.x; x < w.x + w.w; x++) {
     const i = x - sky.x0, hh = sky.skyline[i] || 6;
-    const h2 = Math.round(hh + 4 + 3 * Math.sin(i / 7 + 2));
+    const h2 = Math.round(hh + k * (4 + 3 * Math.sin(i / 7 + 2)));
     R(ctx, far, x, w.y + w.h - h2, 1, h2);
-    if (h2 > 13) R(ctx, snow, x, w.y + w.h - h2, 1, 1);
+    if (h2 > 13 * k) R(ctx, snow, x, w.y + w.h - h2, 1, Math.round(k));
     R(ctx, near, x, w.y + w.h - hh, 1, hh);
-    if (hh > 11) R(ctx, snow, x, w.y + w.h - hh, 1, Math.min(2, hh - 11));
+    if (hh > 11 * k) R(ctx, snow, x, w.y + w.h - hh, 1, Math.min(Math.round(2 * k), Math.round(hh - 11 * k)));
   }
-  R(ctx, mix('#2e5a34', '#0c1410', tod.night * 0.7), w.x, w.y + w.h - 2, w.w, 2);
+  R(ctx, mix('#2e5a34', '#0c1410', tod.night * 0.7), w.x, w.y + w.h - Math.round(2 * k), w.w, Math.round(2 * k));
 }
 
 /** Слънчеви снопове от прозорците върху пода (adds light). */
 export function drawShafts(ctx, room, tod, t) {
-  const a = tod.daylight * 0.16 * (1 - tod.night * 0.5);
+  const a = tod.daylight * 0.16 * (1 - tod.night * 0.5) * (tod.sunny ?? 1);
   if (a < 0.01) return;
   const color = mix('#fff2c8', '#ffa860', tod.warm);
   const skew = Math.round((tod.h - 12.5) * -5);
@@ -1120,12 +1141,21 @@ export function drawWallDynamic(ctx, room, date, stats, t) {
       });
     });
     // табелка с токените под дъската
+    let tokX = b.x + b.w;
     if (stats.tokens != null) {
       const s = compactNum(stats.tokens), w = textWidth(s) + 10, x = b.x + b.w - w - 2, y = b.y + b.h + 4;
+      tokX = x;
       R(ctx, '#1a1420', x, y, w, 9);
       R(ctx, '#3a2e48', x + 1, y + 1, w - 2, 7);
       drawCoin(ctx, x + 2, y + 2);
       drawText(ctx, s, x + 8, y + 2, '#ffe27a');
+    }
+    // метеостанция вляво под дъската (клик -> настройки на времето)
+    room.wxPlaque = null;
+    if (stats.wx) {
+      const pw = plaqueWidth(stats.wx);
+      const x = Math.max(room.door.x + room.door.w + 3, Math.min(b.x + 2, tokX - pw - 3));
+      room.wxPlaque = drawWeatherPlaque(ctx, x, b.y + b.h + 4, stats.wx, stats.tod);
     }
   }
 
@@ -1190,10 +1220,10 @@ export function thumb(it) {
     case 'plants': return mk(28, 36, (g) => drawPlant(g, 28, 36, true, it.style));
     case 'posters': return mk(56, 22, (g) => it.kinds.forEach((k, i) => drawPoster(g, 1 + i * 19, 1, k)));
     case 'lamp': return it.style === 'arc' ? mk(ARC_LAMP.w, ARC_LAMP.h, (g) => drawArcLamp(g, ARC_LAMP.w, ARC_LAMP.h)) : mk(11, 36, (g) => drawFloorLamp(g, 11, 36));
-    case 'window': return mk(38, 30, (g) => {
-      const w = { x: 2, y: 2, w: 34, h: 26 };
-      drawSky(g, { windows: [w], sky: { x0: 2, x1: 36, stars: [], clouds: [{ x: 8, y: 5, w: 10, v: 0 }], skyline: skylineFor(it.style, 34), view: it.style } }, NOON, 0);
-      const f = makeCanvas(38, 30); drawWindowFrame(f.getContext('2d'), w.x, w.y, w.w, w.h); g.drawImage(f, 0, 0); // стъклото в рамката е прозрачно
+    case 'window': return mk(38, 48, (g) => {
+      const w = { x: 2, y: 2, w: 34, h: 42 }, k = 42 / 26;
+      drawSky(g, { windows: [w], sky: { x0: 2, x1: 36, stars: [], clouds: [{ x: 8, y: 6, w: 10, v: 0 }], skyline: skylineFor(it.style, 34, k), view: it.style, k } }, NOON, 0);
+      const f = makeCanvas(38, 48); drawWindowFrame(f.getContext('2d'), w.x, w.y, w.w, w.h); g.drawImage(f, 0, 0); // стъклото в рамката е прозрачно
     });
     case 'neon': return mk(24, 13, (g) => drawNeon(g, 1, 1, it.c));
     case 'espresso': return mk(30, 42, (g) => drawCounter(g, 30, 42, true));

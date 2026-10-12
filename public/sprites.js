@@ -197,6 +197,10 @@ export const HAIR_FEMALE = ['long', 'wavy', 'bob', 'pony', 'braid', 'bun', 'pixi
 export const HAIR_NAMES = Object.keys(HAIR_STYLES);
 // прическите, от които избира аватарът (по 4 за тяло; индексът е save data)
 export const AVATAR_HAIR = { m: ['short', 'side', 'quiff', 'spiky'], f: ['long', 'pony', 'bob', 'bun'] };
+// дрехите на аватара (индексите също са save data; 0 = досегашната фиксирана дреха). Мъжът е само с панталон.
+export const AVATAR_TOPS = { m: ['collar', 'tee', 'tie', 'hoodie', 'vneck', 'stripe'], f: ['blouse', 'scoop', 'vneck', 'tee', 'hoodie', 'stripe'] };
+export const AVATAR_BOTTOMS = { m: ['pants'], f: ['skirt', 'pants', 'dress'] };
+export const DRESS_TOPS = new Set(['blouse', 'scoop', 'vneck', 'tee']); // с рокля не вървят суитшърт и райе
 
 const BEANIE = [
   '......vv......',
@@ -741,17 +745,19 @@ export function lookFor(id, isSub) {
 
 /** Аватарът на оркестраторите: тяло, прическа, кожа, цвят на косата и очила от потребителя; останалото е фиксирано. */
 export function avatarLook(av, id) {
-  const fem = av.body === 1;
-  const styles = AVATAR_HAIR[fem ? 'f' : 'm'];
+  const fem = av.body === 1, g = fem ? 'f' : 'm';
+  const styles = AVATAR_HAIR[g];
+  const bottom = AVATAR_BOTTOMS[g][av.bottom] || AVATAR_BOTTOMS[g][0];
+  let top = AVATAR_TOPS[g][av.top] || AVATAR_TOPS[g][0];
+  if (bottom === 'dress' && !DRESS_TOPS.has(top)) top = 'scoop';
   return {
     id, fem,
     skin: SKINS[av.skin] || SKINS[1],
     hairColor: HAIRS[av.hair] || HAIRS[1],
     hair: styles[av.style] || styles[0],
-    top: fem ? 'blouse' : 'collar',
-    bottom: fem ? 'skirt' : 'pants',
+    top, bottom,
     short: false,
-    pants: fem ? SKIRTS[0] : PANTS[0],
+    pants: bottom === 'skirt' ? SKIRTS[0] : fem ? PANTS[3] : PANTS[0],
     tights: null,
     shoes: fem ? SHOES[3] : SHOES[0],
     iris: IRIS[0],

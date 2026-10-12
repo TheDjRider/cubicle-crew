@@ -3,6 +3,7 @@
 // Щом се появи агент (или потребителят кликне) – екранът изчезва и прозорецът става офисът.
 import { T, STATES } from './config.js';
 import { timeOfDay } from './environment.js';
+import { applyWeather, drawWindowWeather } from './weather.js';
 import { CharacterSprites, avatarLook, FW, FH } from './sprites.js';
 import { Cat } from './characters.js';
 import { ENV, mix, shade } from './palette.js';
@@ -62,10 +63,10 @@ export class Morning {
   }
 
   /** Вика се всеки кадър; рисува само ~10 пъти в секунда. */
-  render(now, date) {
+  render(now, date, weather = null) {
     if (!this.active || now - this.lastDraw < FRAME_MS) return;
     this.lastDraw = now;
-    const ctx = this.ctx, W = this.W, H = this.H, tod = timeOfDay(date);
+    const ctx = this.ctx, W = this.W, H = this.H, tod = applyWeather(timeOfDay(date), weather);
     const floorY = H - 18, t = now / 1000;
     ctx.imageSmoothingEnabled = false;
 
@@ -169,17 +170,18 @@ export class Morning {
     }
     // слънце или луна по дъга
     const arc = (k) => [x + 4 + k * (w - 8), y + h - 6 - Math.sin(k * Math.PI) * (h - 12)];
-    if (tod.sun != null) {
+    const cover = tod.cover || 0;
+    if (tod.sun != null && cover < 0.7) {
       const [sx, sy] = arc(tod.sun);
       R(ctx, '#ffe9a0', Math.round(sx) - 2, Math.round(sy) - 3, 5, 7); R(ctx, '#ffe9a0', Math.round(sx) - 3, Math.round(sy) - 2, 7, 5);
       R(ctx, '#fff6d8', Math.round(sx) - 1, Math.round(sy) - 2, 3, 3);
-    } else if (tod.moon != null) {
+    } else if (tod.moon != null && cover < 0.75) {
       const [mx, my] = arc(tod.moon);
       R(ctx, '#e8ecf8', Math.round(mx) - 2, Math.round(my) - 2, 5, 5); R(ctx, tod.skyTop, Math.round(mx), Math.round(my) - 2, 3, 3);
     }
     // облаци, бавно
     const cc = mix('#ffffff', tod.skyBottom, 0.25 + tod.night * 0.5);
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 3 + Math.round(cover * 4); i++) {
       const span = w + 30, cx = x - 15 + ((t * (1.2 + i * 0.5) + i * 37) % span), cy = y + 4 + i * 7;
       R(ctx, cc, Math.round(cx), cy, 12 - i * 2, 3); R(ctx, cc, Math.round(cx) + 3, cy - 2, 5, 2);
     }
@@ -192,6 +194,7 @@ export class Morning {
         if ((b.lit + wx2 * 7 + wy2 * 13) % 5 === 0) R(ctx, lit, wx2, wy2, 1, 1);
       }
     }
+    drawWindowWeather(ctx, { x, y, w, h }, tod.wx, tod, t * 1000);
     ctx.restore();
   }
 
