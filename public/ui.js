@@ -4,6 +4,15 @@ import { CFG, STATES, STATE_ORDER, T, PARAMS, LANG, setLang } from './config.js'
 import { shortDetail, fmtDuration } from './util.js';
 import { coinUrl } from './tokens.js';
 
+// торбичка за пазаруване 9x9 (иконата на бутона за магазина) – рисува се тук, без външни файлове
+const BAG = ['...aaa...', '..a...a..', '..a...a..', 'bbbbbbbbb', 'bcccccccb', 'bcccdcccb', 'bccdddccb', 'bcccdcccb', 'bbbbbbbbb'];
+function bagUrl() {
+  const c = document.createElement('canvas'), g = c.getContext('2d'), col = { a: '#e8d8a8', b: '#3a2050', c: '#b05ad8', d: '#ffe27a' };
+  c.width = 9; c.height = 9;
+  BAG.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
+  return c.toDataURL();
+}
+
 const el = (tag, cls, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -27,7 +36,7 @@ export class UI {
     this.bindMouse();
     // монетата в HUD отваря магазина (onShop се задава в main.js)
     this.hud.addEventListener('click', (e) => {
-      if (e.target.closest('.tok')) this.onShop?.();
+      if (e.target.closest('.tok, .shopbtn')) this.onShop?.();
       else if (e.target.closest('.lang')) {
         const l = LANG === 'bg' ? 'en' : 'bg';
         if (PARAMS.desktop && window.pixelOffice?.action) window.pixelOffice.action('lang:' + l); else setLang(l);
@@ -276,7 +285,8 @@ export class UI {
     const connTxt = { connecting: T.connecting, connected: T.connected, down: T.reconnecting, demo: T.demo }[this.conn];
     // токените са първи – в малкия прозорец остават сами в ъгъла, когато останалото се скрие
     const html =
-      (this.tokens != null ? `<span class="tok${now - (this.tokenFlash ?? -1e9) < 1500 ? ' gain' : ''}" title="${T.shop.open}"><i style="background-image:url(${this.coin ||= coinUrl()})"></i><b>${this.fmtTokens()}</b></span>` : '') +
+      (this.tokens != null ? `<span class="tok${now - (this.tokenFlash ?? -1e9) < 1500 ? ' gain' : ''}" title="${T.shop.open}"><i style="background-image:url(${this.coin ||= coinUrl()})"></i><b>${this.fmtTokens()}</b></span>` +
+        `<span class="shopbtn" title="${T.shop.open}"><i style="background-image:url(${this.bag ||= bagUrl()})"></i>${T.shop.title}</span>` : '') +
       `<span class="conn ${this.conn}"><i></i>${connTxt}</span>` +
       `<span>${T.agents} <b>${s.agents - s.subs}</b></span>` +
       `<span>${T.subagents} <b>${s.subs}</b></span>` +

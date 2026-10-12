@@ -522,7 +522,7 @@ export class Office {
     this.room.doorOpen = clamp(this.room.doorOpen + (nearDoor ? dt * 4 : -dt * 2.5), 0, 1);
     for (const c of this.cats) c.update(dt, now, L);
     // прашинки в слънчевите снопове
-    if (this.tod && this.tod.daylight > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
+    if (this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
       const w = this.room.windows[Math.floor(Math.random() * this.room.windows.length)];
       this.fx.dust(w.x + Math.random() * w.w, CFG.WALL_H + Math.random() * 40);
     }

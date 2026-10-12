@@ -24,6 +24,7 @@ const tokens = new Tokens(office, ui);
 const shop = new Shop(tokens, ui);
 ui.onShop = () => shop.open();
 ui.onWeather = () => shop.open('weather');
+shop.onToggle = () => resize();
 if (PARAMS.debug) window.__shop = shop;
 
 model.on('join', (a) => office.join(a, performance.now()));
@@ -55,7 +56,9 @@ function applyCanvas() {
 }
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  office.resize(Math.round(innerWidth * dpr), Math.round(innerHeight * dpr));
+  // отворен магазин = лента отдолу; офисът се побира над нея
+  const shopH = shop.root.hidden ? 0 : shop.root.offsetHeight;
+  office.resize(Math.round(innerWidth * dpr), Math.round(Math.max(120, innerHeight - shopH) * dpr));
   applyCanvas();
 }
 addEventListener('resize', resize);

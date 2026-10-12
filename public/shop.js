@@ -73,7 +73,6 @@ export class Shop {
     }
     this.body = el('div', 'body', panel);
     this.foot = el('footer', null, panel, T.shop.hint);
-    r.addEventListener('click', (e) => { if (e.target === r) this.close(); });
     this.body.addEventListener('mouseover', (e) => this.hover(e.target.closest('.card')));
     this.body.addEventListener('mouseleave', () => this.hover(null));
     this.body.addEventListener('click', (e) => this.click(e.target.closest('button')));
@@ -82,14 +81,19 @@ export class Shop {
   open(tab) {
     if (tab) this.tab = tab;
     if (this.tokens.tokens == null) return;
+    const was = this.root.hidden;
     this.root.hidden = false; this.key = ''; this.render();
+    document.body.classList.add('shopping');
     window.pixelOffice?.shop?.(true);
+    if (was) this.onToggle?.();
   }
   close() {
     if (this.root.hidden) return;
     this.root.hidden = true;
     this.tokens.setPreview(null);
+    document.body.classList.remove('shopping');
     window.pixelOffice?.shop?.(false);
+    this.onToggle?.();
   }
   toggle() { if (this.root.hidden) this.open(); else this.close(); }
 
