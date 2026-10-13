@@ -11,6 +11,7 @@ import { startDemo } from './demo.js';
 import { Tokens, demoWallet } from './tokens.js';
 import { Shop } from './shop.js';
 import { Morning } from './morning.js';
+import { play } from './sound.js';
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d', { alpha: false });
@@ -31,6 +32,11 @@ model.on('join', (a) => office.join(a, performance.now()));
 model.on('leave', (a) => office.leave(a));
 model.on('link', (p, c) => office.link(p, c));
 model.on('celebrate', (a) => office.celebrate(a));
+// звуци (само с истински сесии – демото би звъняло постоянно)
+if (!PARAMS.demo) {
+  model.on('state', (a, old, s) => { if (s === 'waiting' && old !== 'waiting') play('ask', a.id); });
+  model.on('celebrate', (a) => { if (!a.subagent) play('done', a.id); });
+}
 
 // ?wait: сутрешен екран, докато не се появи първият агент (или клик) – после Electron връща нормалния размер
 const morning = PARAMS.wait ? new Morning(office, () => { lastSpecKey = ''; window.pixelOffice?.action('wake'); resize(); }) : null;
@@ -161,8 +167,7 @@ if (PARAMS.demo) {
       try { e = JSON.parse(m.data); } catch { return; /* лош ред */ }
       if (e.type === 'wallet') tokens.onWallet(e);
       else if (e.type === 'sessions') model.sessions(e.list);
-      else if (e.type === 'weather') { onWeather(e); shop.setWeather(e); }
-      else ingest(e);
+      else if (e.type === 'weather') { onWeather(e); shop.setWeather(e); }      else ingest(e);
     };
     ws.onclose = () => { ui.setConnection('down'); setTimeout(connect, retry); retry = Math.min(8000, retry * 1.5); };
     ws.onerror = () => { /* onclose ще се погрижи */ };

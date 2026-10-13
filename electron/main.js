@@ -26,7 +26,7 @@ log('start', process.argv.join(' '));
 if (!app.requestSingleInstanceLock()) { log('second instance – exit'); app.quit(); }
 app.setAppUserModelId('com.pixeloffice.desktop');
 
-let win = null, tray = null, port = 4317, stats = { agents: 0, subs: 0, tools: 0, waiting: [] };
+let win = null, tray = null, port = 4317, stats = { agents: 0, subs: 0, tools: 0, waiting: [], sound: true };
 let quitting = false;
 let waiting = false; // сутрешен екран: малко прозорче до първата сесия
 
@@ -62,10 +62,12 @@ function visible(b) {
 const lang = () => settings.lang || (/^bg/i.test(app.getLocale() || '') ? 'bg' : 'en');
 const L = {
   bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', weather: 'Времето навън…', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
+    sound: 'Звук, когато агент чака или приключи',
     autoSize: 'Разширявай при втори екип', demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', lang: 'Език / Language', resetSize: 'Нулирай размера',
     resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход',
     tip: (a, s, w) => `агенти ${a} · под-агенти ${s}${w ? ` · чакат те ${w}` : ''}`, one: (n) => `${n} чака теб`, many: (k) => `${k} агента чакат теб` },
   en: { hide: 'Hide', show: 'Show', shop: 'Shop', weather: 'Weather outside…', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
+    sound: 'Sound when an agent waits or finishes',
     autoSize: 'Widen for a second team', demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', lang: 'Language / Език', resetSize: 'Reset size',
     resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit',
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
@@ -111,7 +113,8 @@ function createWindow() {
     // maximizable: false – двоен клик върху лентата за местене иначе разпъва прозореца на цял екран
     frame: false, resizable: !waiting, maximizable: false, fullscreenable: false, skipTaskbar: true, show: false,
     alwaysOnTop: settings.onTop, backgroundColor: '#0e0c14', title: 'Cubicle Crew',
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
+    // autoplayPolicy: звукът "чака те" трябва да свири и преди първия клик в прозореца
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' },
   });
   applyOnTop();
   applyThrough();
@@ -213,6 +216,8 @@ function menuTemplate() {
     { label: t.onTop, type: 'checkbox', checked: settings.onTop, click: (m) => { settings.onTop = m.checked; applyOnTop(); saveSettings(); } },
     { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => { settings.through = m.checked; applyThrough(); saveSettings(); } },
     { label: t.notify, type: 'checkbox', checked: settings.notify, click: (m) => { settings.notify = m.checked; saveSettings(); } },
+    // звукът е настройка на страницата (localStorage) – менюто само я сменя там
+    { label: t.sound, type: 'checkbox', checked: stats.sound, click: (m) => { stats.sound = m.checked; win?.webContents.send('sound', m.checked); } },
     { label: t.autoSize, type: 'checkbox', checked: settings.autoSize, click: (m) => { settings.autoSize = m.checked; saveSettings(); if (m.checked) reloadPage(); } },
     { label: t.demo, type: 'checkbox', checked: settings.demo, click: (m) => { settings.demo = m.checked; saveSettings(); win.loadURL(pageUrl()); } },
     { label: t.login, type: 'checkbox', checked: li.get(), click: (m) => li.set(m.checked) },
@@ -292,10 +297,11 @@ ipcMain.on('prefer-size', (_e, sz) => {
 
 ipcMain.on('stats', (_e, s) => {
   const before = new Set(stats.waiting);
-  stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [] };
+  stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [], sound: s.sound !== false };
   const fresh = stats.waiting.filter((n) => !before.has(n));
   if (fresh.length && settings.notify && Notification.isSupported() && !win.isFocused()) {
-    const n = new Notification({ title: 'Cubicle Crew', body: fresh.length === 1 ? tr().one(fresh[0]) : tr().many(fresh.length), silent: false });
+    // страницата свири свой звук -> известието е без системния (иначе звъни два пъти)
+    const n = new Notification({ title: 'Cubicle Crew', body: fresh.length === 1 ? tr().one(fresh[0]) : tr().many(fresh.length), silent: stats.sound });
     n.on('click', () => { toggleWindow(true); win.focus(); });
     n.show();
   }
@@ -318,8 +324,7 @@ app.whenReady().then(async () => {
   waiting = settings.waitWindow !== false;
   const server = await import('../server.js');
   const { startServer } = server;
-  flushWallet = server.flushWallet; // токените се записват преди изход
-  // собствен сървър (ако 4317 е зает, напр. от `npm start` – друг свободен порт), за да не зависи от друг процес
+  flushWallet = server.flushWallet; // токените се записват преди изход  // собствен сървър (ако 4317 е зает, напр. от `npm start` – друг свободен порт), за да не зависи от друг процес
   ({ port } = await startServer(Number(process.env.PORT) || 4317, { reuse: false }));
   log('server port', port);
   createWindow();

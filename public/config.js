@@ -69,6 +69,11 @@ const T_BG = {
   parentOf: 'Под-агенти',
   childOf: 'Под-агент на',
   needsYou: 'Чака теб!',
+  allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
+  sound: {
+    on: 'Звук: включен – звъни, когато агент чака теб или сесия приключи (само ако не гледаш прозореца). Клик – изключи.',
+    off: 'Звук: изключен. Клик – включи.',
+  },
   thinking: 'мисли…',
   legendHint: 'L – легенда · Esc – без фокус',
   states: {
@@ -162,6 +167,11 @@ const T_EN = {
   parentOf: 'Sub-agents',
   childOf: 'Sub-agent of',
   needsYou: 'Needs you!',
+  allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
+  sound: {
+    on: 'Sound: on – chimes when an agent needs you or a session finishes (only while you are not looking at the window). Click to mute.',
+    off: 'Sound: off. Click to turn it on.',
+  },
   thinking: 'thinking…',
   legendHint: 'L – legend · Esc – clear focus',
   states: {

@@ -54,6 +54,9 @@ export class Model {
     a.lastEvent = now;
     a.lastType = e.type;
     if (a.done && e.type !== 'tool_end') { a.done = false; } // пак работи
+    // молбата е отговорена (резултат/нов текст) – и ако статусът на сесията още не е дошъл. Нов tool_start
+    // веднага след молбата е закъснял ред от същото съобщение – той не я маха.
+    if (a.ask && (e.type !== 'tool_start' || now - a.ask.since > 1500)) a.ask = null;
 
     switch (e.type) {
       case 'tool_start': {
@@ -93,8 +96,30 @@ export class Model {
       const a = this.agents.get(s.agent);
       a.live = true; a.ended = false;
       a.busy = s.status === 'busy';   // Claude Code: "busy" докато мисли/работи (в транскрипта може да няма редове), "idle" – чака промпт
+      // "waiting" (+ waitingFor: "permission prompt"…) – чака теб; щом стане пак "busy"/"idle", е отговорено
+      const was = a.statusWaiting;
+      a.statusWaiting = s.status === 'waiting';
+      if (a.statusWaiting && !was) this.attention({ session: a.id, kind: /permission/i.test(s.waitingFor || '') ? 'permission' : 'input' }, now);
+      else if (!a.statusWaiting && was) this.clearAsk(a);
     }
-    for (const a of this.agents.values()) if (a.live && !ids.has(a.id)) { a.live = false; a.ended = true; a.busy = false; }
+    for (const a of this.agents.values()) if (a.live && !ids.has(a.id)) { a.live = false; a.ended = true; a.busy = false; a.statusWaiting = false; this.clearAsk(a); }
+  }
+
+  /** Сесията вече не чака – махаме молбата от нея и от под-агентите ѝ. */
+  clearAsk(a) {
+    a.ask = null;
+    for (const cid of a.children) { const c = this.agents.get(cid); if (c) c.ask = null; }
+  }
+
+  /** Сесията чака теб (status "waiting" – молба за разрешение и т.н.; в транскрипта няма ред за това).
+   *  Чака този от екипа (оркестратор или жив под-агент), който последен е започнал инструмент. */
+  attention(m, now = performance.now()) {
+    const lead = this.agents.get(m.session);
+    if (!lead) return;
+    let target = lead, best = -1;
+    const team = [lead, ...[...lead.children].map((id) => this.agents.get(id)).filter((c) => c && !c.done && !c.leaving)];
+    for (const a of team) for (const p of a.pending.values()) if (!DELEGATE_TOOLS.has(p.tool) && p.start > best) { best = p.start; target = a; }
+    target.ask = { kind: m.kind === 'input' ? 'input' : 'permission', since: now };
   }
 
   link(childId, parentId) {
@@ -121,6 +146,7 @@ export class Model {
   }
 
   stateOf(a, now) {
+    if (a.ask) return 'waiting'; // чака разрешение – без 8-секундното правило (докато чака, редове няма)
     const tools = [...a.pending.values()];
     const delegatingPending = tools.some((p) => DELEGATE_TOOLS.has(p.tool));
     if (now - a.lastEvent > CFG.IDLE_MS && !a.busy) {
@@ -154,7 +180,8 @@ export class Model {
       // кой си тръгва
       const quiet = now - a.lastEvent;
       let leave = false;
-      if (a.subagent) {
+      if (a.ask) { /* чака разрешение – остава, колкото и да е тихо */ }
+      else if (a.subagent) {
         if (a.done && now - a.doneAt > CFG.CHILD_EXIT_DELAY_MS && quiet > CFG.CHILD_EXIT_DELAY_MS) leave = true;
         // дълъг tool (напр. Bash) без нови редове – чакаме повече, преди да приемем, че е приключил
         else if (quiet > (a.lastType === 'tool_start' ? CFG.CHILD_DONE_IDLE_MS * 6 : CFG.CHILD_DONE_IDLE_MS)) leave = true;

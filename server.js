@@ -17,8 +17,7 @@ const ACTIVE_WINDOW_MS = 60 * 60 * 1000; // следим файлове, пип�
 const POLL_MS = 400;
 const SCAN_MS = 2000;                    // пълно обхождане на папката (стари/възобновени файлове)
 const SESSIONS = process.env.CLAUDE_SESSIONS_DIR || path.join(path.dirname(ROOT), 'sessions'); // <pid>.json на всяка жива сесия
-const SESSIONS_MS = 3000;
-const LINK_WINDOW_MS = 15000;            // евристика: под-агент, появил се до толкова след Task/Agent
+const SESSIONS_MS = 1000;                // и молбите за разрешение идват оттук – да не закъсняватconst LINK_WINDOW_MS = 15000;            // евристика: под-агент, появил се до толкова след Task/Agent
 const DEBUG = !!process.env.DEBUG || process.argv.includes('--debug');
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const SPRITES = path.join(PUBLIC, 'sprites');
@@ -111,8 +110,7 @@ const broadcast = (evt) => {
   for (const c of wss.clients) if (c.readyState === 1) c.send(msg);
 };
 const wallet = new Wallet(broadcast, (m) => console.log(m));
-const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
-// нов клиент веднага вижда портфейла и живите сесии
+const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });// нов клиент веднага вижда портфейла и живите сесии
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify(wallet.msg(0, 'sync', null, null, true)));
   ws.send(JSON.stringify({ type: 'sessions', list: live }));
@@ -135,7 +133,10 @@ function scanSessions() {
     try { s = JSON.parse(fs.readFileSync(path.join(SESSIONS, n), 'utf8')); } catch { continue; }
     if (!s || typeof s.sessionId !== 'string' || !Number.isInteger(s.pid) || !alive(s.pid)) continue;
     if (list.some((x) => x.agent === s.sessionId)) continue;
-    list.push({ agent: s.sessionId, label: s.cwd ? path.basename(s.cwd) : s.sessionId.slice(0, 8), status: s.status || null });
+    const item = { agent: s.sessionId, label: s.cwd ? path.basename(s.cwd) : s.sessionId.slice(0, 8), status: s.status || null };
+    // status "waiting" + waitingFor ("permission prompt", …) – Claude Code чака теб (молба за разрешение и т.н.)
+    if (typeof s.waitingFor === 'string' && s.waitingFor) item.waitingFor = s.waitingFor.slice(0, 40);
+    list.push(item);
   }
   list.sort((x, y) => (x.agent < y.agent ? -1 : 1));
   const key = JSON.stringify(list);

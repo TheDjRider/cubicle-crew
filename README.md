@@ -25,7 +25,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 
 - **One look tells you the state of everything.** Each agent's shirt, monitor glow and name tag take the colour of what it is doing.
 - **Delegation you can actually see.** Orchestrators walk over and hand paper to their sub-agents. Dotted lines on the floor show who works for whom.
-- **You never miss a question.** An agent waiting on `AskUserQuestion` waves, its tag flashes red, and the desktop app sends a Windows notification.
+- **You never miss a question.** An agent waiting on you (an `AskUserQuestion`, or an "Allow Bash?" permission prompt) waves, its tag flashes red with "Allow Bash?", a little chime plays if you're looking at another window, and the desktop app sends a Windows notification.
 - **Nothing to set up.** No API keys and no hooks to install. It runs offline and only reads local files.
 
 <p align="center">
@@ -44,6 +44,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | 🌧️ **Real weather** *(optional)* | Pick your city in the shop's **Weather** tab (or click the little weather station above the bookshelf) and the windows show the weather outside: clouds, rain running down the glass, snow on the ledge, fog, lightning. The room gets darker on grey days, and the station shows the temperature and the chance of rain. Data comes from [Open-Meteo](https://open-meteo.com) every 20 minutes; only the city's coordinates are sent. Until you pick a city, the app makes no requests to the internet at all. |
 | 🪙 **Tokens & shop** | Active agents earn tokens. Spend them on ~50 decor items: floors, walls, rugs, sofas, a throne for the lead, a neon sign, an aquarium, an arcade cabinet, a second and a third cat, nine cat coat patterns. There are also 14 achievements. |
 | 🧍 **Your avatar** | Pick a man or a woman, the hairstyle, top (and skirt, trousers or dress for a woman), skin, hair colour and glasses of your own character: the first orchestrator in the office. Everyone else stays random (men and women, different hair, clothes, beards, skirts and dresses). |
+| 🔔 **Sound** | An 8-bit ding-dong when an agent needs you (a question or a permission prompt) and a short fanfare when a session finishes after a minute or more of work. It only plays while you're looking at another window, and the bell in the bottom bar (or the tray menu) mutes it. In a browser it starts working after your first click on the page. |
 | 🖥️ **Desktop widget** | A frameless, always-on-top Windows app above the tray, with a tray menu, `Ctrl+Alt+P`, notifications and start with Windows. |
 | 🧩 **Moddable art** | Everything is drawn in code, but you can replace it with your own PNG character sheet and tileset without touching any code. |
 
@@ -94,7 +95,7 @@ npm run dist         # build the installer → release/CubicleCrew-Setup-<versio
 The widget runs its own server, so you don't need a browser or `npm start`. It sits in the bottom-right corner above
 the tray and stays on top of other windows. Hover it to show a drag bar with settings, pin, click-through, hide and
 quit buttons. It widens itself when a second team shows up.
-`Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has notifications, start with Windows, demo mode and size reset.
+`Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has notifications, sound, start with Windows, demo mode and size reset.
 
 The installed app starts with Windows by default. Whenever it starts and no Claude Code session is open yet, it waits in a small window above the tray with a morning scene (your avatar with a coffee, a sleeping cat, the sky at the real time of day); when a session appears, or you click it, it opens into the full office. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.
 
@@ -115,9 +116,11 @@ The installed app starts with Windows by default. Whenever it starts and no Clau
 - **Server** (`server.js`): polls transcripts touched in the last hour and turns each line into small events
   (`tool_start`, `tool_end`, `say`, `user_prompt`). It links sub-agents to their parent through
   `subagents/agent-<id>.meta.json` first, then the session id, then a timing heuristic. It also reads
-  `~/.claude/sessions` to know which sessions are still open. Old history isn't replayed on start.
+  `~/.claude/sessions` every second to know which sessions are still open, which are busy and which are waiting for you. Old history isn't replayed on start.
 - **Tool → state:** `Edit`/`Write` → typing, `Read`/`Grep`/`WebFetch` → reading, `Bash` → running,
   `Task`/`Agent` → delegating, `AskUserQuestion` → waiting. 8 seconds of silence → idle, unless Claude Code still reports the session as busy (it's thinking or writing a long reply). You can change the mapping in `public/rules.js`.
+- **Permission prompts** never reach the transcript, but Claude Code marks the session as `waiting` (`waitingFor: "permission prompt"`)
+  while one is on screen. The agent that started the last tool turns red until you answer, and goes back to work the moment you click Allow.
 - **Client** (`public/`): plain ES modules with no build step. The scene is drawn on a low-resolution canvas and scaled
   up by whole device pixels, so it stays crisp at any DPI. All text is HTML laid over the canvas.
 - **Tokens:** earned on the server every 5 seconds: about 1 per active orchestrator minute, half for sub-agents,
@@ -149,7 +152,7 @@ Drop PNGs into `public/sprites/` and reload the page:
 
 - The JSONL transcript format isn't an official API. If parsing ever breaks, `npm run debug` shows what's happening.
 - Without the session status (older Claude Code versions), an agent counts as idle after 8 seconds without new transcript lines, so long thinking looks like a break.
-- `waiting` only comes from `AskUserQuestion`. Tool permission prompts don't show up in the transcript.
+- Permission prompts are only seen through the session status, so older Claude Code versions that don't write it only show `waiting` for `AskUserQuestion`.
 - The installer only targets Windows x64 for now. The browser version runs anywhere Node does.
 
 ## Tech

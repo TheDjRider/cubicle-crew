@@ -3,6 +3,7 @@
 import { CFG, STATES, STATE_ORDER, T, PARAMS, LANG, setLang } from './config.js';
 import { shortDetail, fmtDuration } from './util.js';
 import { coinUrl } from './tokens.js';
+import { soundOn, setSound } from './sound.js';
 
 // торбичка за пазаруване 9x9 (иконата на бутона за магазина) – рисува се тук, без външни файлове
 const BAG = ['...aaa...', '..a...a..', '..a...a..', 'bbbbbbbbb', 'bcccccccb', 'bcccdcccb', 'bccdddccb', 'bcccdcccb', 'bbbbbbbbb'];
@@ -10,6 +11,17 @@ function bagUrl() {
   const c = document.createElement('canvas'), g = c.getContext('2d'), col = { a: '#e8d8a8', b: '#3a2050', c: '#b05ad8', d: '#ffe27a' };
   c.width = 9; c.height = 9;
   BAG.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
+  return c.toDataURL();
+}
+
+// звънче 9x9 (известия/звук); изключено – сиво и зачеркнато
+const BELL = ['....a....', '...aba...', '..abbba..', '..abbba..', '..abbba..', '.abbbbba.', 'aaaaaaaaa', '....c....', '.........'];
+function bellUrl(on) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const col = on ? { a: '#7a5410', b: '#ffe27a', c: '#ffe27a' } : { a: '#3a3a4a', b: '#8a8aa0', c: '#8a8aa0' };
+  c.width = 9; c.height = 9;
+  BELL.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
+  if (!on) { g.fillStyle = '#e04a6b'; for (let i = 0; i < 9; i++) g.fillRect(i, 8 - i, 1, 1); }
   return c.toDataURL();
 }
 
@@ -37,6 +49,9 @@ export class UI {
     // монетата в HUD отваря магазина (onShop се задава в main.js)
     this.hud.addEventListener('click', (e) => {
       if (e.target.closest('.tok, .shopbtn')) this.onShop?.();
+      else if (e.target.closest('.snd')) {
+        setSound(!soundOn()); this.lastHud = 0; // Electron научава новия избор от stats (sound)
+      }
       else if (e.target.closest('.lang')) {
         const l = LANG === 'bg' ? 'en' : 'bg';
         if (PARAMS.desktop && window.pixelOffice?.action) window.pixelOffice.action('lang:' + l); else setLang(l);
@@ -61,16 +76,19 @@ export class UI {
       if (act && bridge) bridge.action(act);
     });
     bridge?.onState?.((st) => { bar.querySelector('[data-act="pin"]').classList.toggle('on', !!st.onTop); });
+    bridge?.onSound?.((on) => { setSound(on); this.lastHud = 0; }); // "Звук" от менюто в трея
     this.bridge = bridge;
   }
 
   sendDesktopStats(s) {
     if (!this.bridge) return;
     const waiting = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => a.agent.desc || this.displayName(a.agent));
-    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}`;
+    const sound = soundOn();
+    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting });
+    // sound: приложението пуска известието без системния звук, щом страницата свири своя
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound });
   }
 
   setScale(scale, dpr, W, H) {
@@ -186,7 +204,7 @@ export class UI {
       const tool = this.model.currentTool(ag);
       let btxt = null;
       if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, shortDetail(tool.detail, 38)];
-      else if (st === 'waiting') btxt = [T.needsYou, tool ? tool.tool : ''];
+      else if (st === 'waiting') btxt = [T.needsYou, ag.ask ? T.allow(ag.ask.kind === 'permission' && tool ? tool.tool : '') : tool ? tool.tool : ''];
       const bkey = btxt ? btxt.join('|') : '';
       this.set(it, 'btxt', bkey, () => {
         if (btxt) { it.bubble.children[0].textContent = btxt[0]; it.bubble.children[1].textContent = btxt[1]; it.bw = 0; }
@@ -292,6 +310,7 @@ export class UI {
       `<span>${T.subagents} <b>${s.subs}</b></span>` +
       `<span>${T.toolCalls} <b>${s.tools}</b></span>` +
       (s.waiting ? `<span class="alert">${T.waitingYou} <b>${s.waiting}</b></span>` : '') +
+      (this.conn !== 'demo' ? `<span class="snd" title="${soundOn() ? T.sound.on : T.sound.off}"><i style="background-image:url(${(this.bells ||= [bellUrl(false), bellUrl(true)])[+soundOn()]})"></i></span>` : '') +
       `<span class="lang" title="${T.lang}">${LANG === 'bg' ? 'БГ' : 'EN'}</span>`;
     if (this.hud._html !== html) { this.hud.innerHTML = html; this.hud._html = html; }
     const title = s.waiting ? `(${s.waiting}) ${T.needsYou} · ${T.title}` : T.title;
