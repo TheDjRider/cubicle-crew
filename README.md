@@ -98,6 +98,10 @@ quit buttons. It widens itself when a second team shows up.
 
 The installed app starts with Windows by default. Whenever it starts and no Claude Code session is open yet, it waits in a small window above the tray with a morning scene (your avatar with a coffee, a sleeping cat, the sky at the real time of day); when a session appears, or you click it, it opens into the full office. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.
 
+<p align="center">
+  <img src="docs/media/morning.gif" alt="The morning window while no session is open yet" width="450">
+</p>
+
 
 ## How it works
 
