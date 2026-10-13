@@ -81,4 +81,5 @@ Electron (`electron/main.js` ESM, `electron/preload.cjs`): frameless always-on-t
 3. Cover: 1 team and 2 teams, desktop widget size (`?desktop`, 632×376 @ dpr 1.25), small window (900×560), night (`&time=22:30`).
 4. `?debug` exposes `window.__office` / `window.__model` for state dumps via the `evalJs` argument, and lets you inject events with `__model.ingest({...})` via `preEvalJs`.
 5. Real pipeline: write fake JSONL into a temp `CLAUDE_PROJECTS_DIR` (parent `<sid>.jsonl` + `<sid>/subagents/agent-x.jsonl` + `.meta.json`) and read the WS output.
+**Never start the packaged build (`release/win-unpacked/…exe`) for a smoke test without `settings.loginInit`:** with a fresh `--user-data-dir`, `initLoginItem()` rewrites the user's real Run entry `com.pixeloffice.desktop` to point at `release\` (happened 2026-10-13). Put `{"loginInit": true}` into `<user-data-dir>/settings.json` first.
 Don't kill the user's own `Cubicle Crew.exe` (older installs: `Pixel Office.exe`) / port-4317 server without asking.
