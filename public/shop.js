@@ -1,25 +1,27 @@
 // Магазин: DOM панел (острия текст, кирилица) с раздели; посочен предмет се вижда веднага в офиса (преглед),
 // покупките минават през сървъра (или демо портфейла) – правилата са в catalog.js.
-import { T, itemName, LANG, PARAMS } from './config.js';
+import { T, itemName, LANG, PARAMS, petName } from './config.js';
 import { wxFrom } from './weather.js';
-import { ITEMS, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, unlocked, resolveDecor } from './catalog.js';
+import { ITEMS, ITEM, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, unlocked, resolveDecor, PET_SLOTS, petCount, MAX_PETS, PET_NAME_MAX } from './catalog.js';
 import { CharacterSprites, avatarLook, AVATAR_TOPS, AVATAR_BOTTOMS, DRESS_TOPS } from './sprites.js';
 import { SKINS, HAIRS } from './palette.js';
 import { thumb } from './environment.js';
-import { Cat } from './characters.js';
+import { Cat, Dog } from './characters.js';
 import { coinUrl } from './tokens.js';
 import { makeCanvas } from './util.js';
 
 const el = (tag, cls, parent, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; };
 const fmt = (n) => Number(n).toLocaleString(LANG === 'bg' ? 'bg-BG' : 'en-US');
 
-function catThumb(it) {
-  const c = makeCanvas(18, 14), g = c.getContext('2d');
-  g.fillStyle = '#7e5538'; g.fillRect(0, 0, 18, 14);   // под – иначе тъмните котки не се виждат на тъмната карта
-  g.fillStyle = '#6f4a30'; g.fillRect(0, 6, 18, 1); g.fillRect(0, 12, 18, 1);
-  const cat = new Cat(it);
-  cat.x = 9; cat.y = 13; cat.mode = 'sit';
-  cat.draw(g, 0);
+/** Любимец на парче под (иначе тъмните котки/кучета не се виждат на тъмната карта); кучето седи, за да личи породата. */
+export function petThumb(it, mode = 'sit') {
+  const dog = it.group === 'dog', w = dog ? 22 : 18, h = dog ? 18 : 14;
+  const c = makeCanvas(w, h), g = c.getContext('2d');
+  g.fillStyle = '#7e5538'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#6f4a30'; for (let y = 6; y < h; y += 6) g.fillRect(0, y, w, 1);
+  const p = dog ? new Dog(it) : new Cat(it);
+  p.x = dog ? 10 : 9; p.y = h - 1; p.mode = mode;
+  p.draw(g, 0);
   return c;
 }
 /** Купичка 9x9 – златна, ако е отключено. */
@@ -45,7 +47,8 @@ export class Shop {
     tokens.onChange(() => { if (!this.root.hidden) this.render(); });
     addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      if ('bBбБ'.includes(e.key) && this.tokens.tokens != null) { this.toggle(); e.preventDefault(); }
+      const typing = e.target?.closest?.('input, textarea'); // името на любимеца / търсенето на град
+      if (!typing && 'bBбБ'.includes(e.key) && this.tokens.tokens != null) { this.toggle(); e.preventDefault(); }
       else if (e.key === 'Escape' && !this.root.hidden) this.close();
     });
     window.pixelOffice?.onOpenShop?.(() => this.open());
@@ -79,6 +82,7 @@ export class Shop {
   }
 
   open(tab) {
+    if (document.body.classList.contains('setting-up')) return; // първо началната настройка
     if (tab) this.tab = tab;
     if (this.tokens.tokens == null) return;
     const was = this.root.hidden;
@@ -106,10 +110,13 @@ export class Shop {
     // пълно прерисуване само ако нещо видимо се е променило (иначе посочването "мига")
     const afford = ITEMS.filter((it) => tab.groups.includes(it.group) && !owns(s, it.id) && it.price <= t.tokens).map((it) => it.id).join();
     const key = [this.tab, JSON.stringify(s.owned), JSON.stringify(s.equipped), JSON.stringify(s.achievements), afford,
-      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', JSON.stringify(s.avatar), tab.id === 'weather' ? JSON.stringify(this.weather) : ''].join('|');
+      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', JSON.stringify(s.avatar), tab.id === 'weather' ? JSON.stringify(this.weather) : '', JSON.stringify(s.petNames)].join('|');
     if (key === this.key) return;
     this.key = key;
     const scroll = this.body.scrollTop;
+    // полето, в което се пише в момента (име на любимец), оцелява при прерисуване
+    const typing = this.body.contains(document.activeElement) && document.activeElement.tagName === 'INPUT' && document.activeElement.name
+      ? { name: document.activeElement.name, value: document.activeElement.value, at: document.activeElement.selectionStart } : null;
     this.body.innerHTML = '';
     if (tab.id === 'trophies') this.renderTrophies();
     else if (tab.id === 'avatar') this.renderAvatar();
@@ -118,7 +125,16 @@ export class Shop {
     else if (tab.merge) this.renderGroup(tab.groups, T.shop.tabs[tab.id]); // по един предмет на група – обща решетка
     else for (const g of tab.groups) this.renderGroup([g], T.shop.groups[g]);
     this.body.scrollTop = scroll;
+    if (typing) {
+      const inp = this.body.querySelector(`input[name="${typing.name}"]`);
+      if (inp) { inp.value = typing.value; inp.focus(); try { inp.setSelectionRange(typing.at, typing.at); } catch { /* */ } }
+    }
+    // клик върху любимец в офиса -> неговият ред
+    if (this.focusPet && tab.id === 'pets') { this.body.querySelector(`section[data-pet="${this.focusPet}"]`)?.scrollIntoView({ block: 'start' }); this.focusPet = null; }
   }
+
+  /** Отваря „Любимци“ на реда на дадения любимец (клик върху него в офиса). */
+  openPet(slot) { this.focusPet = slot; this.open('pets'); }
 
   renderGroup(groups, title) {
     const s = this.tokens.save, eq = s.equipped || {};
@@ -213,10 +229,11 @@ export class Shop {
     el('p', 'hint', opts, A.hint);
   }
 
-  /** Любимци: по един ред за всяка котка – избор на шарка; котки 2 и 3 се отключват. Шарките се купуват веднъж. */
+  /** Любимци: по един ред за всеки (3 котки + куче) – име, шарка/порода, прибиране у дома. Следващата котка се
+   *  показва, щом предишната е отключена; кучето – винаги. В офиса са най-много MAX_PETS. */
   renderPets() {
     const s = this.tokens.save, eq = s.equipped || {}, P = T.shop.pets, decor = resolveDecor(eq);
-    const pats = ITEMS.filter((x) => x.group === 'cat');
+    const full = petCount(s) >= MAX_PETS;
     const card = (grid, it, slot, on) => {
       const c = el('div', `card${owns(s, it.id) ? ' owned' : ''}${on ? ' on' : ''}`, grid);
       c.dataset.id = it.id; c.dataset.slot = slot;
@@ -224,22 +241,44 @@ export class Shop {
       el('div', 'nm', c, itemName(it));
       return c;
     };
-    ['cat', 'cat2', 'cat3'].forEach((slot, i) => {
-      const sec = el('section', null, this.body);
-      el('h3', null, sec, P.cats[i]);
-      const grid = el('div', 'grid', sec);
+    const catSlots = PET_SLOTS.filter((sl) => SLOTS[sl].pet === 'cat');
+    // първо безплатният вид (започналите с куче виждат кучето най-горе)
+    const order = (s.starter === 'dog') ? [...PET_SLOTS].sort((a, b) => (SLOTS[b].pet === 'dog') - (SLOTS[a].pet === 'dog')) : PET_SLOTS;
+    for (const slot of order) {
+      const S = SLOTS[slot];
+      if (!unlocked(s, slot) && S.after && !unlocked(s, S.after)) continue;
+      const sec = el('section', 'pet', this.body);
+      sec.dataset.pet = slot;
+      const title = S.pet === 'dog' ? P.dog : P.cats[catSlots.indexOf(slot)];
+      const h = el('h3', null, sec);
       if (!unlocked(s, slot)) {
-        const it = ITEMS.find((x) => x.id === SLOTS[slot].need);
+        h.textContent = title;
+        const grid = el('div', 'grid', sec);
+        const it = ITEM[S.need];
         const c = card(grid, it, slot, false);
         el('div', 'pr', c, `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
         const short = it.price - (this.tokens.tokens ?? 0);
-        const b = el('button', 'buy', el('div', 'act', c), short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
-        b.dataset.buy = it.id; b.disabled = short > 0;
-        el('p', 'hint', sec, P.unlock(itemName(ITEMS.find((x) => x.id === it.gives))));
-        return;
+        const b = el('button', 'buy', el('div', 'act', c), full ? P.full : short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
+        b.dataset.buy = it.id; b.disabled = short > 0 || full;
+        el('p', 'hint', sec, (S.pet === 'dog' ? P.unlockDog : P.unlock)(itemName(ITEM[it.gives])));
+        continue;
       }
       const cur = decor[slot]?.id || null;
-      for (const it of pats) {
+      h.textContent = `${title} · ${petName(slot, s.petNames)}${cur ? '' : ` (${P.home})`}`;
+      // име
+      const form = el('form', 'pname', sec);
+      const inp = el('input', null, form);
+      inp.name = `pet-${slot}`; inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(slot, null); inp.value = s.petNames?.[slot] || '';
+      inp.setAttribute('aria-label', P.name);
+      el('button', null, form, P.rename).type = 'submit';
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        if (!this.tokens.backend.pet) return;
+        const r = await this.tokens.backend.pet(slot, inp.value);
+        if (r && !r.ok) this.flash(T.shop.errors[r.error] || r.error);
+      };
+      const grid = el('div', 'grid', sec);
+      for (const it of ITEMS.filter((x) => x.group === S.group)) {
         const c = card(grid, it, slot, cur === it.id);
         const have = owns(s, it.id);
         el('div', 'pr', c, it.price === 0 ? T.shop.free : have ? T.shop.owned : `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
@@ -250,15 +289,16 @@ export class Shop {
           b.dataset.buy = it.id; b.dataset.slot = slot; b.disabled = short > 0;
         } else {
           const b = el('button', cur === it.id ? 'on' : '', act, cur === it.id ? T.shop.equipped : T.shop.equip);
-          b.dataset.equip = it.id; b.dataset.slot = slot; b.disabled = cur === it.id;
+          b.dataset.equip = it.id; b.dataset.slot = slot; b.disabled = cur === it.id || (!cur && full);
         }
       }
-      if (slot !== 'cat') {
-        const b = el('button', null, el('div', 'act', sec), cur ? P.away : P.back);
-        if (cur) { b.dataset.remove = '1'; b.dataset.slot = slot; }
-        else { b.dataset.equip = ITEMS.find((x) => x.slot === slot).gives; b.dataset.slot = slot; }
-      }
-    });
+      // у дома / обратно в офиса (връща се с безплатната шарка/порода)
+      const b = el('button', null, el('div', 'act', sec), cur ? P.away : P.back);
+      b.dataset.slot = slot;
+      if (cur) b.dataset.remove = '1';
+      else { b.dataset.equip = S.def || ITEM[S.need].gives; b.disabled = full; }
+    }
+    el('p', 'hint', el('section', null, this.body), P.limit);
   }
 
   /** Времето навън: избран град + търсене; текстът от интернет се слага само като textContent. */
@@ -304,7 +344,7 @@ export class Shop {
 
   thumb(it) {
     let src = this.thumbs.get(it.id);
-    if (!src) { src = it.group === 'cat' ? catThumb(it) : it.group === 'catslot' ? catThumb(ITEMS.find((x) => x.id === it.gives)) : thumb(it); this.thumbs.set(it.id, src); }
+    if (!src) { src = it.group === 'cat' || it.group === 'dog' ? petThumb(it) : it.group === 'catslot' ? petThumb(ITEM[it.gives]) : thumb(it); this.thumbs.set(it.id, src); }
     // цяло число пъти увеличение (пиксел арт), около 84x66
     const k = Math.max(1, Math.min(4, Math.round(Math.min(84 / src.width, 66 / src.height))));
     const c = makeCanvas(src.width, src.height);

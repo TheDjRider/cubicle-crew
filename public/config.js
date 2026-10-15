@@ -90,20 +90,24 @@ const T_BG = {
     groups: {
       wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под екипа', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
-      cat: 'Котка', cat2: 'Още една котка', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
+      cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
     },
     slots: { 'rug.team0': 'Екип 1', 'rug.team1': 'Екип 2', 'chair.team0': 'Екип 1', 'chair.team1': 'Екип 2', 'chair.lead': '★ Оркестратори' },
     buy: 'Купи', equip: 'Сложи', equipped: 'Сложено', remove: 'Махни', free: 'безплатно', owned: 'твое',
     need: (n) => `още ${n}`,
     hint: 'Посочи предмет – виждаш го в офиса. Затвори с Esc.',
-    errors: { avatar: 'Невалиден аватар.', funds: 'Нямаш достатъчно токени.', locked: 'Първо го купи.', busy: 'Друг Cubicle Crew брои токените – опитай пак след малко.', offline: 'Няма връзка със сървъра.' },
+    errors: { avatar: 'Невалиден аватар.', funds: 'Нямаш достатъчно токени.', locked: 'Първо го купи.', busy: 'Друг Cubicle Crew брои токените – опитай пак след малко.', offline: 'Няма връзка със сървъра.',
+      pets: 'В офиса има място за най-много 3 любимци – първо прибери някой у дома.' },
     achievement: 'Постижение',
     reward: (n) => `+${n} токена`,
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'отключено',
     pets: {
-      cats: ['Котка 1', 'Котка 2', 'Котка 3'], away: 'Без тази котка', back: 'Върни котката',
+      cats: ['Котка 1', 'Котка 2', 'Котка 3'], dog: 'Куче', away: 'Прибери у дома', back: 'Върни в офиса',
       unlock: (p) => `Идва с шарка „${p}“; после можеш да ѝ избереш всяка купена шарка.`,
+      unlockDog: (p) => `Идва като ${p.toLowerCase()}; после можеш да му избереш всяка купена порода.`,
+      home: 'у дома', full: 'Няма място', name: 'Име', rename: 'Преименувай', save: 'Запази',
+      limit: 'Най-много 3 любимци в офиса: до 3 котки или 2 котки и куче. Прибраните остават твои и могат да се върнат.',
     },
     avatar: {
       body: 'Тяло', male: 'Мъж', female: 'Жена', style: 'Прическа',
@@ -116,6 +120,23 @@ const T_BG = {
       skins: ['Много светла', 'Светла', 'Средна', 'Мургава', 'Тъмна', 'Много тъмна'],
       hairs: ['Черна', 'Кестенява', 'Светлокестенява', 'Руса', 'Рижа', 'Сива', 'Синя', 'Розова', 'Зелена', 'Лилава'],
     },
+  },
+  // офисните любимци: имена по подразбиране (по място) и подсказката при посочване
+  pets: {
+    names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Шаро' },
+    kinds: { cat: 'Офисна котка', dog: 'Офисно куче' },
+    tip: 'Клик – ново име и външен вид',
+  },
+  // начална настройка (първо пускане)
+  setup: {
+    hello: 'Добре дошъл в Cubicle Crew!',
+    intro: 'Две бързи неща и офисът е готов.',
+    petQ: 'С кого започва офисът?', cat: 'Котка', dog: 'Куче', nameQ: 'Как се казва?',
+    petHint: 'Другият вид може да се вземе по-късно от магазина (до 3 любимци).',
+    cityQ: 'Къде се намираш?',
+    cityHint: 'За часовника и времето навън в прозорците. Изпращат се само координатите на града към Open-Meteo; без град – нито една заявка навън.',
+    chosen: 'Избран:', next: 'Напред', back: 'Назад', skip: 'Пропусни', done: 'Готово',
+    later: 'Всичко това може да се смени после от магазина.',
   },
   weather: {
     city: 'Град', none: 'Не е избран – навън винаги е ясно, без заявки към интернет.',
@@ -188,20 +209,24 @@ const T_EN = {
     groups: {
       wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Team rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',
-      cat: 'Cat', cat2: 'One more cat', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
+      cat: 'Cat', cat2: 'One more cat', dog: 'Dog', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
     },
     slots: { 'rug.team0': 'Team 1', 'rug.team1': 'Team 2', 'chair.team0': 'Team 1', 'chair.team1': 'Team 2', 'chair.lead': '★ Leads' },
     buy: 'Buy', equip: 'Use', equipped: 'In use', remove: 'Remove', free: 'free', owned: 'owned',
     need: (n) => `${n} more`,
     hint: 'Hover an item to preview it in the office. Esc closes.',
-    errors: { avatar: 'Invalid avatar.', funds: 'Not enough tokens.', locked: 'Buy it first.', busy: 'Another Cubicle Crew is counting tokens – try again in a moment.', offline: 'No connection to the server.' },
+    errors: { avatar: 'Invalid avatar.', funds: 'Not enough tokens.', locked: 'Buy it first.', busy: 'Another Cubicle Crew is counting tokens – try again in a moment.', offline: 'No connection to the server.',
+      pets: 'The office has room for 3 pets at most – send one home first.' },
     achievement: 'Achievement',
     reward: (n) => `+${n} tokens`,
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'unlocked',
     pets: {
-      cats: ['Cat 1', 'Cat 2', 'Cat 3'], away: 'No cat here', back: 'Bring the cat back',
+      cats: ['Cat 1', 'Cat 2', 'Cat 3'], dog: 'Dog', away: 'Send home', back: 'Bring back',
       unlock: (p) => `Comes as a ${p.toLowerCase()}; then you can give it any pattern you own.`,
+      unlockDog: (p) => `Comes as a ${p.toLowerCase()}; then you can make it any breed you own.`,
+      home: 'at home', full: 'No room', name: 'Name', rename: 'Rename', save: 'Save',
+      limit: 'Up to 3 pets in the office: 3 cats, or 2 cats and a dog. Pets sent home stay yours and can come back.',
     },
     avatar: {
       body: 'Body', male: 'Man', female: 'Woman', style: 'Hairstyle',
@@ -214,6 +239,21 @@ const T_EN = {
       skins: ['Very light', 'Light', 'Medium', 'Tan', 'Dark', 'Very dark'],
       hairs: ['Black', 'Brown', 'Light brown', 'Blonde', 'Ginger', 'Grey', 'Blue', 'Pink', 'Green', 'Purple'],
     },
+  },
+  pets: {
+    names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex' },
+    kinds: { cat: 'Office cat', dog: 'Office dog' },
+    tip: 'Click to rename or change the look',
+  },
+  setup: {
+    hello: 'Welcome to Cubicle Crew!',
+    intro: 'Two quick things and the office is ready.',
+    petQ: 'Who starts in the office?', cat: 'Cat', dog: 'Dog', nameQ: 'What is their name?',
+    petHint: 'You can get the other kind later in the shop (up to 3 pets).',
+    cityQ: 'Where are you?',
+    cityHint: 'For the clock and the weather in the windows. Only the city coordinates are sent to Open-Meteo; with no city, nothing goes to the internet.',
+    chosen: 'Selected:', next: 'Next', back: 'Back', skip: 'Skip', done: 'Done',
+    later: 'You can change all of this later in the shop.',
   },
   weather: {
     city: 'City', none: 'Not set – it is always clear outside and nothing is sent to the internet.',
@@ -261,6 +301,9 @@ const T_EN = {
     'lamp.floor': 'Floor lamp', 'lamp.arc': 'Arc lamp',
     'cat.grey': 'Grey cat', 'cat.ginger': 'Ginger cat', 'cat.black': 'Black cat', 'cat.white': 'White cat', 'cat2.tabby': 'Second cat', 'cat3.extra': 'Third cat',
     'cat.tabby': 'Tabby cat', 'cat.tuxedo': 'Tuxedo cat', 'cat.calico': 'Calico cat', 'cat.siamese': 'Siamese cat', 'cat.tortie': 'Tortoiseshell cat',
+    'cat1.extra': 'Cat', 'dog.extra': 'Dog',
+    'dog.beagle': 'Beagle', 'dog.golden': 'Golden retriever', 'dog.black': 'Black labrador', 'dog.dachshund': 'Dachshund', 'dog.corgi': 'Corgi',
+    'dog.husky': 'Husky', 'dog.dalmatian': 'Dalmatian', 'dog.pug': 'Pug',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',
     'neon.code': 'Neon sign', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet',
   },
@@ -296,5 +339,8 @@ export const PARAMS = {
   desktop: Q.has('desktop'),   // отворено от Electron приложението
   wait: Q.has('wait'),         // сутрешен екран, докато няма сесия (Electron при старт с Windows)
   weather: Q.get('weather'),   // ?weather=clear|cloudy|overcast|fog|drizzle|rain|snow|storm — фалшиво време (за тестове/демото)
+  setup: Q.has('setup'),       // ?setup — показва началната настройка отново (за тестове; в демото – в паметта)
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
+/** Име на любимец по място (save.petNames или името по подразбиране на текущия език). */
+export const petName = (slot, names) => names?.[slot] || T.pets.names[slot] || slot;

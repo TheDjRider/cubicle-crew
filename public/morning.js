@@ -1,11 +1,11 @@
 // Сутрешен екран: малкото прозорче при старт с Windows, докато няма нито една сесия.
-// Аватарът пие кафе на бюрото, котката спи, небето в прозореца е по истинския час.
+// Аватарът пие кафе на бюрото, любимецът спи на перваза, небето в прозореца е по истинския час.
 // Щом се появи агент (или потребителят кликне) – екранът изчезва и прозорецът става офисът.
 import { T, STATES } from './config.js';
 import { timeOfDay } from './environment.js';
 import { applyWeather, drawWindowWeather } from './weather.js';
 import { CharacterSprites, avatarLook, FW, FH } from './sprites.js';
-import { Cat } from './characters.js';
+import { Cat, Dog } from './characters.js';
 import { ENV, mix, shade } from './palette.js';
 import { drawText, textWidth } from './pixelfont.js';
 import { R, rng } from './util.js';
@@ -32,8 +32,7 @@ export class Morning {
     document.body.classList.add('waiting');
     this.canvas.addEventListener('click', () => this.wake());
     this.box.addEventListener('click', () => this.wake());
-    this.cat = new Cat(undefined, 0.5);
-    this.cat.mode = 'sleep';
+    this.pet = null; this.petKey = null;
     this.resize();
     addEventListener('resize', () => { if (this.active) this.resize(); });
   }
@@ -122,12 +121,18 @@ export class Morning {
     R(ctx, ENV.pot[1], plx - 1, dTop - 5, 5, 5); R(ctx, ENV.pot[0], plx - 1, dTop - 5, 5, 1);
     R(ctx, ENV.leaf[1], plx - 1, dTop - 9, 2, 4); R(ctx, ENV.leaf[0], plx + 1, dTop - 11, 2, 6); R(ctx, ENV.leaf[2], plx + 3, dTop - 8, 2, 3);
 
-    // ---- котката на перваза: спи, понякога сяда и се оглежда
-    const cyc = t % 40;
-    this.cat.mode = cyc > 30 && cyc < 36 ? 'sit' : 'sleep';
-    this.cat.x = wx + 9; this.cat.y = wy + wh + 2; this.cat.flip = false;
-    this.cat.draw(ctx, now);
-    if (this.cat.mode === 'sleep') this.drawZ(ctx, this.cat.x + 6, this.cat.y - 11, t * 0.8, true);
+    // ---- първият любимец от офиса спи на перваза, понякога сяда и се оглежда
+    const first = this.office.pets[0] || null, key = first ? first.look.id || first.kind : '';
+    if (key !== this.petKey) { this.petKey = key; this.pet = first ? new (first.kind === 'dog' ? Dog : Cat)(first.look) : null; }
+    const pet = this.pet;
+    if (pet) {
+      const cyc = t % 40;
+      pet.mode = cyc > 30 && cyc < 36 ? 'sit' : 'sleep';
+      pet.x = wx + (pet.kind === 'dog' ? 12 : 9); pet.y = wy + wh + 2; // подът е под надписа – и кучето е на перваза
+      pet.flip = false;
+      pet.draw(ctx, now);
+      if (pet.mode === 'sleep') this.drawZ(ctx, pet.x + (pet.kind === 'dog' ? 9 : 6), pet.y - (pet.kind === 'dog' ? 8 : 11), t * 0.8, true);
+    }
 
     // ---- светлина: нощем синкаво, на изгрев топло; мониторът свети
     if (tod.tint !== '#ffffff') {

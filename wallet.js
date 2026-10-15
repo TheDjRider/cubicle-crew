@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { Earner, dayKey } from './public/rules.js';
-import { buyItem, equipItem, setAvatar, grantAchievements } from './public/catalog.js';
+import { buyItem, equipItem, setAvatar, grantAchievements, setupOffice, setPetName } from './public/catalog.js';
 
 const DIR = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office');
 const FILE = path.join(DIR, 'save.json');
@@ -14,12 +14,15 @@ const STEP_MS = 5000;        // натрупване
 const SAVE_MS = 10000;       // най-много един запис за толкова
 const LOCK_STALE_MS = 30000; // заключване без опресняване толкова -> поемаме го
 
+// setup: null = нов потребител, началната настройка още не е минала (catalog.js setupOffice)
 const fresh = () => ({
   version: 1, tokens: 0, lifetimeTokens: 0, lifetimeActiveSec: 0, tasksDone: 0,
-  owned: [], equipped: {}, lastDaily: null, daysActive: 0, achievements: {},
+  owned: [], equipped: {}, lastDaily: null, daysActive: 0, achievements: {}, setup: null,
 });
+// записи отпреди началната настройка: не я показваме (котката им си остава)
+const load = (s) => ({ ...fresh(), setup: 'legacy', ...s });
 // полетата, които клиентът получава при промяна на обзавеждането
-const DECOR_KEYS = ['owned', 'equipped', 'achievements', 'avatar'];
+const DECOR_KEYS = ['owned', 'equipped', 'achievements', 'avatar', 'petNames', 'starter', 'setup'];
 
 function readJson(f) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } }
 function alive(pid) { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } }
@@ -27,7 +30,8 @@ function alive(pid) { try { process.kill(pid, 0); return true; } catch (e) { ret
 export class Wallet {
   constructor(broadcast, log = () => {}) {
     this.broadcast = broadcast; this.log = log;
-    this.save = { ...fresh(), ...(readJson(FILE) || readJson(FILE + '.bak') || {}) };
+    const f = readJson(FILE) || readJson(FILE + '.bak');
+    this.save = f ? load(f) : fresh();
     this.earner = new Earner({ lastDaily: this.save.lastDaily });
     this.owner = false; this.dirty = false; this.lastWrite = 0; this.mtime = 0;
     this.activeMs = 0;
@@ -60,7 +64,7 @@ export class Wallet {
     const s = readJson(FILE);
     if (!s) return false;
     const before = this.save.tokens;
-    this.save = { ...fresh(), ...s };
+    this.save = load(s);
     this.earner.lastDaily = this.save.lastDaily;
     return this.save.tokens !== before;
   }
@@ -116,12 +120,14 @@ export class Wallet {
       if (!l?.port) return { ok: false, error: 'busy' };
       try {
         const r = await fetch(`http://127.0.0.1:${l.port}/api/${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json());
-        if (r.save) { this.save = { ...fresh(), ...r.save }; delete this.save.owner; delete this.save.catalog; this.broadcast(this.msg(0, kind, null, null, true)); }
+        if (r.save) { this.save = load(r.save); delete this.save.owner; delete this.save.catalog; this.broadcast(this.msg(0, kind, null, null, true)); }
         return r;
       } catch { return { ok: false, error: 'busy' }; }
     }
     const r = kind === 'buy' ? buyItem(this.save, String(body.item), body.slot ? String(body.slot) : null)
       : kind === 'avatar' ? setAvatar(this.save, body)
+      : kind === 'setup' ? setupOffice(this.save, body)
+      : kind === 'pet' ? setPetName(this.save, String(body.slot), body.name)
       : equipItem(this.save, String(body.slot), body.item == null ? null : String(body.item));
     if (r.ok) {
       this.dirty = true;

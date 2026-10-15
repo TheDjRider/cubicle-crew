@@ -18,10 +18,13 @@ export const SLOTS = {
   plants:        { group: 'plants',   def: 'plants.ficus' },
   posters:       { group: 'posters',  def: 'posters.classic' },
   lamp:          { group: 'lamp',     def: 'lamp.floor' },
-  cat:           { group: 'cat',      def: 'cat.grey' },   // котка 1 (безплатна); шарките са обща група за трите котки
+  // любимци (pet): до MAX_PETS общо, кучето е едно. Безплатен е видът, избран в началната настройка (starter;
+  // старите записи = котка), другият се отключва с покупка (need). Прибран любимец = null в equipped.
+  cat:           { group: 'cat',      def: 'cat.grey', pet: 'cat', starter: 'cat', need: 'cat1.extra' }, // шарките са обща група за трите котки
   window:        { group: 'window',   def: 'window.city' },
-  cat2:          { group: 'cat',      def: null, need: 'cat2.tabby' }, // котка 2/3: празно = няма котка; отключват се с покупка
-  cat3:          { group: 'cat',      def: null, need: 'cat3.extra' },
+  cat2:          { group: 'cat',      def: null, pet: 'cat', need: 'cat2.tabby', after: 'cat' }, // котка 2/3: купуват се след предишната
+  cat3:          { group: 'cat',      def: null, pet: 'cat', need: 'cat3.extra', after: 'cat2' },
+  dog:           { group: 'dog',      def: null, pet: 'dog', starter: 'dog', need: 'dog.extra' },
   neon:          { group: 'neon',     def: null },
   aquarium:      { group: 'aquarium', def: null },
   arcade:        { group: 'arcade',   def: null },
@@ -34,7 +37,7 @@ export const TABS = [
   { id: 'floor', groups: ['floor', 'rug', 'lrug'] },
   { id: 'furniture', groups: ['sofa', 'chair', 'lamp'] },
   { id: 'decor', groups: ['plants', 'posters', 'window'] },
-  { id: 'pets', groups: ['cat', 'catslot'] },
+  { id: 'pets', groups: ['cat', 'catslot', 'dog'] },
   { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade'], merge: true },
   { id: 'avatar', groups: [] },
   { id: 'weather', groups: [] },
@@ -135,6 +138,19 @@ export const ITEMS = [
   // още котки: отключват мястото и идват с една шарка (cat2.tabby е старата "Втора котка" – id-то остава)
   I('cat2.tabby', 'catslot', 600, 'Втора котка', { slot: 'cat2', gives: 'cat.tabby' }),
   I('cat3.extra', 'catslot', 900, 'Трета котка', { slot: 'cat3', gives: 'cat.tuxedo' }),
+  // котка за започналите с куче и куче за започналите с котка (alt: всеки може да купи само едното)
+  I('cat1.extra', 'catslot', 600, 'Котка', { slot: 'cat', gives: 'cat.grey', alt: true }),
+  I('dog.extra', 'catslot', 600, 'Куче', { slot: 'dog', gives: 'dog.beagle', alt: true }),
+  // кучета (породи) – рисуват се от Dog в characters.js. m = муцуна, e = уши, ears flop|up, tail long|curl|stub,
+  // legs short = къси крака, len = по-дълго (+) / по-късо (-) тяло, pat saddle|chest|mask|spots с цвят p
+  I('dog.beagle', 'dog', 0, 'Бигъл', { c: '#c08a4a', hi: '#d8a464', m: '#f0e8dc', e: '#6a4426', eye: '#2a1a12', ears: 'flop', tail: 'long', pat: 'saddle', p: '#3a2a22' }),
+  I('dog.golden', 'dog', 150, 'Голдън ретривър', { c: '#d8a050', hi: '#ecbc6c', m: '#e4b468', e: '#c08840', eye: '#2a1a12', ears: 'flop', tail: 'long' }),
+  I('dog.black', 'dog', 150, 'Черен лабрадор', { c: '#2a2624', hi: '#423c38', m: '#34302e', e: '#1e1a18', eye: '#a07a3a', ears: 'flop', tail: 'long' }),
+  I('dog.dachshund', 'dog', 200, 'Дакел', { c: '#8a4a26', hi: '#a8603a', m: '#7a3e20', e: '#5e321a', eye: '#1a1210', ears: 'flop', tail: 'long', legs: 'short', len: 3 }),
+  I('dog.corgi', 'dog', 250, 'Корги', { c: '#d88a3e', hi: '#eca45a', m: '#f4ece0', e: '#c07430', eye: '#2a1a12', ears: 'up', tail: 'stub', legs: 'short', len: 1, pat: 'chest', p: '#f4ece0' }),
+  I('dog.husky', 'dog', 250, 'Хъски', { c: '#6a7080', hi: '#868c9c', m: '#eef0f4', e: '#545a68', eye: '#4a8fe0', ears: 'up', tail: 'curl', pat: 'mask', p: '#eef0f4' }),
+  I('dog.dalmatian', 'dog', 250, 'Далматинец', { c: '#ece8e0', hi: '#fffcf4', m: '#ece8e0', e: '#2a2624', eye: '#2a1a12', ears: 'flop', tail: 'long', pat: 'spots', p: '#24201e' }),
+  I('dog.pug', 'dog', 250, 'Мопс', { c: '#d8bc8a', hi: '#ecd4a4', m: '#2e2624', e: '#2e2624', eye: '#1a1210', ears: 'flop', tail: 'curl', legs: 'short', len: -1 }),
   // изглед през прозорците
   I('window.city', 'window', 0, 'Град', { style: 'city' }),
   I('window.sea', 'window', 500, 'Море', { style: 'sea' }),
@@ -150,8 +166,9 @@ export const GROUP_SLOTS = {};
 for (const [slot, s] of Object.entries(SLOTS)) (GROUP_SLOTS[s.group] ||= []).push(slot);
 
 // ---- постижения (фаза 4): проверяват се след всяка промяна; наградата отива само в tokens (не в lifetimeTokens) ----
-const paid = (s) => (s.owned || []).filter((id) => ITEM[id]?.price > 0).length;
-const ALL_PAID = ITEMS.filter((it) => it.price > 0).length;
+// котката/кучето "от другия вид" (alt) не се брои – всеки може да купи само едното
+const paid = (s) => (s.owned || []).filter((id) => ITEM[id]?.price > 0 && !ITEM[id].alt).length;
+const ALL_PAID = ITEMS.filter((it) => it.price > 0 && !it.alt).length;
 const M = {
   tokens: (s) => s.lifetimeTokens || 0,
   tasks: (s) => s.tasksDone || 0,
@@ -173,8 +190,21 @@ export const ACHIEVEMENTS = [
 const BUNDLED = {};
 for (const it of ITEMS) if (it.gives) BUNDLED[it.gives] = it.id;
 export const owns = (save, id) => !!ITEM[id] && (ITEM[id].price === 0 || (save.owned || []).includes(id) || (!!BUNDLED[id] && (save.owned || []).includes(BUNDLED[id])));
-/** Мястото е отключено (котки 2 и 3 се купуват). */
-export const unlocked = (save, slot) => !SLOTS[slot]?.need || owns(save, SLOTS[slot].need);
+/** Мястото е отключено: без need, безплатният вид според началната настройка (старите записи = котка) или купено. */
+export function unlocked(save, slot) {
+  const s = SLOTS[slot];
+  if (!s?.need) return true;
+  if (s.starter && (save.starter || 'cat') === s.starter) return true;
+  return owns(save, s.need);
+}
+/** Колко любимци има в офиса сега (най-много MAX_PETS). */
+export const MAX_PETS = 3;
+export const PET_SLOTS = Object.keys(SLOTS).filter((sl) => SLOTS[sl].pet);
+export function petCount(save) {
+  const d = resolveDecor(save.equipped);
+  return PET_SLOTS.filter((sl) => d[sl] && unlocked(save, sl)).length;
+}
+const emptyPet = (save, slot) => !!SLOTS[slot]?.pet && !resolveDecor(save.equipped)[slot];
 // стари записи: на мястото cat2 стоеше самият 'cat2.tabby'
 const LEGACY = { 'cat2.tabby': 'cat.tabby' };
 
@@ -183,15 +213,22 @@ export function buyItem(save, id, slot = null) {
   const it = ITEM[id];
   if (!it) return { ok: false, error: 'unknown' };
   if (owns(save, id)) return { ok: false, error: 'owned' };
+  if (it.slot) {
+    // ново място за любимец: предишната котка трябва да я има, а в офиса – място
+    const s = SLOTS[it.slot];
+    if (unlocked(save, it.slot) || (s.after && !unlocked(save, s.after))) return { ok: false, error: 'locked' };
+    if (petCount(save) >= MAX_PETS) return { ok: false, error: 'pets' };
+  }
   if (save.tokens < it.price) return { ok: false, error: 'funds' };
   save.tokens -= it.price;
   (save.owned ||= []).push(id);
-  // отключена котка: идва веднага със своята шарка
+  // отключен любимец: идва веднага със своята шарка/порода
   if (it.slot) { (save.equipped ||= {})[it.slot] = it.gives; return { ok: true, slot: it.slot }; }
   // посоченото място (напр. коя котка), иначе първото, което още е на подразбиране
   const slots = (GROUP_SLOTS[it.group] || []).filter((s) => unlocked(save, s));
   const target = (slot && slots.includes(slot) && slot) || slots.find((s) => !save.equipped?.[s] || save.equipped[s] === SLOTS[s].def) || slots[0];
-  if (target) (save.equipped ||= {})[target] = id;
+  // прибран любимец при пълен офис: купено е, но не се слага
+  if (target && !(emptyPet(save, target) && petCount(save) >= MAX_PETS)) (save.equipped ||= {})[target] = id;
   return { ok: true, slot: target };
 }
 
@@ -201,13 +238,41 @@ export function equipItem(save, slot, id) {
   if (!s) return { ok: false, error: 'slot' };
   if (id == null) {
     save.equipped ||= {};
-    if (s.def) save.equipped[slot] = s.def; else delete save.equipped[slot];
+    if (s.pet && s.def) save.equipped[slot] = null; // любимецът се прибира у дома (и първата котка)
+    else if (s.def) save.equipped[slot] = s.def; else delete save.equipped[slot];
     return { ok: true };
   }
   const it = ITEM[id];
   if (!it || it.group !== s.group) return { ok: false, error: 'slot' };
   if (!owns(save, id) || !unlocked(save, slot)) return { ok: false, error: 'locked' };
+  if (emptyPet(save, slot) && petCount(save) >= MAX_PETS) return { ok: false, error: 'pets' };
   (save.equipped ||= {})[slot] = id;
+  return { ok: true };
+}
+
+/** Име на любимец (по място): до PET_NAME_MAX знака, без контролни знаци и <>; празно = името по подразбиране. */
+export const PET_NAME_MAX = 16;
+export function cleanPetName(name) {
+  return String(name ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, PET_NAME_MAX);
+}
+export function setPetName(save, slot, name) {
+  if (!SLOTS[slot]?.pet) return { ok: false, error: 'slot' };
+  const n = cleanPetName(name);
+  save.petNames ||= {};
+  if (n) save.petNames[slot] = n; else delete save.petNames[slot];
+  return { ok: true };
+}
+
+/** Начална настройка (веднъж; setup === null = още не е минала): с какъв любимец започва офисът и името му.
+ *  Без pet (пропусната) -> котка, както досега. Ако вече е минала – нищо не се променя. */
+export function setupOffice(save, data = {}) {
+  if (save.setup) return { ok: true };
+  const pet = data.pet === 'dog' ? 'dog' : 'cat';
+  save.starter = pet;
+  save.equipped ||= {};
+  if (pet === 'dog') { save.equipped.cat = null; save.equipped.dog = ITEM['dog.extra'].gives; }
+  if (data.name != null) setPetName(save, pet, data.name);
+  save.setup = new Date().toISOString().slice(0, 10);
   return { ok: true };
 }
 
@@ -228,6 +293,7 @@ export function grantAchievements(save, today) {
 export function resolveDecor(equipped = {}) {
   const out = {};
   for (const [slot, s] of Object.entries(SLOTS)) {
+    if (s.pet && equipped[slot] === null) { out[slot] = null; continue; } // прибран любимец
     const it = ITEM[LEGACY[equipped[slot]] || equipped[slot]];
     out[slot] = it && it.group === s.group ? it : s.def ? ITEM[s.def] : null;
   }

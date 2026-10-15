@@ -5,14 +5,16 @@ import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, gl
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
-import { resolveDecor, AVATAR } from './catalog.js';
+import { resolveDecor, AVATAR, SLOTS, PET_SLOTS } from './catalog.js';
 import { drawScreen } from './screens.js';
-import { Actor, Cat, DART_CYCLE, DART_RELEASE } from './characters.js';
+import { Actor, Cat, Dog, DART_CYCLE, DART_RELEASE } from './characters.js';
 import { avatarLook } from './sprites.js';
 import { rgba } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
 
 const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts']);
+// откъде тръгва всеки любимец (част от зоната за почивка), за да не се появят един върху друг
+const PET_START = { cat: 0.5, cat2: 0.2, cat3: 0.82, dog: 0.36 };
 
 export class Office {
   constructor(model, particles) {
@@ -24,9 +26,10 @@ export class Office {
     this.spec = { teams: 1, rows: 1 };
     this.teams = new Array(CFG.MAX_TEAMS).fill(null); // id на оркестратора за всеки екип
     this.decor = resolveDecor({});   // обзавеждането (catalog.js); setDecor() го сменя
-    this.catBySlot = [];              // котка 1..3 (празно място = null)
-    this.cats = [];
-    this.syncCats();
+    this.petBySlot = {};              // любимците по място (cat, cat2, cat3, dog)
+    this.pets = [];
+    this.petNames = {};               // save.petNames (портфейлът ги сменя)
+    this.syncPets();
     this.avatar = AVATAR.def;        // външният вид на потребителя (портфейлът го сменя)
     this.avatarId = null;            // кой оркестратор го носи: първият дошъл; щом излезе – следващият по ред
     this.joinSeq = 0;
@@ -90,22 +93,34 @@ export class Office {
     if (a) a.setLook(avatarLook(av, a.id));
   }
 
-  /** Ново обзавеждане (от портфейла или прегледа в магазина): котките + прерисуване на стаята. */
+  /** Ново обзавеждане (от портфейла или прегледа в магазина): любимците + прерисуване на стаята. */
   setDecor(decor) {
     this.decor = decor;
-    this.syncCats();
+    this.syncPets();
     if (this.L) this.relayout();
   }
 
-  /** До три котки – всяка със своята шарка; запазват мястото си при смяна на шарката. */
-  syncCats() {
+  /** До три любимци (котки + куче) – всеки със своята шарка/порода; запазват мястото си при смяна на шарката. */
+  syncPets() {
     const d = this.decor;
-    [d.cat, d.cat2, d.cat3].forEach((look, i) => {
-      if (!look) { this.catBySlot[i] = null; return; }
-      if (!this.catBySlot[i]) this.catBySlot[i] = new Cat(look, [0.5, 0.2, 0.82][i]);
-      this.catBySlot[i].look = look;
-    });
-    this.cats = this.catBySlot.filter(Boolean);
+    for (const slot of PET_SLOTS) {
+      const look = d[slot];
+      if (!look) { delete this.petBySlot[slot]; continue; }
+      if (!this.petBySlot[slot]) {
+        const p = new (SLOTS[slot].pet === 'dog' ? Dog : Cat)(look, PET_START[slot] ?? 0.5);
+        p.slot = slot;
+        this.petBySlot[slot] = p;
+      }
+      this.petBySlot[slot].look = look;
+    }
+    this.pets = PET_SLOTS.map((s) => this.petBySlot[s]).filter(Boolean);
+  }
+
+  /** Любимецът под мишката (най-предният). */
+  petAt(x, y) {
+    let best = null;
+    for (const p of this.pets) if (p.placed && p.hit(x, y) && (!best || p.y > best.y)) best = p;
+    return best;
   }
 
   /** Расте веднага; смалява се само когато никой не върви (иначе героите "прескачат"). */
@@ -520,7 +535,9 @@ export class Office {
     // вратата се отваря, ако някой е до нея
     const nearDoor = [...this.actors.values()].some((a) => Math.abs(a.x - L.door.cx) < 10 && a.y < L.door.floorY + 14 && a.mode !== 'seated');
     this.room.doorOpen = clamp(this.room.doorOpen + (nearDoor ? dt * 4 : -dt * 2.5), 0, 1);
-    for (const c of this.cats) c.update(dt, now, L);
+    // кучето понякога отива при някого, който почива (стои на място в зоната за почивка)
+    const people = this.pets.some((p) => p.kind === 'dog') ? [...this.actors.values()].filter((a) => a.mode === 'idleSpot' && LOUNGE.has(a.loc.type)) : [];
+    for (const c of this.pets) c.update(dt, now, L, people);
     // прашинки в слънчевите снопове
     if (this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
       const w = this.room.windows[Math.floor(Math.random() * this.room.windows.length)];
@@ -626,7 +643,7 @@ export class Office {
       const k = a.depth(L);
       items.push({ key: k, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
     }
-    for (const c of this.cats) items.push({ key: c.y, fn: () => c.draw(ctx, now) });
+    for (const c of this.pets) items.push({ key: c.y, fn: () => c.draw(ctx, now) });
     if (room.aquarium) items.push({ key: room.aquarium.key + 0.5, fn: () => drawAquariumFish(ctx, room.aquarium, now) });
     if (room.arcade) items.push({ key: room.arcade.key + 0.5, fn: () => drawArcadeScreen(ctx, room.arcade, now) });
     items.forEach((it, i) => { it.i = i; });

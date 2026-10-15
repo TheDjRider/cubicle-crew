@@ -34,6 +34,22 @@ export const FAKE = {
 };
 export function fakeNow(name) { const f = FAKE[name]; return f ? { ...f, at: Date.now(), fake: true } : null; }
 
+/** Часът в избрания град: Date, чиито местни полета (getHours…) са часът там. Без зона / непозната зона -> date.
+ *  Браузърът си знае зоните (Intl) – нищо не се тегли. */
+const zoneFmt = new Map();
+export function cityDate(date, tz) {
+  if (!tz) return date;
+  let f = zoneFmt.get(tz);
+  if (f === undefined) {
+    try { f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }); } catch { f = null; }
+    zoneFmt.set(tz, f);
+  }
+  if (!f) return date;
+  const p = {};
+  for (const x of f.formatToParts(date)) p[x.type] = Number(x.value);
+  return new Date(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second, date.getMilliseconds());
+}
+
 /** Сурово време от сървъра -> параметри за рисуване (null = няма/остаряло -> ясно небе като досега). */
 export function wxFrom(now) {
   if (!now || (!now.fake && Date.now() - now.at > STALE_MS)) return null;

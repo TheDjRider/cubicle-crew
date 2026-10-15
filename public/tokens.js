@@ -3,7 +3,7 @@
 // и пращаме покупките (POST /api/buy, /api/equip). В демото същите правила работят в паметта.
 import { PARAMS } from './config.js';
 import { Earner, dayKey } from './rules.js';
-import { resolveDecor, buyItem, equipItem, setAvatar, avatarOf, grantAchievements } from './catalog.js';
+import { resolveDecor, buyItem, equipItem, setAvatar, avatarOf, grantAchievements, setupOffice, setPetName } from './catalog.js';
 
 const SHOW_EVERY_MS = 20000; // най-много едно "+N" на агент за толкова (натрупва се)
 
@@ -51,6 +51,9 @@ export class Tokens {
       this.save.owned = m.owned || []; this.save.equipped = m.equipped; this.save.achievements = m.achievements || {};
       this.save.avatar = m.avatar || null;
       this.office.setAvatar(avatarOf(this.save));
+      // любимци и началната настройка (стар сървър без тези полета: setup остава undefined = не се показва)
+      this.save.petNames = m.petNames || {}; this.save.starter = m.starter; this.save.setup = m.setup;
+      this.office.petNames = this.save.petNames;
     }
     if (m.stats) this.save.stats = m.stats;
     if (m.reason === 'work' && m.by) {
@@ -90,17 +93,22 @@ export class Tokens {
 function serverBackend() {
   const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then((r) => r.json()).catch(() => ({ ok: false, error: 'offline' }));
-  return { buy: (item, slot) => post('api/buy', { item, slot }), equip: (slot, item) => post('api/equip', { slot, item }), avatar: (a) => post('api/avatar', a) };
+  return {
+    buy: (item, slot) => post('api/buy', { item, slot }), equip: (slot, item) => post('api/equip', { slot, item }), avatar: (a) => post('api/avatar', a),
+    setup: (d) => post('api/setup', d), pet: (slot, name) => post('api/pet', { slot, name }),
+  };
 }
 
 /** ?demo: същите правила, но в паметта (истинският save.json не се пипа) и 10 пъти по-бързо, за да се вижда. */
 export function demoWallet(tokens) {
   const earner = new Earner({ rate: 10 });
   const start = PARAMS.demo === 'showcase' ? 1240 : 600; // демото започва с малко токени, за да се пробва магазинът
-  const save = { tokens: start, lifetimeTokens: start, tasksDone: 0, lifetimeActiveSec: 0, daysActive: 0, owned: [], equipped: {}, achievements: {} };
+  // ?demo&setup – началната настройка в паметта (иначе демото я пропуска)
+  const save = { tokens: start, lifetimeTokens: start, tasksDone: 0, lifetimeActiveSec: 0, daysActive: 0, owned: [], equipped: {}, achievements: {}, setup: PARAMS.setup ? null : 'demo' };
   const push = (delta, reason, src, by, extra) => tokens.onWallet({
     type: 'wallet', tokens: save.tokens, lifetime: save.lifetimeTokens, delta, reason, src, by,
     owned: save.owned, equipped: save.equipped, achievements: save.achievements, avatar: save.avatar,
+    petNames: save.petNames, starter: save.starter, setup: save.setup,
     stats: { tasksDone: save.tasksDone, lifetimeActiveSec: save.lifetimeActiveSec, daysActive: save.daysActive }, ...extra,
   });
   const achievements = () => { for (const a of grantAchievements(save, dayKey())) push(a.reward, 'achievement', null, null, { achievement: a.id }); };
@@ -123,6 +131,8 @@ export function demoWallet(tokens) {
     buy: (item, slot) => act(buyItem(save, item, slot), 'buy'),
     equip: (slot, item) => act(equipItem(save, slot, item), 'equip'),
     avatar: (a) => act(setAvatar(save, a), 'avatar'),
+    setup: (d) => act(setupOffice(save, d), 'setup'),
+    pet: (slot, name) => act(setPetName(save, slot, name), 'pet'),
   };
   return (e) => { for (const b of earner.ingest(e, Date.now())) add(b.amount, b.reason, b.src); };
 }

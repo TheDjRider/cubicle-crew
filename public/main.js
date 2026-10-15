@@ -5,12 +5,13 @@ import { Particles } from './particles.js';
 import { Office } from './office.js';
 import { UI } from './ui.js';
 import { timeOfDay, parseFakeTime, TILES } from './environment.js';
-import { applyWeather, wxFrom, fakeNow } from './weather.js';
+import { applyWeather, wxFrom, fakeNow, cityDate } from './weather.js';
 import { setCharacterSheet, buildAtlas, lookFor } from './sprites.js';
 import { startDemo } from './demo.js';
 import { Tokens, demoWallet } from './tokens.js';
 import { Shop } from './shop.js';
 import { Morning } from './morning.js';
+import { Setup } from './setup.js';
 import { play } from './sound.js';
 
 const canvas = document.getElementById('c');
@@ -25,6 +26,7 @@ const tokens = new Tokens(office, ui);
 const shop = new Shop(tokens, ui);
 ui.onShop = () => shop.open();
 ui.onWeather = () => shop.open('weather');
+ui.onPet = (slot) => shop.openPet(slot);
 shop.onToggle = () => resize();
 if (PARAMS.debug) window.__shop = shop;
 
@@ -41,6 +43,15 @@ if (!PARAMS.demo) {
 // ?wait: сутрешен екран, докато не се появи първият агент (или клик) – после Electron връща нормалния размер
 const morning = PARAMS.wait ? new Morning(office, () => { lastSpecKey = ''; window.pixelOffice?.action('wake'); resize(); }) : null;
 window.pixelOffice?.onWake?.(() => morning?.wake());
+
+// начална настройка (първо пускане): любимец + град; сутрешният екран не чака – настройката е в истинския прозорец
+const setup = new Setup(tokens);
+setup.onWeather = (m) => { onWeather(m); shop.setWeather(m); };
+tokens.onChange(() => {
+  if (morning?.active && setup.need()) morning.wake();
+  setup.maybeOpen();
+});
+if (PARAMS.debug) window.__setup = setup;
 
 // ---------------------------------------------------------------- мащаб
 let appliedVersion = -1;
@@ -80,8 +91,9 @@ const currentWx = () => wxFrom(fakeWx || weatherMsg?.now);
 function onWeather(m) { weatherMsg = m; office.weatherMsg = m; }
 shop.onWeather = onWeather;
 
+// часът е на избрания град (началната настройка / магазин → „Времето“); ?time= е фалшив час и не се мести
 function nowDate() {
-  if (!fake) return new Date();
+  if (!fake) return cityDate(new Date(), weatherMsg?.city?.tz);
   const d = new Date();
   d.setHours(fake.h, fake.m, 0, 0);
   return new Date(d.getTime() + (Date.now() - t0));

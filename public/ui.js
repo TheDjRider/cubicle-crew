@@ -1,6 +1,6 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
-import { CFG, STATES, STATE_ORDER, T, PARAMS, LANG, setLang } from './config.js';
+import { CFG, STATES, STATE_ORDER, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
 import { shortDetail, fmtDuration } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
@@ -138,7 +138,7 @@ export class UI {
     this.legend.innerHTML = STATE_ORDER.map((s) => `<span><i style="background:${STATES[s].color}"></i>${T.states[s]}</span>`).join('') + `<em>${T.legendHint}</em>`;
     try { if (localStorage.getItem('po.legend') === '0') this.legend.hidden = true; } catch { /* няма storage */ }
     addEventListener('keydown', (e) => {
-      if (e.key === 'l' || e.key === 'L' || e.key === 'л' || e.key === 'Л') {
+      if ('lLлЛ'.includes(e.key) && e.key.length === 1 && !e.target?.closest?.('input, textarea')) {
         this.legend.hidden = !this.legend.hidden;
         try { localStorage.setItem('po.legend', this.legend.hidden ? '0' : '1'); } catch { /* */ }
       }
@@ -157,6 +157,8 @@ export class UI {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
+      const pet = !a && this.office.petAt(m.x, m.y);
+      if (pet) { this.onPet?.(pet.slot); return; }
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
   }
@@ -278,7 +280,10 @@ export class UI {
       const wm = this.office.weatherMsg, c = wm?.city;
       html = (c ? `<div class="title">${esc(c.name)}</div>` : '') + `<div class="dim">${T.weather.tip}</div>`;
     }
-    this.canvas.style.cursor = a || this.onPlaque(m) ? 'pointer' : '';
+    // любимец: името му (може да се смени – клик отваря „Любимци“)
+    const pet = !a && !html && this.office.petAt(m.x, m.y);
+    if (pet) html = `<div class="title">${esc(petName(pet.slot, this.office.petNames))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}</div><div class="dim">${T.pets.tip}</div>`;
+    this.canvas.style.cursor = a || pet || this.onPlaque(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
     this.tip.hidden = false;

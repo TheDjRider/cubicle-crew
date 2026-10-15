@@ -51,7 +51,7 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(wallet.publicSave()));
     return;
   }
-  if (urlPath === '/api/buy' || urlPath === '/api/equip' || urlPath === '/api/avatar') {
+  if (urlPath === '/api/buy' || urlPath === '/api/equip' || urlPath === '/api/avatar' || urlPath === '/api/setup' || urlPath === '/api/pet') {
     // само POST с JSON от localhost: чужда страница не може да харчи токените (JSON от друг произход изисква preflight, който не позволяваме)
     const origin = req.headers.origin;
     if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }

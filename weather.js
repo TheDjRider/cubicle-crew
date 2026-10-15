@@ -1,7 +1,8 @@
 // Реалното време навън (по желание): Open-Meteo – безплатно, без ключ, изпращат се само координатите на града.
 // Пита само сървърът и само ако потребителят е задал град (докато няма град – нито една заявка навън).
 // Пази се в ~/.pixel-office/weather.json: { city, enabled, now, savedAt }.
-// WS съобщение: {type:'weather', city:{name, admin1, country}|null, enabled, now:{at, temp, code, cloud, precip, pop, wind, isDay}|null}
+// WS съобщение: {type:'weather', city:{name, admin1, country, tz?}|null, enabled, now:{at, temp, code, cloud, precip, pop, wind, isDay}|null}
+// tz = часовата зона на града (IANA) – часовникът и небето в офиса вървят по нея.
 // – без поле `agent`, старите клиенти го пропускат.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +18,12 @@ const GEOCODE = process.env.GEOCODING_API || 'https://geocoding-api.open-meteo.c
 function readJson(f) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } }
 const str = (v, n = 80) => (typeof v === 'string' ? v.slice(0, n) : '');
 const num = (v, lo, hi) => (typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null);
+/** Валидна IANA зона (напр. 'Europe/Sofia') или ''. */
+function zone(v) {
+  const z = str(v, 64);
+  if (!z) return '';
+  try { new Intl.DateTimeFormat('en', { timeZone: z }); return z; } catch { return ''; }
+}
 
 export class Weather {
   constructor(broadcast, log = () => {}) {
@@ -29,7 +36,7 @@ export class Weather {
 
   msg() {
     const c = this.s.city;
-    return { type: 'weather', city: c ? { name: c.name, admin1: c.admin1 || '', country: c.country || '' } : null, enabled: this.s.enabled, now: this.s.enabled ? this.s.now : null };
+    return { type: 'weather', city: c ? { name: c.name, admin1: c.admin1 || '', country: c.country || '', tz: c.tz || '' } : null, enabled: this.s.enabled, now: this.s.enabled ? this.s.now : null };
   }
 
   write() {
@@ -65,6 +72,8 @@ export class Weather {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json(), cur = j.current || {};
       if (c !== this.s.city) return; // градът е сменен междувременно
+      const tz = zone(j.timezone); // и за градовете, избрани преди зоната да се пази
+      if (tz) c.tz = tz;
       this.s.now = {
         at: Date.now(),
         temp: num(cur.temperature_2m, -90, 70),
@@ -92,7 +101,7 @@ export class Weather {
     const r = await fetch(`${GEOCODE}?${q}`, { signal: AbortSignal.timeout(10000) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
-    return (j.results || []).map((x) => ({ name: str(x.name), admin1: str(x.admin1), country: str(x.country), lat: x.latitude, lon: x.longitude }))
+    return (j.results || []).map((x) => ({ name: str(x.name), admin1: str(x.admin1), country: str(x.country), lat: x.latitude, lon: x.longitude, tz: zone(x.timezone) }))
       .filter((x) => x.name && num(x.lat, -90, 90) != null && num(x.lon, -180, 180) != null)
       .filter((x, i, a) => a.findIndex((y) => y.name === x.name && y.admin1 === x.admin1 && y.country === x.country) === i); // град + община със същото име
   }
@@ -105,7 +114,7 @@ export class Weather {
       else {
         const lat = num(c?.lat, -90, 90), lon = num(c?.lon, -180, 180), name = str(c?.name).trim();
         if (lat == null || lon == null || !name) return { ok: false, error: 'city' };
-        this.s.city = { name, admin1: str(c.admin1), country: str(c.country), lat, lon };
+        this.s.city = { name, admin1: str(c.admin1), country: str(c.country), lat, lon, tz: zone(c.tz) };
         this.s.now = null;
       }
     }
