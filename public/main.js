@@ -12,6 +12,7 @@ import { Tokens, demoWallet } from './tokens.js';
 import { Shop } from './shop.js';
 import { Morning } from './morning.js';
 import { Setup } from './setup.js';
+import { prefs } from './prefs.js';
 import { play } from './sound.js';
 
 const canvas = document.getElementById('c');
@@ -30,6 +31,12 @@ ui.onPet = (slot) => shop.openPet(slot);
 // докато магазинът (или началната настройка) е отворен, Electron пренебрегва prefer-size -> след затваряне
 // искаме размера наново, иначе втори екип, дошъл междувременно, остава в малкия прозорец (мащаб 1)
 shop.onToggle = () => { lastSpecKey = ''; resize(); };
+// „Фокус“ / „Скривай команди“ (от ? панела или от трея): любимците, стената с монетите, магазинът
+prefs.onChange((k) => {
+  if (k !== 'focus') return;
+  office.syncPets();
+  if (prefs.focus) { shop.close(); fx.list.length = 0; for (const a of office.actors.values()) if (a.sofaAct === 'game' || a.sofaAct === 'doze') a.sofaAct = 'rest'; }
+});
 if (PARAMS.debug) window.__shop = shop;
 
 model.on('join', (a) => office.join(a, performance.now()));

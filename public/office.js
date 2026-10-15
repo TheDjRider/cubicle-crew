@@ -9,6 +9,7 @@ import { resolveDecor, AVATAR, SLOTS, PET_SLOTS } from './catalog.js';
 import { drawScreen } from './screens.js';
 import { Actor, Cat, Dog, DART_CYCLE, DART_RELEASE } from './characters.js';
 import { avatarLook } from './sprites.js';
+import { prefs } from './prefs.js';
 import { rgba } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
 
@@ -104,7 +105,8 @@ export class Office {
       }
       this.petBySlot[slot].look = look;
     }
-    this.pets = PET_SLOTS.map((s) => this.petBySlot[s]).filter(Boolean);
+    // режим „Фокус“: без любимци (остават си записани – връщат се при изключване)
+    this.pets = prefs.focus ? [] : PET_SLOTS.map((s) => this.petBySlot[s]).filter(Boolean);
   }
 
   /** Любимецът под мишката (най-предният). */
@@ -343,7 +345,7 @@ export class Office {
       a.loc = spot; a.mode = 'idleSpot'; a.x = pt.x; a.y = pt.y; a.spotSince = now;
     }
     a.alpha = 0; a.fadeTo = 1;
-    this.fx.sparkle(a.x, a.y - 18, STATES[agent.state].color, 18);
+    if (!prefs.focus) this.fx.sparkle(a.x, a.y - 18, STATES[agent.state].color, 18);
   }
 
   /** Аватарът на потребителя е само на един оркестратор – първия дошъл, който още е в офиса; другите са случайни. */
@@ -384,18 +386,19 @@ export class Office {
   leave(agent) {
     const a = this.actors.get(agent.id);
     if (!a) { this.model.remove(agent.id); return; }
-    if (agent.subagent && agent.done) this.fx.confetti(a.x, a.y - 30, 26);
+    if (agent.subagent && agent.done && !prefs.focus) this.fx.confetti(a.x, a.y - 30, 26);
     a.leavingNow = true;
     this.route(a, { type: 'door', exit: true });
   }
 
   celebrate(agent) {
     const a = this.actors.get(agent.id);
-    if (a) this.fx.confetti(a.x, a.y - 30, 46);
+    if (a && !prefs.focus) this.fx.confetti(a.x, a.y - 30, 46);
   }
 
   /** "+N" токени над агента (няма го – над дъската). */
   tokenFx(id, n, big) {
+    if (prefs.focus) return;
     const a = id && this.actors.get(id);
     if (a && a.alpha > 0.3) { const b = this.anchors(a).bubble; this.fx.token(b.x, b.y - 6, n, big); return; }
     const bd = this.room?.board;
@@ -424,7 +427,7 @@ export class Office {
     if (!a.seat) {
       // без бюро: работи с лаптоп на дивана (или прав в зоната за почивка), почива като всички
       if (['seat', 'pace', 'transit', 'visit'].includes(a.loc.type)) this.route(a, st === 'idle' ? this.freeLoungeSpot(a) : this.workSpot(a));
-      else if (st === 'idle') { if (a.sofaAct === 'laptop') a.sofaAct = Math.random() < 0.7 ? 'game' : 'doze'; this.leisure(a, now); }
+      else if (st === 'idle') { if (a.sofaAct === 'laptop') a.sofaAct = prefs.focus ? 'rest' : Math.random() < 0.7 ? 'game' : 'doze'; this.leisure(a, now); }
       else if (a.loc.type === 'sofa') { if (a.sofaAct !== 'laptop') { a.sofaAct = 'laptop'; a.spotSince = now; } }
       else if (a.loc.type !== 'lounge') this.route(a, this.workSpot(a));
       return;
@@ -455,6 +458,7 @@ export class Office {
     if (t === 'coffee' || t === 'cooler') {
       if (here > 7000) { const sofa = this.freeSofa(a); if (sofa) this.route(a, sofa); }
     } else if (t === 'sofa') {
+      if (prefs.focus) return; // „Фокус“: само сяда, без дартс
       a.sofaFor ||= 20000 + Math.random() * 25000;
       if (here > a.sofaFor && !this.live().some((x) => x !== a && x.loc.type === 'darts')) {
         a.sofaFor = 0; a.dartsFor = 12000 + Math.random() * 12000;
@@ -525,7 +529,7 @@ export class Office {
     const people = this.pets.some((p) => p.kind === 'dog') ? [...this.actors.values()].filter((a) => a.mode === 'idleSpot' && LOUNGE.has(a.loc.type)) : [];
     for (const c of this.pets) c.update(dt, now, L, people);
     // прашинки в слънчевите снопове
-    if (this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
+    if (!prefs.focus && this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
       const w = this.room.windows[Math.floor(Math.random() * this.room.windows.length)];
       this.fx.dust(w.x + Math.random() * w.w, CFG.WALL_H + Math.random() * 40);
     }
@@ -544,6 +548,7 @@ export class Office {
   }
 
   emitParticles(a, now, dt) {
+    if (prefs.focus) return; // „Фокус“: без искри, пара, „zzz“ и дартс
     const L = this.L;
     const fx = a.fx;
     const p = L.pods[a.pod] || { x: -999, y: -999 };
@@ -596,7 +601,7 @@ export class Office {
     drawSky(ctx, room, tod, now);
     ctx.drawImage(room.bg, 0, 0);
     const st = this.model.stats();
-    drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
+    drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
     drawShafts(ctx, room, tod, now);

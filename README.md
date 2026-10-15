@@ -42,8 +42,9 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. Up to three pets roam the lounge: cats with coat patterns and a dog (beagle, golden, corgi, husky, dachshund…) that likes to sit next to whoever is resting. Hover a pet to see its name; click it to rename it. |
 | 🌇 **Real sky** | The tall French windows follow the clock of your city (or your computer's clock): dawn, golden hour, night. Lamps, monitors and the neon sign glow after dark. |
 | 🌧️ **Real weather** *(optional)* | Pick your city in the shop's **Weather** tab (or click the little weather station above the bookshelf) and the windows show the weather outside: clouds, rain running down the glass, snow on the ledge, fog, lightning. The room gets darker on grey days, and the station shows the temperature and the chance of rain. Data comes from [Open-Meteo](https://open-meteo.com) every 20 minutes; only the city's coordinates are sent. Until you pick a city, the app makes no requests to the internet at all. |
-| 🪙 **Tokens & shop** | Active agents earn tokens. Spend them on ~50 decor items: floors, walls, rugs, sofas, a throne for the lead, a neon sign, an aquarium, an arcade cabinet, more cats, a dog and its breeds, nine cat coat patterns. There are also 14 achievements. |
+| 🪙 **Coins & shop** | Active agents earn coins. Spend them on ~50 decor items: floors, walls, rugs, sofas, a throne for the lead, a neon sign, an aquarium, an arcade cabinet, more cats, a dog and its breeds, nine cat coat patterns. There are also 14 achievements. |
 | 🧍 **Your avatar** | Pick a man or a woman, the hairstyle, top (and skirt, trousers or dress for a woman), skin, hair colour and glasses of your own character: the first orchestrator in the office. Everyone else stays random (men and women, different hair, clothes, beards, skirts and dresses). |
+| 🧘 **Focus mode & privacy** | One switch (the `?` button or the tray menu) turns off the coins, shop, pets, particles and games, leaving just who is doing what and who is waiting for you. **Hide commands and paths** keeps bubbles to the tool name, for screen sharing and streaming. The `?` panel also explains every state; each one has its own dot shape as well as a colour. Click an orchestrator to give its session a name. |
 | 🔔 **Sound** | An 8-bit ding-dong when an agent needs you (a question or a permission prompt) and a short fanfare when a session finishes after a minute or more of work. It only plays while you're looking at another window, and the bell in the bottom bar (or the tray menu) mutes it. In a browser it starts working after your first click on the page. |
 | 🖥️ **Desktop widget** | A frameless, always-on-top Windows app above the tray, with a tray menu, `Ctrl+Alt+P`, notifications and start with Windows. |
 | 🧩 **Moddable art** | Everything is drawn in code, but you can replace it with your own PNG character sheet and tileset without touching any code. |
@@ -108,6 +109,8 @@ The installed app starts with Windows by default. Whenever it starts and no Clau
 
 ## How it works
 
+Everything stays on your machine. [docs/security.md](docs/security.md) lists exactly what the app reads, writes and sends.
+
 ```
 ~/.claude/projects/**/*.jsonl  ──tail──▶  server.js  ──WebSocket──▶  browser / Electron
 ~/.claude/sessions/<pid>.json  ──poll──▶     │                         │
@@ -137,7 +140,7 @@ are in [`docs/gamification.md`](docs/gamification.md).
 [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) is a great VS Code extension with a similar idea. Cubicle Crew goes in a different direction:
 
 - **Standalone.** It runs as a desktop widget or in any browser, next to whatever editor or terminal you use, with no VS Code required.
-- **A small idle game.** Your agents earn tokens, and you spend them on furniture, pets and decor. There are also achievements and an avatar.
+- **A small idle game.** Your agents earn coins, and you spend them on furniture, pets and decor. There are also achievements and an avatar.
 - **The office reacts to your whole setup.** Teams per session, a queue in the lounge when more than two sessions work, and a day/night sky that follows your local clock.
 - **Zero assets.** Every sprite and piece of furniture is drawn in code, so there's nothing to buy or download, and you can still drop in your own tileset.
 

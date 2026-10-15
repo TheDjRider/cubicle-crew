@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld('pixelOffice', {
   onWake: (fn) => ipcRenderer.on('wake', () => fn()),            // сутрешният екран да се махне (меню/втори старт)
   onVisible: (fn) => ipcRenderer.on('visible', (_e, v) => fn(!!v)), // скрит прозорец -> страницата не рисува
   onSound: (fn) => ipcRenderer.on('sound', (_e, on) => fn(!!on)),     // "Звуци" от менюто в трея
+  onPref: (fn) => ipcRenderer.on('pref', (_e, key, value) => fn(String(key), !!value)), // „Фокус“ / „Скривай команди“ от трея
 });

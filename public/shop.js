@@ -1,6 +1,7 @@
 // Магазин: DOM панел (острия текст, кирилица) с раздели; посочен предмет се вижда веднага в офиса (преглед),
 // покупките минават през сървъра (или демо портфейла) – правилата са в catalog.js.
 import { T, itemName, LANG, PARAMS, petName } from './config.js';
+import { prefs } from './prefs.js';
 import { wxFrom } from './weather.js';
 import { ITEMS, ITEM, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, unlocked, resolveDecor, PET_SLOTS, petCount, MAX_PETS, PET_NAME_MAX } from './catalog.js';
 import { CharacterSprites, avatarLook, AVATAR_TOPS, AVATAR_BOTTOMS, DRESS_TOPS } from './sprites.js';
@@ -48,7 +49,7 @@ export class Shop {
     addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
       const typing = e.target?.closest?.('input, textarea'); // името на любимеца / търсенето на град
-      if (!typing && 'bBбБ'.includes(e.key) && this.tokens.tokens != null) { this.toggle(); e.preventDefault(); }
+      if (!typing && 'bBбБ'.includes(e.key) && this.tokens.tokens != null && !prefs.focus) { this.toggle(); e.preventDefault(); }
       else if (e.key === 'Escape' && !this.root.hidden) this.close();
     });
     window.pixelOffice?.onOpenShop?.(() => this.open());
@@ -83,6 +84,7 @@ export class Shop {
 
   open(tab) {
     if (document.body.classList.contains('setting-up')) return; // първо началната настройка
+    if (prefs.focus && tab !== 'weather') return; // „Фокус“: без магазин (времето остава)
     if (tab) this.tab = tab;
     if (this.tokens.tokens == null) return;
     const was = this.root.hidden;
@@ -105,7 +107,7 @@ export class Shop {
   render() {
     const t = this.tokens, s = t.save;
     this.bal.innerHTML = `<i style="background-image:url(${this.coin ||= coinUrl()})"></i>${fmt(t.tokens ?? 0)}`;
-    for (const b of this.nav.children) b.classList.toggle('on', b.dataset.tab === this.tab);
+    for (const b of this.nav.children) { b.classList.toggle('on', b.dataset.tab === this.tab); b.hidden = prefs.focus && b.dataset.tab !== 'weather'; }
     const tab = TABS.find((x) => x.id === this.tab);
     // пълно прерисуване само ако нещо видимо се е променило (иначе посочването "мига")
     const afford = ITEMS.filter((it) => tab.groups.includes(it.group) && !owns(s, it.id) && it.price <= t.tokens).map((it) => it.id).join();

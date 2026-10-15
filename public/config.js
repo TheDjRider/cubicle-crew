@@ -75,13 +75,32 @@ const T_BG = {
   },
   thinking: 'мисли…',
   legendHint: 'L – легенда · Esc – без фокус',
+  // помощ (?): какво значи всеки цвят + личните настройки
+  help: {
+    open: 'Какво значат цветовете и настройки (?)', title: 'Какво прави агентът',
+    states: {
+      idle: 'Почива – няма работа от 8 секунди. Отива за кафе или на дивана.',
+      thinking: 'Мисли – Claude обмисля или пише дълъг отговор (без инструмент).',
+      typing: 'Пише – променя файлове (Write, Edit).',
+      reading: 'Чете – разглежда код и търси (Read, Grep, Glob, уеб).',
+      running: 'Изпълнява – пуска команда в терминала (Bash).',
+      delegating: 'Делегира – пуска под-агенти (Task/Agent); линиите водят до тях.',
+      waiting: 'Чака теб – въпрос или разрешение („Allow …?“). Звънецът звъни.',
+    },
+    shapes: 'Формата на точката до името също показва състоянието – за далтонисти и за малкия прозорец.',
+    settings: 'Настройки',
+    focus: 'Режим „Фокус“', focusHint: 'Без монети, магазин, любимци, частици и игри – само кой какво прави и кой те чака.',
+    private: 'Скривай команди и пътища', privateHint: 'Балончетата и подсказките показват само инструмента – за споделен екран и стрийм.',
+    close: 'Затвори',
+  },
+  rename: 'Преименувай', renameHint: 'Име на сесията (празно = името на проекта)',
   states: {
     idle: 'почива', thinking: 'мисли', typing: 'пише', reading: 'чете',
     running: 'изпълнява', delegating: 'делегира', waiting: 'чака теб',
   },
   board: { agents: 'Активни агенти', tools: 'Извиквания на инструменти', subs: 'Под-агенти' },
   min: 'мин', sec: 'сек', hour: 'ч',
-  tokens: 'Токени',
+  tokens: 'Монети',
   shop: {
     title: 'Магазин',
     open: 'Магазин (B)',
@@ -95,10 +114,10 @@ const T_BG = {
     buy: 'Купи', equip: 'Сложи', equipped: 'Сложено', remove: 'Махни', free: 'безплатно', owned: 'твое',
     need: (n) => `още ${n}`,
     hint: 'Посочи предмет – виждаш го в офиса. Затвори с Esc.',
-    errors: { avatar: 'Невалиден аватар.', funds: 'Нямаш достатъчно токени.', locked: 'Първо го купи.', busy: 'Друг Cubicle Crew брои токените – опитай пак след малко.', offline: 'Няма връзка със сървъра.',
+    errors: { avatar: 'Невалиден аватар.', funds: 'Нямаш достатъчно монети.', locked: 'Първо го купи.', busy: 'Друг Cubicle Crew брои монетите – опитай пак след малко.', offline: 'Няма връзка със сървъра.',
       pets: 'В офиса има място за най-много 3 любимци – първо прибери някой у дома.' },
     achievement: 'Постижение',
-    reward: (n) => `+${n} токена`,
+    reward: (n) => `+${n} монети`,
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'отключено',
     pets: {
@@ -147,10 +166,10 @@ const T_BG = {
     demo: 'В демото времето се задава с адреса: ?weather=clear, cloudy, overcast, fog, drizzle, rain, snow или storm.',
   },
   achievements: {
-    'tokens.100': ['Първите 100', 'Спечели 100 токена'],
-    'tokens.1k': ['Хилядарка', 'Спечели 1 000 токена'],
-    'tokens.5k': ['Пълна каса', 'Спечели 5 000 токена'],
-    'tokens.20k': ['Магнат', 'Спечели 20 000 токена'],
+    'tokens.100': ['Първите 100', 'Спечели 100 монети'],
+    'tokens.1k': ['Хилядарка', 'Спечели 1 000 монети'],
+    'tokens.5k': ['Пълна каса', 'Спечели 5 000 монети'],
+    'tokens.20k': ['Магнат', 'Спечели 20 000 монети'],
     'tasks.10': ['Първи екип', '10 задачи на под-агенти'],
     'tasks.100': ['Мениджър', '100 задачи на под-агенти'],
     'tasks.500': ['Директор', '500 задачи на под-агенти'],
@@ -162,7 +181,7 @@ const T_BG = {
     'shop.10': ['Обзавеждане', 'Купи 10 неща'],
     'shop.all': ['Мечтаният офис', 'Купи всичко от магазина'],
   },
-  tokensHint: 'Токени: печелиш ги, докато агентите работят – харчиш ги в магазина (B)',
+  tokensHint: 'Монети: печелиш ги, докато агентите работят – харчиш ги в магазина (B)',
   lang: 'Език: български – смени на English',
   winbar: { settings: 'Настройки (размер, известия, демо…)', pin: 'Винаги отгоре', through: 'Кликовете минават през прозореца (махни от менюто в трея)', hide: 'Скрий в трея', quit: 'Затвори' },
   demo2: { which: 'Кой вариант да избера?', cont: 'Да продължа ли?', whichShort: 'Кой вариант?', arch: 'Прегледай архитектурата', tests: 'Пусни тестовете', cache: 'Измисли план за кеша' },
@@ -194,13 +213,31 @@ const T_EN = {
   },
   thinking: 'thinking…',
   legendHint: 'L – legend · Esc – clear focus',
+  help: {
+    open: 'What the colours mean, and settings (?)', title: 'What the agent is doing',
+    states: {
+      idle: 'Idle – nothing for 8 seconds. Goes for coffee or to the sofa.',
+      thinking: 'Thinking – Claude is reasoning or writing a long reply (no tool).',
+      typing: 'Typing – changing files (Write, Edit).',
+      reading: 'Reading – looking through code and searching (Read, Grep, Glob, web).',
+      running: 'Running – a terminal command (Bash).',
+      delegating: 'Delegating – starting sub-agents (Task/Agent); the lines lead to them.',
+      waiting: 'Waiting for you – a question or a permission prompt ("Allow …?"). The bell rings.',
+    },
+    shapes: 'The shape of the dot next to the name also shows the state – for colour-blind people and the small window.',
+    settings: 'Settings',
+    focus: 'Focus mode', focusHint: 'No coins, shop, pets, particles or games – just who is doing what and who is waiting for you.',
+    private: 'Hide commands and paths', privateHint: 'Bubbles and tooltips show only the tool – for screen sharing and streaming.',
+    close: 'Close',
+  },
+  rename: 'Rename', renameHint: 'Session name (empty = project name)',
   states: {
     idle: 'idle', thinking: 'thinking', typing: 'typing', reading: 'reading',
     running: 'running', delegating: 'delegating', waiting: 'waiting for you',
   },
   board: { agents: 'Active agents', tools: 'Tool calls', subs: 'Sub-agents' },
   min: 'min', sec: 's', hour: 'h',
-  tokens: 'Tokens',
+  tokens: 'Coins',
   shop: {
     title: 'Shop',
     open: 'Shop (B)',
@@ -214,10 +251,10 @@ const T_EN = {
     buy: 'Buy', equip: 'Use', equipped: 'In use', remove: 'Remove', free: 'free', owned: 'owned',
     need: (n) => `${n} more`,
     hint: 'Hover an item to preview it in the office. Esc closes.',
-    errors: { avatar: 'Invalid avatar.', funds: 'Not enough tokens.', locked: 'Buy it first.', busy: 'Another Cubicle Crew is counting tokens – try again in a moment.', offline: 'No connection to the server.',
+    errors: { avatar: 'Invalid avatar.', funds: 'Not enough coins.', locked: 'Buy it first.', busy: 'Another Cubicle Crew is counting coins – try again in a moment.', offline: 'No connection to the server.',
       pets: 'The office has room for 3 pets at most – send one home first.' },
     achievement: 'Achievement',
-    reward: (n) => `+${n} tokens`,
+    reward: (n) => `+${n} coins`,
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'unlocked',
     pets: {
@@ -264,10 +301,10 @@ const T_EN = {
     demo: 'In the demo, set the weather in the address: ?weather=clear, cloudy, overcast, fog, drizzle, rain, snow or storm.',
   },
   achievements: {
-    'tokens.100': ['First 100', 'Earn 100 tokens'],
-    'tokens.1k': ['Grand', 'Earn 1,000 tokens'],
-    'tokens.5k': ['Full vault', 'Earn 5,000 tokens'],
-    'tokens.20k': ['Tycoon', 'Earn 20,000 tokens'],
+    'tokens.100': ['First 100', 'Earn 100 coins'],
+    'tokens.1k': ['Grand', 'Earn 1,000 coins'],
+    'tokens.5k': ['Full vault', 'Earn 5,000 coins'],
+    'tokens.20k': ['Tycoon', 'Earn 20,000 coins'],
     'tasks.10': ['First team', '10 sub-agent tasks'],
     'tasks.100': ['Manager', '100 sub-agent tasks'],
     'tasks.500': ['Director', '500 sub-agent tasks'],
@@ -279,7 +316,7 @@ const T_EN = {
     'shop.10': ['Furnished', 'Buy 10 things'],
     'shop.all': ['Dream office', 'Buy everything in the shop'],
   },
-  tokensHint: 'Tokens: earned while your agents work – spend them in the shop (B)',
+  tokensHint: 'Coins: earned while your agents work – spend them in the shop (B)',
   lang: 'Language: English – switch to български',
   winbar: { settings: 'Settings (size, notifications, demo…)', pin: 'Always on top', through: 'Click-through (turn it off from the tray menu)', hide: 'Hide to tray', quit: 'Quit' },
   demo2: { which: 'Which option should I pick?', cont: 'Shall I continue?', whichShort: 'Which option?', arch: 'Review the architecture', tests: 'Run the tests', cache: 'Plan the cache' },
@@ -339,6 +376,8 @@ export const PARAMS = {
   wait: Q.has('wait'),         // сутрешен екран, докато няма сесия (Electron при старт с Windows)
   weather: Q.get('weather'),   // ?weather=clear|cloudy|overcast|fog|drizzle|rain|snow|storm — фалшиво време (за тестове/демото)
   setup: Q.has('setup'),       // ?setup — показва началната настройка отново (за тестове; в демото – в паметта)
+  overlay: Q.has('overlay'),   // ?overlay – за OBS/стрийм: без HUD и легенда, командите и пътищата са скрити
+  focus: Q.has('focus'),       // ?focus – режим „Фокус“ (за тестове; иначе се пази в настройките)
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
 /** Име на любимец по място (save.petNames или името по подразбиране на текущия език). */

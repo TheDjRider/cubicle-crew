@@ -4,6 +4,7 @@ import { CFG, STATES, STATE_ORDER, T, PARAMS, LANG, setLang, itemName, petName }
 import { shortDetail, fmtDuration } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
+import { prefs } from './prefs.js';
 
 // торбичка за пазаруване 9x9 (иконата на бутона за магазина) – рисува се тук, без външни файлове
 const BAG = ['...aaa...', '..a...a..', '..a...a..', 'bbbbbbbbb', 'bcccccccb', 'bcccdcccb', 'bccdddccb', 'bcccdcccb', 'bbbbbbbbb'];
@@ -49,6 +50,7 @@ export class UI {
     // монетата в HUD отваря магазина (onShop се задава в main.js)
     this.hud.addEventListener('click', (e) => {
       if (e.target.closest('.tok, .shopbtn')) this.onShop?.();
+      else if (e.target.closest('.help')) this.toggleHelp();
       else if (e.target.closest('.snd')) {
         setSound(!soundOn()); this.lastHud = 0; // Electron научава новия избор от stats (sound)
       }
@@ -58,6 +60,10 @@ export class UI {
       }
     });
     document.documentElement.lang = LANG;
+    if (PARAMS.overlay) document.body.classList.add('overlay');
+    // фокус (клик върху агент): картата е интерактивна – бутон за ново име на сесията
+    this.card.addEventListener('click', (e) => { if (e.target.closest('[data-ren]')) this.startRename(); });
+    prefs.onChange(() => { this.lastHud = 0; this.card._html = ''; for (const it of this.items.values()) it.c = {}; if (this.help && !this.help.hidden) this.renderHelp(); });
     if (PARAMS.debug) this.debugEl.hidden = false;
     if (PARAMS.desktop) this.initDesktop();
   }
@@ -82,13 +88,13 @@ export class UI {
 
   sendDesktopStats(s) {
     if (!this.bridge) return;
-    const waiting = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => a.agent.desc || this.displayName(a.agent));
+    const waiting = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => (!prefs.private && a.agent.desc) || this.displayName(a.agent));
     const sound = soundOn();
-    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}`;
+    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
     // sound: приложението пуска известието без системния звук, щом страницата свири своя
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound });
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private });
   }
 
   setScale(scale, dpr, W, H) {
@@ -107,6 +113,7 @@ export class UI {
 
   /** Известие за постижение (по едно, на опашка) + конфети. */
   achievement(id, reward) {
+    if (prefs.focus) return; // наградата пак е записана, само без известие
     (this.toasts ||= []).push([id, reward]);
     if (!this.toastBusy) this.nextToast();
   }
@@ -135,14 +142,15 @@ export class UI {
   px(v) { return Math.round(v * this.cssScale * this.dpr) / this.dpr; }
 
   buildLegend() {
-    this.legend.innerHTML = STATE_ORDER.map((s) => `<span><i style="background:${STATES[s].color}"></i>${T.states[s]}</span>`).join('') + `<em>${T.legendHint}</em>`;
+    this.legend.innerHTML = STATE_ORDER.map((s) => `<span data-state="${s}"><i style="background:${STATES[s].color}"></i>${T.states[s]}</span>`).join('') + `<em>${T.legendHint}</em>`;
     try { if (localStorage.getItem('po.legend') === '0') this.legend.hidden = true; } catch { /* няма storage */ }
     addEventListener('keydown', (e) => {
       if ('lLлЛ'.includes(e.key) && e.key.length === 1 && !e.target?.closest?.('input, textarea')) {
         this.legend.hidden = !this.legend.hidden;
         try { localStorage.setItem('po.legend', this.legend.hidden ? '0' : '1'); } catch { /* */ }
       }
-      if (e.key === 'Escape') this.focus(null);
+      if (e.key === 'Escape') { this.focus(null); if (this.help && !this.help.hidden) this.toggleHelp(false); }
+      if (e.key === '?' && !e.target?.closest?.('input, textarea')) this.toggleHelp();
     });
   }
 
@@ -186,7 +194,7 @@ export class UI {
       const anc = office.anchors(a);
       const hidden = a.alpha < 0.05;
       // етикет
-      const name = (ag.subagent ? '↳ ' : '★ ') + (ag.desc || this.displayName(ag));
+      const name = (ag.subagent ? '↳ ' : '★ ') + ((!prefs.private && ag.desc) || this.displayName(ag));
       this.set(it, 'name', name, () => { it.label.children[1].textContent = name; it.lw = 0; });
       this.set(it, 'st', st, () => {
         it.label.children[0].style.background = STATES[st].color;
@@ -205,7 +213,7 @@ export class UI {
       // балонче: инструмент + детайл (само за "работни" състояния)
       const tool = this.model.currentTool(ag);
       let btxt = null;
-      if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, shortDetail(tool.detail, 38)];
+      if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, prefs.private ? '' : shortDetail(tool.detail, 38)];
       else if (st === 'waiting') btxt = [T.needsYou, ag.ask ? T.allow(ag.ask.kind === 'permission' && tool ? tool.tool : '') : tool ? tool.tool : ''];
       const bkey = btxt ? btxt.join('|') : '';
       this.set(it, 'btxt', bkey, () => {
@@ -238,26 +246,30 @@ export class UI {
   set(it, key, val, fn) { if (it.c[key] !== val) { it.c[key] = val; fn(); } }
 
   displayName(ag) {
+    const own = prefs.name(ag.id);
+    if (own) return own;
     // ако няколко сесии са в един проект – добавяме кратко id
     let dup = 0;
     for (const o of this.model.agents.values()) if (o.label === ag.label && !o.subagent) dup++;
     return dup > 1 && !ag.subagent ? `${ag.label} #${ag.id.slice(0, 4)}` : ag.label;
   }
 
-  describe(a, now) {
-    const ag = a.agent, st = a.vstate;
+  describe(a, now, card = false) {
+    const ag = a.agent, st = a.vstate, priv = prefs.private;
     const tool = this.model.currentTool(ag) || ag.lastTool;
+    const own = prefs.name(ag.id);
     const rows = [
-      [T.project, esc(ag.label) + ` <span class="dim">#${esc(ag.id.slice(0, 8))}</span>`],
-      [T.state, `<i class="dot" style="background:${STATES[st].color}"></i>${T.states[st]}`],
+      [T.project, (own ? `<b>${esc(own)}</b> · ` : '') + esc(ag.label) + ` <span class="dim">#${esc(ag.id.slice(0, 8))}</span>`],
+      [T.state, `<i class="dot" data-state="${st}" style="background:${STATES[st].color}"></i>${T.states[st]}`],
     ];
-    if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${esc(shortDetail(tool.detail, 46))}`]);
+    if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${priv ? '' : esc(shortDetail(tool.detail, 46))}`]);
     rows.push([T.toolCalls, String(ag.toolCalls)]);
     rows.push([T.uptime, fmtDuration(now - ag.firstSeen, T)]);
     if (ag.parent) { const p = this.model.agents.get(ag.parent); rows.push([T.childOf, esc(p ? this.displayName(p) : ag.parent.slice(0, 8))]); }
     if (ag.children.size) rows.push([T.parentOf, String(this.model.liveChildren(ag)) + ' / ' + ag.children.size]);
-    const title = ag.desc ? `<div class="title">${esc(ag.desc)}</div>` : '';
-    return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>';
+    const title = ag.desc && !priv ? `<div class="title">${esc(ag.desc)}</div>` : '';
+    const ren = card && !ag.subagent ? `<div class="ren"><button type="button" data-ren>✎ ${T.rename}</button></div>` : '';
+    return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>' + ren;
   }
 
   updateTooltip(now) {
@@ -270,10 +282,10 @@ export class UI {
     else {
       const b = this.office.room?.board;
       if (b && m.x >= b.x && m.x < b.x + b.w && m.y >= b.y && m.y < b.y + b.h) {
-        const s = this.model.stats();
+        const s = this.model.stats(), coins = this.tokens != null && !prefs.focus;
         html = `<table><tr><th>${T.board.agents}</th><td>${s.agents}</td></tr><tr><th>${T.board.tools}</th><td>${s.tools}</td></tr><tr><th>${T.board.subs}</th><td>${s.subs}</td></tr>` +
-          (this.tokens != null ? `<tr><th>${T.tokens}</th><td>${this.fmtTokens()}</td></tr>` : '') + '</table>' +
-          (this.tokens != null ? `<div class="dim">${T.tokensHint}</div>` : '');
+          (coins ? `<tr><th>${T.tokens}</th><td>${this.fmtTokens()}</td></tr>` : '') + '</table>' +
+          (coins ? `<div class="dim">${T.tokensHint}</div>` : '');
       }
     }
     if (!a && !html && this.onPlaque(m)) {
@@ -297,7 +309,8 @@ export class UI {
   updateCard(now) {
     const a = this.office.actors.get(this.office.focusId);
     if (!a) { this.focus(null); return; }
-    const html = this.describe(a, now);
+    if (this.renaming) return; // докато се пише новото име, картата не се прерисува
+    const html = this.describe(a, now, true);
     if (this.card._html !== html) { this.card.innerHTML = html; this.card._html = html; }
   }
 
@@ -308,7 +321,7 @@ export class UI {
     const connTxt = { connecting: T.connecting, connected: T.connected, down: T.reconnecting, demo: T.demo }[this.conn];
     // токените са първи – в малкия прозорец остават сами в ъгъла, когато останалото се скрие
     const html =
-      (this.tokens != null ? `<span class="tok${now - (this.tokenFlash ?? -1e9) < 1500 ? ' gain' : ''}" title="${T.shop.open}"><i style="background-image:url(${this.coin ||= coinUrl()})"></i><b>${this.fmtTokens()}</b></span>` +
+      (this.tokens != null && !prefs.focus ? `<span class="tok${now - (this.tokenFlash ?? -1e9) < 1500 ? ' gain' : ''}" title="${T.shop.open}"><i style="background-image:url(${this.coin ||= coinUrl()})"></i><b>${this.fmtTokens()}</b></span>` +
         `<span class="shopbtn" title="${T.shop.open}"><i style="background-image:url(${this.bag ||= bagUrl()})"></i></span>` : '') +
       `<span class="conn ${this.conn}"><i></i>${connTxt}</span>` +
       `<span>${T.agents} <b>${s.agents - s.subs}</b></span>` +
@@ -316,6 +329,7 @@ export class UI {
       `<span>${T.toolCalls} <b>${s.tools}</b></span>` +
       (s.waiting ? `<span class="alert">${T.waitingYou} <b>${s.waiting}</b></span>` : '') +
       (this.conn !== 'demo' ? `<span class="snd" title="${soundOn() ? T.sound.on : T.sound.off}"><i style="background-image:url(${(this.bells ||= [bellUrl(false), bellUrl(true)])[+soundOn()]})"></i></span>` : '') +
+      `<span class="help" title="${T.help.open}">?</span>` +
       `<span class="lang" title="${T.lang}">${LANG === 'bg' ? 'БГ' : 'EN'}</span>`;
     if (this.hud._html !== html) { this.hud.innerHTML = html; this.hud._html = html; }
     const title = s.waiting ? `(${s.waiting}) ${T.needsYou} · ${T.title}` : T.title;
@@ -327,6 +341,50 @@ export class UI {
   }
 
   fmtTokens() { return this.tokens.toLocaleString(LANG === 'bg' ? 'bg-BG' : 'en-US'); }
+
+  // ------------------------------------------------------------------ ново име на сесия (от картата при фокус)
+  startRename() {
+    const a = this.office.actors.get(this.office.focusId);
+    if (!a || a.agent.subagent) return;
+    const box = this.card.querySelector('.ren');
+    if (!box) return;
+    this.renaming = true;
+    box.innerHTML = '';
+    const inp = el('input', null, box);
+    inp.id = 'rename'; inp.maxLength = 32; inp.placeholder = a.agent.label; inp.title = T.renameHint;
+    inp.value = prefs.name(a.id) || '';
+    const done = (save) => {
+      if (!this.renaming) return;
+      this.renaming = false;
+      if (save) prefs.setName(a.id, inp.value);
+      this.card._html = '';
+    };
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(true); else if (e.key === 'Escape') { e.stopPropagation(); done(false); } });
+    inp.addEventListener('blur', () => done(true));
+    inp.focus();
+  }
+
+  // ------------------------------------------------------------------ помощ: цветовете + настройки
+  toggleHelp(show) {
+    if (!this.help) {
+      this.help = el('div', null, document.body);
+      this.help.id = 'help'; this.help.hidden = true;
+      this.help.setAttribute('role', 'dialog');
+      this.help.addEventListener('change', (e) => { const k = e.target.dataset?.pref; if (k) prefs.set(k, e.target.checked); });
+      this.help.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) this.toggleHelp(false); });
+    }
+    const open = show ?? this.help.hidden;
+    if (open) this.renderHelp();
+    this.help.hidden = !open;
+  }
+  renderHelp() {
+    const H = T.help;
+    this.help.innerHTML = `<div class="help-panel"><header><b>${H.title}</b><button type="button" data-close title="${H.close} (Esc)">✕</button></header>` +
+      '<ul>' + STATE_ORDER.map((s) => `<li data-state="${s}"><i style="background:${STATES[s].color}"></i><span><b>${T.states[s]}</b> – ${esc(H.states[s].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + '</ul>' +
+      `<p class="dim">${H.shapes}</p><h3>${H.settings}</h3>` +
+      `<label><input type="checkbox" id="pref-focus" data-pref="focus"${prefs.focus ? ' checked' : ''}><span><b>${H.focus}</b><small>${H.focusHint}</small></span></label>` +
+      `<label><input type="checkbox" id="pref-private" data-pref="private"${prefs.private ? ' checked' : ''}><span><b>${H.private}</b><small>${H.privateHint}</small></span></label></div>`;
+  }
 
   updateDebug(now) {
     const L = this.office.L;

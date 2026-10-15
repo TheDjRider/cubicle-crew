@@ -228,6 +228,42 @@
   .setup-panel .nav .go { background: #e0c24a; color: #1d1626; border-color: #e0c24a; font-weight: 600; }
   .setup-panel .err { margin-top: 6px; color: #ff9ab0; font-size: 12px; }
   .setup-panel .err:empty { display: none; }
+  /* форма на точката според състоянието (освен цвета – за далтонисти и малкия прозорец):
+     почива ● · мисли ◆ · пише ■ · чете ▬ · изпълнява ▶ · делегира ✚ · чака теб ▲ */
+  .tag i, #legend i, .dot, #help li i { flex: none; }
+  .tag[data-state="idle"] i, #legend [data-state="idle"] i, .dot[data-state="idle"], #help [data-state="idle"] i { border-radius: 50%; }
+  .tag[data-state="thinking"] i, #legend [data-state="thinking"] i, .dot[data-state="thinking"], #help [data-state="thinking"] i { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .tag[data-state="reading"] i, #legend [data-state="reading"] i, .dot[data-state="reading"], #help [data-state="reading"] i { clip-path: inset(22% 0); }
+  .tag[data-state="running"] i, #legend [data-state="running"] i, .dot[data-state="running"], #help [data-state="running"] i { clip-path: polygon(8% 0, 100% 50%, 8% 100%); }
+  .tag[data-state="delegating"] i, #legend [data-state="delegating"] i, .dot[data-state="delegating"], #help [data-state="delegating"] i { clip-path: polygon(35% 0, 65% 0, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0 65%, 0 35%, 35% 35%); }
+  .tag[data-state="waiting"] i, #legend [data-state="waiting"] i, .dot[data-state="waiting"], #help [data-state="waiting"] i { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .tag i { width: 8px; height: 8px; }
+  .tag[data-state="waiting"] i { background: #fff !important; }
+
+  /* помощ (?): какво значат цветовете + настройки */
+  #hud .help { pointer-events: auto; cursor: pointer; font-weight: 700; color: var(--ui-dim); }
+  #hud .help:hover { color: #fff; border-color: #6b6b80; }
+  #help { position: fixed; inset: 0; z-index: 35; display: flex; align-items: center; justify-content: center; padding: 8px; box-sizing: border-box; background: rgba(8, 6, 14, 0.45); }
+  .help-panel { width: 100%; max-width: 460px; max-height: 100%; overflow-y: auto; box-sizing: border-box; padding: 12px 16px 14px; background: #17121f; border: 2px solid #3a3452; border-radius: 4px; box-shadow: 4px 4px 0 rgba(0,0,0,.45); }
+  .help-panel header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
+  .help-panel button { font: inherit; color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; border-radius: 3px; padding: 1px 8px; cursor: pointer; }
+  .help-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .help-panel li { display: flex; gap: 8px; align-items: baseline; font-size: 13px; }
+  .help-panel li i { width: 9px; height: 9px; display: inline-block; }
+  .help-panel p { margin: 10px 0 0; font-size: 12px; }
+  .help-panel h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 600; color: var(--ui-dim); text-transform: uppercase; letter-spacing: .04em; }
+  .help-panel label { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; cursor: pointer; font-size: 13px; }
+  .help-panel label small { display: block; color: var(--ui-dim); font-size: 12px; }
+  .help-panel input { margin-top: 3px; }
+
+  /* картата при фокус: бутон „Преименувай“ */
+  #card { pointer-events: auto; }
+  #card .ren { margin-top: 6px; }
+  #card .ren button { font: inherit; font-size: 11px; color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; border-radius: 3px; padding: 1px 8px; cursor: pointer; }
+  #card .ren input { width: 100%; box-sizing: border-box; font: inherit; color: var(--ui-text); background: #0f0c16; border: 1px solid #3a3452; border-radius: 3px; padding: 2px 6px; }
+
+  /* ?overlay (OBS/стрийм): само сцената */
+  body.overlay #hud, body.overlay #legend, body.overlay #winbar, body.overlay #empty, body.overlay #card, body.overlay #tooltip { display: none !important; }
   [hidden] { display: none !important; }
 </style>
 </head>

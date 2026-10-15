@@ -1,0 +1,61 @@
+# Privacy and security
+
+Cubicle Crew is a local viewer for your Claude Code sessions. This page lists everything it reads, writes and sends, so you (or your IT team) can check it without reading the code.
+
+## What it reads
+
+**Claude Code transcripts** – `~/.claude/projects/**/*.jsonl` (or `CLAUDE_PROJECTS_DIR`). Every line is parsed, but only these fields are used; the rest of the line is dropped right away:
+
+| Field | Used for |
+|---|---|
+| `type` (`user` / `assistant`) | whether the line is your prompt or Claude's reply |
+| `message.content[].type` | `tool_use`, `tool_result`, `text`, `thinking` – which state to show |
+| `tool_use.name`, `tool_use.id` | the tool in the bubble (Bash, Edit…) and matching its result |
+| `tool_use.input` – only the first of `file_path`, `command`, `pattern`, `description`, `url`, `query`, cut to 60 characters | the detail in the bubble |
+| `tool_result.tool_use_id` | when the tool finished |
+| `cwd` – only the folder name | the project label |
+| `sessionId`, `isSidechain` | which session a sub-agent belongs to |
+
+The text of your prompts, Claude's answers, thinking, file contents and tool output are never read into the app.
+
+**Sub-agent metadata** – `subagents/agent-*.meta.json` next to the transcripts: `toolUseId`, `requestShape`, `description` (the task name shown on a sub-agent's label, cut to 80 characters).
+
+**Live sessions** – `~/.claude/sessions/<pid>.json` (or `CLAUDE_SESSIONS_DIR`): `pid`, `sessionId`, `cwd`, `status`, `waitingFor`. Used to know which sessions are open and when one waits for a permission prompt.
+
+## What it writes
+
+All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
+
+- `save.json` (+ `.bak`) – coins, bought decor, achievements, avatar, pet names. No session content.
+- `save.lock` – which running copy counts coins (pid + port).
+- `weather.json` – the city you picked and the last forecast.
+
+The desktop app also keeps `settings.json` and `desktop.log` (start, window size, wake/sleep) in `%APPDATA%\pixel-office\`. Page settings (language, sound, Focus mode, session names) live in the app's own browser storage.
+
+## What it sends over the network
+
+**Nothing**, until you pick a city for the weather. After that, and only then:
+
+- while you search for a city: the text you typed and the language go to `geocoding-api.open-meteo.com`;
+- every 20 minutes: the city's latitude and longitude go to `api.open-meteo.com`.
+
+There is no telemetry, no analytics, no account, no update check and no crash reporting. Removing the city (shop → Weather → Remove city) stops all requests.
+
+To check it yourself: open Resource Monitor (Windows) or run `netstat -ano` while the app runs; the only listening socket is `127.0.0.1:<port>`, and with no city there are no outgoing connections.
+
+## The local server
+
+- Listens on `127.0.0.1` only – not reachable from other machines.
+- Every request and WebSocket must come from `localhost`: the `Host` header must be local and the `Origin` (if any) must be local. This blocks other websites and DNS rebinding.
+- Buying, equipping and setting things needs a JSON `POST` from a local origin.
+- Static files are served only from the app's `public/` folder.
+
+## On screen
+
+The bubbles show commands and file names, which matters when you share your screen or stream. Turn on **Hide commands and paths** (the `?` button, or the tray menu): bubbles and tooltips then show only the tool name, and sub-agent labels show the project instead of the task. `?overlay` (for OBS) has it on by default.
+
+## Things to know
+
+- **Start with Windows** is on by default for the installed app. Turn it off in the tray menu; uninstalling removes the entry.
+- The Windows installer is **not code-signed** yet, so SmartScreen warns on first run. You can build it yourself from this repository (`npm install && npm run dist`) and compare.
+- The desktop app is Electron. Pages opened from the app open in your browser, not inside it.
