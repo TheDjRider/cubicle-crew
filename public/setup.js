@@ -1,11 +1,12 @@
-// Начална настройка (първо пускане, save.setup === null): с какъв любимец започва офисът и как се казва,
-// после градът – за часовника и времето навън. DOM над сцената (остър текст, кирилица).
+// Начална настройка (първо пускане, save.setup === null): „Офис“ или „Фокус“, с какъв любимец започва офисът
+// и как се казва, после градът – за часовника и времето навън. DOM над сцената (остър текст, кирилица).
 // Записва се през портфейла (POST /api/setup или демо портфейла) и времето (POST /api/weather).
 // ?setup я показва отново (за тестове; на истинския сървър вече минала настройка не се променя).
 import { T, LANG, PARAMS, petName } from './config.js';
 import { ITEM, SLOTS, PET_NAME_MAX } from './catalog.js';
 import { cityDate } from './weather.js';
 import { petThumb } from './shop.js';
+import { prefs } from './prefs.js';
 import { makeCanvas } from './util.js';
 
 const el = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
@@ -19,7 +20,7 @@ export class Setup {
     this.tokens = tokens;
     this.root = null;
     this.forced = PARAMS.setup; // ?setup: веднъж на зареждане
-    this.pet = 'cat'; this.name = ''; this.city = null; this.query = '';
+    this.pet = 'cat'; this.name = ''; this.city = null; this.query = ''; this.mode = prefs.focus ? 'focus' : 'office';
   }
 
   /** Трябва ли да се покаже (истинският портфейл казва setup: null; стар сървър -> undefined -> не). */
@@ -36,7 +37,7 @@ export class Setup {
     this.panel.setAttribute('role', 'dialog');
     document.body.classList.add('setting-up');
     window.pixelOffice?.shop?.(true); // Electron: прозорецът временно расте (като за магазина)
-    this.step(0);
+    this.step(-1);
   }
 
   close() {
@@ -58,9 +59,22 @@ export class Setup {
     this.at = i;
     const S = T.setup, p = this.panel;
     p.innerHTML = '';
-    if (i === 0) {
+    if (i === -1) {
+      // „Офис“ (цялата игра) или „Фокус“ (тихо табло) – сменя се после от „?“
       el('h2', null, p, S.hello);
       el('p', 'dim', p, S.intro);
+      el('h3', null, p, S.modeQ);
+      const row = el('div', 'modes', p);
+      for (const m of ['office', 'focus']) {
+        const b = el('button', m === this.mode ? 'on' : '', row);
+        b.type = 'button';
+        el('b', null, b, T.help[m]);
+        el('span', null, b, T.help[m + 'Hint']);
+        b.onclick = () => { this.mode = m; prefs.set('focus', m === 'focus'); this.step(-1); };
+      }
+      el('p', 'hint', p, S.modeHint);
+      this.nav(S.skip, () => this.finish(true), S.next, () => this.step(0));
+    } else if (i === 0) {
       el('h3', null, p, S.petQ);
       const row = el('div', 'pick', p);
       for (const kind of ['cat', 'dog']) {
@@ -81,7 +95,7 @@ export class Setup {
       inp.oninput = () => { this.name = inp.value; };
       inp.onkeydown = (e) => { if (e.key === 'Enter') this.step(1); };
       el('p', 'hint', p, S.petHint);
-      this.nav(S.skip, () => this.finish(true), S.next, () => this.step(1));
+      this.nav(S.back, () => this.step(-1), S.next, () => this.step(1));
       this.preview();
     } else {
       el('h3', null, p, S.cityQ);
@@ -127,7 +141,7 @@ export class Setup {
   nav(leftText, left, rightText, right) {
     const n = el('div', 'nav', this.panel);
     const a = el('button', null, n, leftText); a.type = 'button'; a.onclick = left;
-    el('span', 'dim', n, `${this.at + 1} / 2`);
+    el('span', 'dim', n, `${this.at + 2} / 3`);
     const b = el('button', 'go', n, rightText); b.type = 'button'; b.onclick = right;
     this.err = el('p', 'err', this.panel);
   }

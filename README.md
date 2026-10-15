@@ -120,6 +120,39 @@ The app isn't signed with an Apple Developer ID yet, so the first launch needs o
 
 On a Mac the widget lives in the menu bar (no Dock icon), opens at the top right under the menu bar, follows you across desktops, and does **not** start at login unless you tick **Start at login** in its menu. `⌘⌥P` shows or hides it. Notifications, the strip, Focus mode and "jump to the terminal" (Terminal, iTerm, VS Code…) work the same as on Windows.
 
+## Desktop widget (Linux)
+
+Grab `CubicleCrew-<version>-linux.AppImage` from the [latest release](https://github.com/rezored/cubicle-crew/releases/latest), make it executable (`chmod +x`) and run it. Everything works as on Windows except "jump to the terminal" and starting at login, which aren't supported on Linux yet. The tray icon needs a desktop with tray support (on GNOME, the AppIndicator extension).
+
+## Settings
+
+Everything is in the **`?` panel** (the `?` button in the bottom bar, the `?` key, or **Settings and help…** at the top of the tray menu). Each option has a one-line description there too.
+
+**Look**
+- **Office** – the whole game: coins and the shop, pets, coffee breaks, handheld games and darts, effects and achievements.
+- **Focus** – a quiet status board: no coins, shop, pets, effects or games. You still see who is doing what and who is waiting for you. Coins keep adding up, just hidden.
+- **Thin strip instead of the office** *(app)* – one row per session: state, what it is doing, for how long. Takes the least space; click a row to jump to its terminal.
+- **Colour legend** – the bar at the bottom right with the state names (key `L`).
+- **Language** – English or Bulgarian.
+
+**Alerts**
+- **Sound** – a short tune when an agent waits for you or finishes a long task, only when you are not looking at the window.
+- **System notification** *(app)* – a pop-up when an agent waits for you; clicking it opens that session's terminal.
+
+**Privacy**
+- **Hide commands and paths** – bubbles, the card and notifications show only the tool and the session name. For screen sharing and streaming.
+
+**Window** *(app)*
+- **Always on top** – the window stays above the others, so you see the office while you work.
+- **Click-through** – the mouse goes through the office to whatever is below. Turn it off from the tray menu.
+- **Small window when there are no sessions** – with no session open the office shrinks to a morning scene and opens by itself when a session starts.
+- **Start with Windows / Start at login** – Cubicle Crew starts by itself when you sign in.
+- **Demo mode** – made-up agents, to see how everything looks without Claude Code.
+
+## Feedback
+
+Cubicle Crew is a free side project and grows from what people say. Ideas and questions go to [GitHub Discussions](https://github.com/rezored/cubicle-crew/discussions), bugs to [Issues](https://github.com/rezored/cubicle-crew/issues). The `?` panel links to both.
+
 ## How it works
 
 Everything stays on your machine. [docs/security.md](docs/security.md) lists exactly what the app reads, writes and sends.
@@ -171,7 +204,7 @@ Drop PNGs into `public/sprites/` and reload the page:
 - The JSONL transcript format isn't an official API. If parsing ever breaks, `npm run debug` shows what's happening.
 - Without the session status (older Claude Code versions), an agent counts as idle after 8 seconds without new transcript lines, so long thinking looks like a break.
 - Permission prompts are only seen through the session status, so older Claude Code versions that don't write it only show `waiting` for `AskUserQuestion`.
-- Installers exist for Windows x64 and macOS (universal, not signed with an Apple Developer ID yet). On Linux use the browser version (`npm start`); jumping to the terminal isn't supported there.
+- Installers exist for Windows x64, macOS (universal) and Linux (AppImage, x64). None is code-signed – the app is a free side project – so Windows and macOS ask once on first launch. Jumping to the terminal and starting at login aren't supported on Linux yet.
 
 ## Tech
 

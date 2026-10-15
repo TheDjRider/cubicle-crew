@@ -87,7 +87,7 @@ const server = http.createServer((req, res) => {
       const pid = pidOf.get(String(data.agent || ''));
       const app = pid ? await focusPid(pid) : null;
       res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify(app ? { ok: true, app } : { ok: false, error: pid ? 'window' : 'nopid' }));
+      res.end(JSON.stringify(app ? { ok: true, app } : { ok: false, error: !pid ? 'nopid' : process.platform === 'linux' ? 'unsupported' : 'window' }));
     });
     return;
   }

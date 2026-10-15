@@ -96,6 +96,7 @@ export class UI {
     });
     bridge?.onState?.((st) => { bar.querySelector('[data-act="pin"]').classList.toggle('on', !!st.onTop); });
     bridge?.onSound?.((on) => { setSound(on); this.lastHud = 0; }); // "Звук" от менюто в трея
+    bridge?.onOpenHelp?.(() => this.toggleHelp(true));               // „Настройки и помощ…“ от трея
     this.bridge = bridge;
   }
 
@@ -417,25 +418,66 @@ export class UI {
       this.help = el('div', null, document.body);
       this.help.id = 'help'; this.help.hidden = true;
       this.help.setAttribute('role', 'dialog');
-      this.help.addEventListener('change', (e) => { const k = e.target.dataset?.pref; if (k) prefs.set(k, e.target.checked); });
+      this.help.addEventListener('change', (e) => this.onHelpChange(e.target));
       this.help.addEventListener('click', (e) => {
         if (e.target.closest('[data-close]')) this.toggleHelp(false);
         else if (e.target.closest('[data-snap]')) this.onSnapshot?.();
         else if (e.target.closest('[data-clip]')) { this.toggleHelp(false); this.onClip?.(); }
       });
+      // настройките на приложението се сменят и от трея – панелът ги показва актуални
+      this.bridge?.onDesktop?.((d) => { this.desk = d; if (!this.help.hidden) this.renderHelp(); });
     }
     const open = show ?? this.help.hidden;
-    if (open) this.renderHelp();
+    if (open) {
+      this.renderHelp();
+      this.bridge?.getDesktop?.().then((d) => { this.desk = d; if (!this.help.hidden) this.renderHelp(); }).catch(() => {});
+    }
     this.help.hidden = !open;
   }
+
+  /** Отметка/избор в панела -> съответната настройка (страницата, звукът, езикът или приложението). */
+  onHelpChange(t) {
+    const d = t.dataset || {};
+    if (d.pref) prefs.set(d.pref, t.checked);
+    else if (t.name === 'mode') prefs.set('focus', t.value === 'focus');
+    else if (d.legend != null) { this.legend.hidden = !t.checked; try { localStorage.setItem('po.legend', t.checked ? '1' : '0'); } catch { /* */ } }
+    else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
+    else if (t.name === 'lang') { if (PARAMS.desktop && this.bridge?.action) this.bridge.action('lang:' + t.value); else setLang(t.value); }
+    else if (d.desk) { this.bridge?.setDesktop?.(d.desk, t.checked); if (d.desk === 'strip' && t.checked) this.toggleHelp(false); }
+  }
+
+  /** Настройки и помощ: всяка опция с по едно изречение какво прави. */
   renderHelp() {
-    const H = T.help;
-    this.help.innerHTML = `<div class="help-panel"><header><b>${H.title}</b><button type="button" data-close title="${H.close} (Esc)">✕</button></header>` +
-      '<ul>' + STATE_ORDER.map((s) => `<li data-state="${s}"><i style="background:${STATES[s].color}"></i><span><b>${T.states[s]}</b> – ${esc(H.states[s].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + '</ul>' +
-      `<p class="dim">${H.shapes}</p><h3>${H.settings}</h3>` +
-      `<label><input type="checkbox" id="pref-focus" data-pref="focus"${prefs.focus ? ' checked' : ''}><span><b>${H.focus}</b><small>${H.focusHint}</small></span></label>` +
-      `<label><input type="checkbox" id="pref-private" data-pref="private"${prefs.private ? ' checked' : ''}><span><b>${H.private}</b><small>${H.privateHint}</small></span></label>` +
-      `<h3>${H.share}</h3><div class="share"><button type="button" data-snap>${H.snapshot}</button><button type="button" data-clip>${H.clip}</button></div><p class="dim">${H.shareHint}</p></div>`;
+    const H = T.help, D = this.desk, demo = this.conn === 'demo';
+    const box = (attrs, on, title, hint) => `<label><input type="checkbox" ${attrs}${on ? ' checked' : ''}><span><b>${title}</b><small>${hint}</small></span></label>`;
+    const radio = (name, value, on, title, hint) => `<label><input type="radio" name="${name}" value="${value}" id="${name}-${value}"${on ? ' checked' : ''}><span><b>${title}</b>${hint ? `<small>${hint}</small>` : ''}</span></label>`;
+    let h = `<div class="help-panel"><header><b>${H.title}</b><button type="button" data-close title="${H.close} (Esc)">✕</button></header>`;
+    // как изглежда
+    h += `<h3>${H.look}</h3><div class="pair">${radio('mode', 'office', !prefs.focus, H.office, H.officeHint)}${radio('mode', 'focus', prefs.focus, H.focus, H.focusHint)}</div>`;
+    if (D) h += box('id="desk-strip" data-desk="strip"', D.strip, H.strip, H.stripHint);
+    h += box('id="opt-legend" data-legend', !this.legend.hidden, H.legend, H.legendHint);
+    h += `<div class="lang"><span>${H.lang}</span>${radio('lang', 'bg', LANG === 'bg', 'Български')}${radio('lang', 'en', LANG === 'en', 'English')}</div>`;
+    // известия
+    h += `<h3>${H.alerts}</h3>`;
+    if (!demo) h += box('id="opt-sound" data-sound', soundOn(), H.sound, H.soundHint);
+    if (D) h += box('id="desk-notify" data-desk="notify"', D.notify, H.notify, H.notifyHint);
+    // поверителност
+    h += `<h3>${H.privacy}</h3>` + box('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint);
+    // прозорецът (само в приложението)
+    if (D) {
+      h += `<h3>${H.window}</h3>` + box('id="desk-ontop" data-desk="onTop"', D.onTop, H.onTop, H.onTopHint) +
+        box('id="desk-through" data-desk="through"', D.through, H.through, H.throughHint) +
+        box('id="desk-wait" data-desk="waitWindow"', D.waitWindow, H.wait, H.waitHint) +
+        (D.canLogin ? box('id="desk-login" data-desk="login"', D.login, D.platform === 'darwin' ? H.loginMac : H.login, H.loginHint) : '') +
+        box('id="desk-demo" data-desk="demo"', D.demo, H.demo, H.demoHint);
+    }
+    // сподели, цветовете, обратна връзка
+    h += `<h3>${H.share}</h3><div class="share"><button type="button" data-snap>${H.snapshot}</button><button type="button" data-clip>${H.clip}</button></div><p class="dim">${H.shareHint}</p>`;
+    h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p></details>`;
+    h += `<h3>${H.feedback}</h3><p class="dim">${H.feedbackHint}</p><div class="share">` +
+      `<a href="https://github.com/rezored/cubicle-crew/discussions" target="_blank" rel="noopener">${H.discuss}</a>` +
+      `<a href="https://github.com/rezored/cubicle-crew/issues/new" target="_blank" rel="noopener">${H.issue}</a></div></div>`;
+    this.help.innerHTML = h;
   }
 
   updateDebug(now) {

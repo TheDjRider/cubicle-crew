@@ -244,6 +244,12 @@
   .setup-panel .pick button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; background: #1f1a2c; border-color: #2c2640; }
   .setup-panel .pick button.on { border-color: #4ac26b; box-shadow: inset 0 0 0 1px #4ac26b; background: #1f2a24; }
   .setup-panel .pick canvas { image-rendering: pixelated; }
+  .setup-panel .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .setup-panel .modes button { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; padding: 10px 12px; background: #1f1a2c; border-color: #2c2640; }
+  .setup-panel .modes button b { font-size: 15px; }
+  .setup-panel .modes button span { font-size: 12px; color: var(--ui-dim); line-height: 1.4; }
+  .setup-panel .modes button.on { border-color: #4ac26b; box-shadow: inset 0 0 0 1px #4ac26b; background: #1f2a24; }
+  @media (max-width: 420px) { .setup-panel .modes { grid-template-columns: 1fr; } }
   .setup-panel .nm { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .setup-panel .find { display: flex; gap: 6px; }
   .setup-panel .list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; color: var(--ui-dim); font-size: 12px; }
@@ -281,6 +287,16 @@
   .help-panel label small { display: block; color: var(--ui-dim); font-size: 12px; }
   .help-panel input { margin-top: 3px; }
   .help-panel .share { display: flex; gap: 6px; flex-wrap: wrap; }
+  .help-panel .share a { font-size: 12px; color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; border-radius: 3px; padding: 2px 8px; text-decoration: none; }
+  .help-panel .share a:hover, .help-panel button:hover { background: #3a3258; }
+  .help-panel .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .help-panel .pair label { border: 1px solid #2c2640; border-radius: 3px; padding: 6px 8px; background: #1f1a2c; }
+  .help-panel .pair label:has(input:checked) { border-color: #4ac26b; box-shadow: inset 0 0 0 1px #4ac26b; }
+  .help-panel .lang { display: flex; align-items: center; gap: 12px; font-size: 13px; padding: 4px 0; }
+  .help-panel .lang label { padding: 0; align-items: center; }
+  .help-panel details { margin-top: 12px; }
+  .help-panel details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--ui-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  @media (max-width: 420px) { .help-panel .pair { grid-template-columns: 1fr; } }
 
   /* картата при фокус: бутон „Преименувай“ */
   #card { pointer-events: auto; }

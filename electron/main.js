@@ -66,12 +66,12 @@ function visible(b) {
 const lang = () => settings.lang || (/^bg/i.test(app.getLocale() || '') ? 'bg' : 'en');
 const L = {
   bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', stats: 'Статистика', weather: 'Времето навън…', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
-    sound: 'Звук, когато агент чака или приключи', focus: 'Режим „Фокус“ (без игра и анимации)', private: 'Скривай команди и пътища', strip: 'Тънка лента вместо офиса',
+    help: 'Настройки и помощ…', sound: 'Звук, когато агент чака или приключи', focus: 'Режим „Фокус“ (без игра и анимации)', private: 'Скривай команди и пътища', strip: 'Тънка лента вместо офиса',
     demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', lang: 'Език / Language', resetSize: 'Нулирай размера',
     resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход',
     tip: (a, s, w) => `агенти ${a} · под-агенти ${s}${w ? ` · чакат те ${w}` : ''}`, one: (n) => `${n} чака теб`, many: (k) => `${k} агента чакат теб` },
   en: { hide: 'Hide', show: 'Show', shop: 'Shop', stats: 'Stats', weather: 'Weather outside…', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
-    sound: 'Sound when an agent waits or finishes', focus: 'Focus mode (no game, no animations)', private: 'Hide commands and paths', strip: 'Thin strip instead of the office',
+    help: 'Settings and help…', sound: 'Sound when an agent waits or finishes', focus: 'Focus mode (no game, no animations)', private: 'Hide commands and paths', strip: 'Thin strip instead of the office',
     demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', lang: 'Language / Език', resetSize: 'Reset size',
     resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit',
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
@@ -185,6 +185,26 @@ function applyOnTop() { win.setAlwaysOnTop(settings.onTop, 'floating'); sendStat
 function applyThrough() { win.setIgnoreMouseEvents(settings.through, { forward: true }); sendState(); }
 function sendState() { win?.webContents.send('state', { onTop: settings.onTop, through: settings.through }); }
 
+// ---------------------------------------------------------------- настройки на приложението: едни и същи от трея и от панела „?“
+const CAN_LOGIN = process.platform !== 'linux'; // Electron не поддържа стартиране при вход в Linux
+function desktopSettings() {
+  return { onTop: settings.onTop, through: settings.through, notify: settings.notify, strip: settings.strip, waitWindow: settings.waitWindow,
+    demo: settings.demo, login: CAN_LOGIN ? loginItem().get() : false, canLogin: CAN_LOGIN, platform: process.platform };
+}
+function applyDesktop(key, v) {
+  if (key === 'onTop') { settings.onTop = v; applyOnTop(); }
+  else if (key === 'through') { settings.through = v; applyThrough(); }
+  else if (key === 'notify') settings.notify = v;
+  else if (key === 'strip') { setStrip(v); return; }
+  else if (key === 'login') { if (CAN_LOGIN) loginItem().set(v); }
+  else if (key === 'waitWindow') { settings.waitWindow = v; if (!v) wake(); }
+  else if (key === 'demo') { settings.demo = v; saveSettings(); win.loadURL(pageUrl()); }
+  else return;
+  saveSettings();
+  refreshTray();
+  win?.webContents.send('desktop-settings', desktopSettings());
+}
+
 function toggleWindow(force) {
   const show = force ?? !win.isVisible();
   if (show) { win.showInactive(); win.moveTop(); } else win.hide();
@@ -221,7 +241,7 @@ function loginItem() {
 // Стартирането с Windows е включено по подразбиране: веднъж, при първото пускане на тази версия.
 // После решава само потребителят (отметката в менюто).
 function initLoginItem() {
-  if (!app.isPackaged || settings.loginInit || MAC) return; // на macOS – само ако потребителят го включи от менюто
+  if (!app.isPackaged || settings.loginInit || process.platform !== 'win32') return; // macOS/Linux – само ако потребителят го включи
   try { loginItem().set(true); settings.loginInit = true; saveSettings(); log('login item on by default'); } catch (e) { log('login item init', e?.message || e); }
 }
 
@@ -257,23 +277,25 @@ function resetPlace() {
 function menuTemplate() {
   const li = loginItem(), t = tr();
   return [
+    { label: t.help, click: () => openTab(() => win.webContents.send('open-help')) },
+    { type: 'separator' },
     { label: win?.isVisible() ? t.hide : t.show, accelerator: SHORTCUT, click: () => toggleWindow() },
     { label: t.shop, click: () => openTab(() => win.webContents.send('open-shop')) },
     { label: t.stats, click: () => openTab(() => win.webContents.send('open-tab', 'stats')) },
     { label: t.weather, click: () => openTab(() => win.webContents.send('open-weather')) },
     { type: 'separator' },
-    { label: t.onTop, type: 'checkbox', checked: settings.onTop, click: (m) => { settings.onTop = m.checked; applyOnTop(); saveSettings(); } },
-    { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => { settings.through = m.checked; applyThrough(); saveSettings(); } },
-    { label: t.notify, type: 'checkbox', checked: settings.notify, click: (m) => { settings.notify = m.checked; saveSettings(); } },
+    { label: t.onTop, type: 'checkbox', checked: settings.onTop, click: (m) => applyDesktop('onTop', m.checked) },
+    { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => applyDesktop('through', m.checked) },
+    { label: t.notify, type: 'checkbox', checked: settings.notify, click: (m) => applyDesktop('notify', m.checked) },
     // звукът е настройка на страницата (localStorage) – менюто само я сменя там
     { label: t.sound, type: 'checkbox', checked: stats.sound, click: (m) => { stats.sound = m.checked; win?.webContents.send('sound', m.checked); } },
     // настройки на страницата (localStorage) – менюто само ги сменя там, страницата ги връща в stats
     { label: t.strip, type: 'checkbox', checked: settings.strip, click: (m) => setStrip(m.checked) },
     { label: t.focus, type: 'checkbox', checked: stats.focus, click: (m) => { stats.focus = m.checked; win?.webContents.send('pref', 'focus', m.checked); } },
     { label: t.private, type: 'checkbox', checked: stats.private, click: (m) => { stats.private = m.checked; win?.webContents.send('pref', 'private', m.checked); } },
-    { label: t.demo, type: 'checkbox', checked: settings.demo, click: (m) => { settings.demo = m.checked; saveSettings(); win.loadURL(pageUrl()); } },
-    { label: t.login, type: 'checkbox', checked: li.get(), click: (m) => li.set(m.checked) },
-    { label: t.waitWindow, type: 'checkbox', checked: settings.waitWindow, click: (m) => { settings.waitWindow = m.checked; saveSettings(); if (!m.checked) wake(); } },
+    { label: t.demo, type: 'checkbox', checked: settings.demo, click: (m) => applyDesktop('demo', m.checked) },
+    ...(CAN_LOGIN ? [{ label: t.login, type: 'checkbox', checked: li.get(), click: (m) => applyDesktop('login', m.checked) }] : []),
+    { label: t.waitWindow, type: 'checkbox', checked: settings.waitWindow, click: (m) => applyDesktop('waitWindow', m.checked) },
     { label: t.lang, submenu: [
       { label: 'English', type: 'radio', checked: lang() === 'en', click: () => setLang('en') },
       { label: 'Български', type: 'radio', checked: lang() === 'bg', click: () => setLang('bg') },
@@ -307,6 +329,7 @@ ipcMain.on('action', (_e, act) => {
   else if (act === 'wake') wake();
   else if (act === 'sleep') sleep();
   else if (act === 'strip:off') setStrip(false);
+  else if (act === 'strip:on') setStrip(true);
 });
 
 // страницата казва какъв размер дава мащаб 2. Ръчно избраният размер е минимумът:
@@ -333,6 +356,10 @@ ipcMain.on('shop', (_e, open) => {
     applyThrough();
   }
 });
+
+// панелът „?“ чете и сменя същите настройки като менюто в трея
+ipcMain.handle('settings:get', () => desktopSettings());
+ipcMain.on('settings:set', (_e, key, v) => applyDesktop(String(key), !!v));
 
 ipcMain.on('strip-size', (_e, h) => {
   if (!win || !settings.strip) return;

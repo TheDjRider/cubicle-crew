@@ -10,7 +10,8 @@
     "icon": "node scripts/make-icon.mjs",
     "predist": "node -e \"fs.rmSync('release', { recursive: true, force: true })\"",
     "dist": "electron-builder --win nsis",
-    "dist:mac": "electron-builder --mac --publish never"
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
   },
   "engines": {
     "node": ">=18"
@@ -96,6 +97,21 @@
     },
     "dmg": {
       "title": "Cubicle Crew ${version}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon-mac.png",
+      "category": "Development",
+      "executableName": "cubicle-crew",
+      "synopsis": "Your Claude Code agents in a tiny pixel-art office",
+      "artifactName": "CubicleCrew-${version}-linux.${ext}"
     }
   },
   "homepage": "https://github.com/rezored/cubicle-crew",

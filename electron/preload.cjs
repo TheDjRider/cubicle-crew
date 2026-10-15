@@ -14,5 +14,9 @@ contextBridge.exposeInMainWorld('pixelOffice', {
   onWake: (fn) => ipcRenderer.on('wake', () => fn()),            // сутрешният екран да се махне (меню/втори старт)
   onVisible: (fn) => ipcRenderer.on('visible', (_e, v) => fn(!!v)), // скрит прозорец -> страницата не рисува
   onSound: (fn) => ipcRenderer.on('sound', (_e, on) => fn(!!on)),     // "Звуци" от менюто в трея
+  getDesktop: () => ipcRenderer.invoke('settings:get'),             // настройките на приложението (за панела „?“)
+  setDesktop: (key, v) => ipcRenderer.send('settings:set', key, !!v),
+  onDesktop: (fn) => ipcRenderer.on('desktop-settings', (_e, s) => fn(s)),
+  onOpenHelp: (fn) => ipcRenderer.on('open-help', () => fn()),        // „Настройки и помощ…“ от менюто в трея
   onPref: (fn) => ipcRenderer.on('pref', (_e, key, value) => fn(String(key), !!value)), // „Фокус“ / „Скривай команди“ от трея
 });
