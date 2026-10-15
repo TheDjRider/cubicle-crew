@@ -16,7 +16,7 @@ export const FW = 24, FH = 32;
 //  k/c/C риза (= цвета на състоянието)   K бяла яка/връзки   j/J акцент (вратовръзка, панделка)
 //  q/p/P панталон или пола   G/F чорапогащник   O колан  Y катарама   b/B/V обувки (+ отблясък)
 //  e очи  m уста  u руменина  A обеци/верижка  g рамки  l стъкла
-//  H лента на слушалки  n/N/v шапка  w/W хартия  i мастило  M/x чаша  L бадж  t химикал
+//  H лента на слушалки  n/N/v шапка  w/W хартия  i мастило  M/x чаша  L бадж  t химикал  X/I капак на лаптоп
 // ---------------------------------------------------------------------
 const HEAD = [
   '..hsssssss..',
@@ -272,6 +272,11 @@ POSES.couchGameA = { arms: ['hold', 'hold'], legs: 'couch', prop: 'gameA', look:
 POSES.couchGameB = { arms: ['hold', 'hold'], legs: 'couch', prop: 'gameB', look: 'down', mouth: 'smile' };
 POSES.dartAim = { arms: ['down', 'reach'], legs: 'stand', face: 'back', prop: 'dart' };
 POSES.dartThrow = { arms: ['down', 'up'], legs: 'stand', face: 'back' };
+// работа с лаптоп на дивана (под-агент или оркестратор без свободно бюро)
+POSES.couchLaptopA = { arms: ['hold', 'hold'], legs: 'couch', prop: 'laptopA', look: 'down' };
+POSES.couchLaptopB = { arms: ['hold', 'hold'], legs: 'couch', prop: 'laptopB', look: 'down' };
+POSES.standLaptopA = { arms: ['hold', 'hold'], legs: 'stand', prop: 'laptopA', look: 'down' };
+POSES.standLaptopB = { arms: ['hold', 'hold'], legs: 'stand', prop: 'laptopB', look: 'down' };
 export const POSE_ORDER = Object.keys(POSES);
 
 // ---------------------------------------------------------------------
@@ -646,6 +651,13 @@ function drawProp(g, prop, dy, layerFront) {
     const b = prop === 'gameB';
     g.set(b ? 12 : 10, y0 + 2, 'a'); g.set(b ? 11 : 13, y0 + 1, 'o'); g.set(b ? 13 : 11, y0 + 3, 'a');
     g.set(8, y0 + 2, 'D'); g.set(15, y0 + 1, 'o'); g.set(16, y0 + 2, 'a');
+  } else if (prop === 'laptopA' || prop === 'laptopB') {
+    // лаптоп в скута: виждаме гърба на капака (сребрист, със светещо лого) и ръба на клавиатурата
+    g.layer = 1;
+    const y0 = 15 + dy;
+    g.rect('X', 6, y0, 12, 6); g.rect('I', 6, y0, 12, 1); g.rect('D', 17, y0 + 1, 1, 5);
+    g.rect(prop === 'laptopB' ? 'a' : 'w', 11, y0 + 2, 2, 2);
+    g.rect('D', 5, y0 + 6, 14, 1); g.rect('d', 6, y0 + 7, 12, 1);
   } else if (prop === 'dart') {
     g.rect('W', 18, 4 + dy, 1, 2); g.set(18, 3 + dy, 'f');
   } else if (prop === 'carry') {
@@ -795,6 +807,7 @@ function paletteFor(look, shirt) {
     M: look.mug, x: shade(look.mug, 0.72),
     L: '#b04ae0',
     d: '#4a4a5a', D: '#2a2a36', z: '#1e3a3a', a: '#6ae08a', o: '#f07ab0', f: '#e05a5a',
+    X: '#a8acba', I: '#d4d8e2',
   };
 }
 

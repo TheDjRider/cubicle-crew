@@ -100,8 +100,8 @@ export class Actor {
     if (this.loc.type === 'door' && this.loc.exit) { this.fadeTo = 0; }
     if (this.loc.type === 'visit') { this.face = 'side'; this.flip = false; } // гледа към детето
     if (this.loc.type === 'darts') this.flip = false;
-    // на дивана: най-често игра на конзолката, понякога дрямка
-    if (this.loc.type === 'sofa') this.sofaAct = Math.random() < 0.7 ? 'game' : 'doze';
+    // на дивана: работещ без бюро – с лаптоп; почиващ – най-често игра на конзолката, понякога дрямка
+    if (this.loc.type === 'sofa') this.sofaAct = !this.seat && this.agent.state !== 'idle' ? 'laptop' : Math.random() < 0.7 ? 'game' : 'doze';
     if (this.pendingLoc) { const l = this.pendingLoc; this.pendingLoc = null; this.office.route(this, l); }
   }
 
@@ -177,12 +177,15 @@ export class Actor {
         return frameAt(st, 1400) ? 'standSip' : 'standMug';
       }
       if (this.loc.type === 'sofa') {
+        if (this.sofaAct === 'laptop') return st < 900 ? 'couchSit' : frameAt(st + this.phase, 900) ? 'couchLaptopB' : 'couchLaptopA';
         if (this.sofaAct === 'game') return st < 1800 ? 'couchSit' : frameAt(st + this.phase, 420) ? 'couchGameB' : 'couchGameA';
         return st > 5000 ? 'couchDoze' : (frameAt(st, 2600) ? 'couchSit' : 'couchSip');
       }
       if (this.loc.type === 'darts') return dartPose(st);
       if (this.loc.type === 'door') return 'stand';
       if (this.loc.type === 'visit') return 'carryS1';
+      // без бюро, но работи – прав с лаптоп
+      if (!this.seat && this.agent.state !== 'idle' && this.loc.type === 'lounge') return frameAt(st + this.phase, 900) ? 'standLaptopB' : 'standLaptopA';
       return 'stand';
     }
     if (now - this.receivedAt < 1300) return 'readA'; // получи бележка от родителя

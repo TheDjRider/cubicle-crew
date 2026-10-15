@@ -67,7 +67,7 @@ function applyCanvas() {
   ui.setScale(L.scale, dpr, L.W, L.H);
   appliedVersion = office.layoutVersion;
   if (PARAMS.desktop && window.pixelOffice?.preferSize) {
-    const key = `${L.spec.teams}x${L.spec.rows}`;
+    const key = `${L.need.w}x${L.need.h}`;
     if (key !== lastSpecKey) {
       lastSpecKey = key;
       window.pixelOffice.preferSize({ w: Math.ceil((L.need.w * 2) / dpr), h: Math.ceil((L.need.h * 2) / dpr) });

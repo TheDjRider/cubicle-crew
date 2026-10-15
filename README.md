@@ -37,7 +37,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 
 | | |
 |---|---|
-| 🧑‍💻 **Teams** | Each session (orchestrator) gets a lead desk with a ★ nameplate, and its sub-agents sit in rows of three below it. Up to two teams work at once: the second lead takes the desk next to the first, on the same rug, and its sub-agents get their own rows. Every team has a little emblem (a fox, an owl, a rocket…) on its desks and labels, and hovering anyone lights up their whole team. Extra sessions queue in the lounge and swap in when a lead goes idle. |
+| 🧑‍💻 **Teams** | Two lead desks with a ★ nameplate share one rug, with three desks for sub-agents below. Any sub-agent takes any free desk; the ones without a desk work on a laptop on the sofa until one frees up. Each team has its own mug colour, and lines connect every lead to its sub-agents. A third session works from the lounge until a lead desk is free. |
 | 🎨 **7 states** | `idle` · `thinking` · `typing` · `reading` · `running` · `delegating` · `waiting`. Each one has its own poses, monitor content and particles. |
 | 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. Up to three pets roam the lounge: cats with coat patterns and a dog (beagle, golden, corgi, husky, dachshund…) that likes to sit next to whoever is resting. Hover a pet to see its name; click it to rename it. |
 | 🌇 **Real sky** | The tall French windows follow the clock of your city (or your computer's clock): dawn, golden hour, night. Lamps, monitors and the neon sign glow after dark. |
@@ -96,7 +96,7 @@ npm run dist         # build the installer → release/CubicleCrew-Setup-<versio
 
 The widget runs its own server, so you don't need a browser or `npm start`. It sits in the bottom-right corner above
 the tray and stays on top of other windows. Hover it to show a drag bar with settings, pin, click-through, hide and
-quit buttons. It widens itself when a second team shows up.
+quit buttons.
 `Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has notifications, sound, start with Windows, demo mode and size reset.
 
 The installed app starts with Windows by default. Whenever it starts and no Claude Code session is open yet, it waits in a small window above the tray with a morning scene (your avatar with a coffee, your pet asleep on the sill, the sky at the real time of day); when a session appears, or you click it, it opens into the full office. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.

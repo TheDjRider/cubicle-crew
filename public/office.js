@@ -1,8 +1,7 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES } from './config.js';
-import { computeLayout, POD, teamRows } from './layout.js';
-import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, glow, drawAquariumFish, drawArcadeScreen, pennantImg, PENNANT } from './environment.js';
-import { EMBLEMS, emblemCanvas, drawSticker } from './emblems.js';
+import { computeLayout, POD } from './layout.js';
+import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, glow, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG } from './environment.js';
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
@@ -11,9 +10,11 @@ import { drawScreen } from './screens.js';
 import { Actor, Cat, Dog, DART_CYCLE, DART_RELEASE } from './characters.js';
 import { avatarLook } from './sprites.js';
 import { rgba } from './palette.js';
-import { R, pixLine, hashStr, clamp, makeCanvas } from './util.js';
+import { R, pixLine, hashStr, clamp } from './util.js';
 
 const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts']);
+// чашата на бюрото = екипът на седящия (под-агентските бюра са общи); без екип (оркестраторът чака) – бяла
+const TEAM_MUGS = ['#2fa8a8', '#d060b0'], NO_TEAM_MUG = '#e8e4dc';
 // откъде тръгва всеки любимец (част от зоната за почивка), за да не се появят един върху друг
 const PET_START = { cat: 0.5, cat2: 0.2, cat3: 0.82, dog: 0.36 };
 
@@ -24,14 +25,11 @@ export class Office {
     this.actors = new Map();
     this.L = null; this.room = null; this.podImgs = [];
     this.dev = { w: 0, h: 0 };
-    this.spec = { teams: 1, rows: [1] };
     this.teams = new Array(CFG.MAX_TEAMS).fill(null); // id на оркестратора за всеки екип
     this.decor = resolveDecor({});   // обзавеждането (catalog.js); setDecor() го сменя
     this.petBySlot = {};              // любимците по място (cat, cat2, cat3, dog)
     this.pets = [];
     this.petNames = {};               // save.petNames (портфейлът ги сменя)
-    this.emblems = new Map();         // id на оркестратор -> емблема на екипа (индекс в EMBLEMS)
-    this.hoverLead = null;            // посочен член на екип -> екипът му светва (ui.js)
     this.syncPets();
     this.avatar = AVATAR.def;        // външният вид на потребителя (портфейлът го сменя)
     this.avatarId = null;            // кой оркестратор го носи: първият дошъл; щом излезе – следващият по ред
@@ -54,26 +52,15 @@ export class Office {
   // Място = { team, role: 'lead'|'sub', slot }. Без място (seat = null) = чака в зоната за почивка.
   live() { return [...this.actors.values()].filter((a) => a.mode !== 'gone'); }
 
-  /** Колко екипа и по колко реда под-агенти има всеки (поне един ред – бюрата на новия екип са готови). */
-  wantedSpec() {
-    const teams = this.teams[1] ? 2 : 1;
-    const rows = [];
-    for (let t = 0; t < teams; t++) {
-      const subs = this.live().filter((a) => a.seat && a.seat.team === t && a.seat.role === 'sub');
-      const maxSlot = subs.reduce((m, a) => Math.max(m, a.seat.slot + 1), 0);
-      rows.push(Math.ceil(Math.max(CFG.SUB_PER_ROW, subs.length, maxSlot) / CFG.SUB_PER_ROW));
-    }
-    return { teams, rows };
-  }
-
   podIndexOf(seat) {
     if (!seat || !this.L) return -1;
-    const p = this.L.pods.find((q) => q.team === seat.team && q.role === seat.role && q.slot === seat.slot);
+    // под-агентските бюра са общи – търси се само по номер
+    const p = this.L.pods.find((q) => q.role === seat.role && q.slot === seat.slot && (seat.role === 'sub' || q.team === seat.team));
     return p ? p.i : -1;
   }
 
   relayout() {
-    this.L = computeLayout(this.dev.w, this.dev.h, this.spec);
+    this.L = computeLayout(this.dev.w, this.dev.h);
     this.room = buildRoom(this.L, this.seed, this.decor);
     this.podImgs = this.L.pods.map((p) => buildPod(hashStr(`pod${p.team}${p.role}${p.slot}`) ^ this.seed, p.role === 'lead', this.decor, p.team));
     this.layoutVersion++;
@@ -127,32 +114,40 @@ export class Office {
     return best;
   }
 
-  /** Расте веднага; смалява се само когато никой не върви (иначе героите "прескачат"). */
-  ensureLayout() {
-    const walking = this.live().some((a) => a.mode === 'walk');
-    // екип 0 е празен, а екип 1 – не: местим екип 1 наляво (само когато всички стоят)
-    if (!this.teams[0] && this.teams[1] && !walking) {
-      this.teams = [this.teams[1], null];
-      for (const a of this.actors.values()) if (a.seat && a.seat.team === 1) a.seat = { ...a.seat, team: 0 };
-    }
-    const want = this.wantedSpec();
-    const had = teamRows(this.spec);
-    const next = walking
-      ? { teams: Math.max(want.teams, this.spec.teams), rows: Array.from({ length: Math.max(want.teams, this.spec.teams) }, (_, t) => Math.max(want.rows[t] || 1, had[t] || 1)) }
-      : want;
-    if (next.teams !== this.spec.teams || teamRows(next).join() !== had.join()) { this.spec = next; this.relayout(); }
-    else for (const a of this.actors.values()) a.pod = this.podIndexOf(a.seat);
-  }
+  /** Подредбата е постоянна – само опреснява кое бюро е на кого. */
+  ensureLayout() { for (const a of this.actors.values()) a.pod = this.podIndexOf(a.seat); }
 
   teamOf(id) {
     const a = id && this.actors.get(id);
     return a && a.seat ? a.seat.team : null;
   }
 
-  freeSubSlot(team, except) {
-    const used = new Set(this.live().filter((a) => a !== except && a.seat && a.seat.team === team && a.seat.role === 'sub').map((a) => a.seat.slot));
-    let k = 0; while (used.has(k)) k++;
-    return k;
+  /** Свободно под-агентско бюро (общи са за всички екипи); -1 = всички са заети. */
+  freeSubSlot(except) {
+    const used = new Set(this.live().filter((a) => a !== except && a.seat && a.seat.role === 'sub').map((a) => a.seat.slot));
+    for (let k = 0; k < CFG.SUB_PER_ROW; k++) if (!used.has(k)) return k;
+    return -1;
+  }
+
+  /** Място за работа без бюро: с лаптоп на дивана, иначе прав с лаптоп в зоната за почивка (не при кафемашината). */
+  workSpot(a) {
+    const sofa = this.freeSofa(a);
+    if (sofa) return sofa;
+    const taken = new Set([...this.actors.values()].filter((x) => x !== a && x.loc.type === 'lounge').map((x) => x.loc.i));
+    let i = 0; while (taken.has(i) && i < 40) i++;
+    return { type: 'lounge', i };
+  }
+
+  /** Под-агенти без бюро заемат освободените (първо работещите, после по ред на идване). */
+  manageSubs() {
+    const waiting = this.live().filter((a) => a.agent.subagent && !a.seat && !a.agent.leaving && !a.leavingNow)
+      .sort((x, y) => (x.agent.state === 'idle') - (y.agent.state === 'idle') || x.joinSeq - y.joinSeq);
+    for (const c of waiting) {
+      const slot = this.freeSubSlot(c);
+      if (slot < 0) return;
+      this.assignSeat(c, { role: 'sub', slot });
+      this.route(c, { type: 'seat' });
+    }
   }
 
   /** Сяда на място (и пренарежда стаята, ако трябва). */
@@ -177,7 +172,7 @@ export class Office {
       // почиващ оркестратор, вече в зоната за почивка, без живи под-агенти -> освобождава бюрото
       // (в покой стаята е с едно работно място; второто се появява, когато работят и двамата)
       if (a && a.agent.state === 'idle' && a.mode !== 'walk' && LOUNGE.has(a.loc.type) && this.model.liveChildren(a.agent) === 0 &&
-        !this.live().some((x) => x.seat && x.seat.team === t && x.seat.role === 'sub')) {
+        !this.live().some((x) => x.seat && x.agent.parent === a.id)) {
         a.seat = null; a.pod = -1; this.teams[t] = null;
       }
     }
@@ -202,13 +197,8 @@ export class Office {
       }
       this.assignSeat(q, { team: t, role: 'lead', slot: 0 });
       this.route(q, { type: 'seat' });
-      // под-агентите му, дошли докато е бил без бюро – при него
-      for (const c of this.live()) {
-        if (c.agent.parent !== q.id || c.seatedOnce || c.agent.leaving || c.leavingNow) continue;
-        this.assignSeat(c, { team: t, role: 'sub', slot: this.freeSubSlot(t, c) });
-        this.route(c, { type: 'seat' });
-      }
     }
+    this.manageSubs();
   }
 
   /** Става от бюро, което вече не е негово (екипът е даден на друг) и отива в зоната за почивка. */
@@ -319,20 +309,16 @@ export class Office {
     this.actors.set(agent.id, a);
     this.syncAvatar();
     if (agent.subagent) {
-      // под-агент: в екипа на родителя (неизвестен родител – екипът със същия проект или първият;
-      // родител без бюро – детето чака в зоната за почивка, manageTeams го премества, щом родителят седне)
-      let team = this.teamOf(agent.parent);
-      if (team == null && !this.actors.has(agent.parent)) {
-        const same = [...this.actors.values()].find((x) => x.seat && x.seat.role === 'lead' && x.agent.label === agent.label);
-        team = same ? same.seat.team : (this.teams[0] ? 0 : null);
-      }
-      if (team != null) this.assignSeat(a, { team, role: 'sub', slot: this.freeSubSlot(team, a) });
+      // под-агент: сяда на всяко свободно под-агентско бюро (общи са за всички екипи);
+      // няма свободно – работи с лаптоп в зоната за почивка, докато manageSubs не му намери бюро
+      const slot = this.freeSubSlot(a);
+      if (slot >= 0) this.assignSeat(a, { role: 'sub', slot });
       // влиза през вратата
       a.loc = { type: 'door' };
       const d = this.locPoint({ type: 'door' }, a);
       a.x = d.x; a.y = d.y - 4; a.alpha = 0; a.fadeTo = 1;
       a.mode = 'idleSpot';
-      this.route(a, a.seat ? { type: 'seat' } : this.freeLoungeSpot(a));
+      this.route(a, a.seat ? { type: 'seat' } : this.workSpot(a));
       return;
     }
     const t = agent.state === 'idle' ? -1 : this.freeTeam();
@@ -351,8 +337,8 @@ export class Office {
       a.x = p.cx; a.y = p.seatY; a.mode = 'seated'; a.loc = { type: 'seat' };
       a.seatedOnce = true;
     } else {
-      // всички екипи са заети – чака в зоната за почивка
-      const spot = this.freeLoungeSpot(a);
+      // и двете оркестраторски бюра са заети – работи с лаптоп в зоната за почивка
+      const spot = this.workSpot(a);
       const pt = this.locPoint(spot, a);
       a.loc = spot; a.mode = 'idleSpot'; a.x = pt.x; a.y = pt.y; a.spotSince = now;
     }
@@ -369,15 +355,8 @@ export class Office {
     if (best) best.setLook(avatarLook(this.avatar, best.id));
   }
 
-  link(parent, child) {
-    const c = this.actors.get(child.id), p = this.actors.get(parent.id);
-    if (!c || !p || !p.seat) return;
-    // детето още не е седнало и е в чужд екип (или без място) – местим го при родителя
-    if (!c.seatedOnce && (!c.seat || c.seat.team !== p.seat.team)) {
-      this.assignSeat(c, { team: p.seat.team, role: 'sub', slot: this.freeSubSlot(p.seat.team, c) });
-      this.route(c, { type: 'seat' });
-    }
-  }
+  /** Връзка родител -> дете: бюрата са общи, затова детето не се мести (чашата на бюрото сменя цвета сама). */
+  link(parent, child) { void parent; void child; }
 
   onSeated(a) {
     // родителят "подава" бележка на детето
@@ -443,9 +422,11 @@ export class Office {
     const st = ag.state;
     const lt = now - ag.stateSince;
     if (!a.seat) {
-      // без място: стои в зоната за почивка (чака свободен екип)
-      if (['seat', 'pace', 'transit', 'visit'].includes(a.loc.type)) this.route(a, this.freeLoungeSpot(a));
-      else if (st === 'idle') this.leisure(a, now);
+      // без бюро: работи с лаптоп на дивана (или прав в зоната за почивка), почива като всички
+      if (['seat', 'pace', 'transit', 'visit'].includes(a.loc.type)) this.route(a, st === 'idle' ? this.freeLoungeSpot(a) : this.workSpot(a));
+      else if (st === 'idle') { if (a.sofaAct === 'laptop') a.sofaAct = Math.random() < 0.7 ? 'game' : 'doze'; this.leisure(a, now); }
+      else if (a.loc.type === 'sofa') { if (a.sofaAct !== 'laptop') { a.sofaAct = 'laptop'; a.spotSince = now; } }
+      else if (a.loc.type !== 'lounge') this.route(a, this.workSpot(a));
       return;
     }
     if (a.loc.type === 'seat') {
@@ -534,7 +515,7 @@ export class Office {
     for (const a of [...this.actors.values()]) {
       this.decide(a, now);
       a.update(dt, now);
-      if (a.mode === 'gone') { this.actors.delete(a.id); this.emblems.delete(a.id); this.model.remove(a.id); this.syncAvatar(); continue; }
+      if (a.mode === 'gone') { this.actors.delete(a.id); this.model.remove(a.id); this.syncAvatar(); continue; }
       this.emitParticles(a, now, dt);
     }
     // вратата се отваря, ако някой е до нея
@@ -667,7 +648,6 @@ export class Office {
     this.drawGlows(ctx, now, tod, occupant);
     ctx.restore();
     // 7) частици и икони отгоре
-    this.drawTeamFocus(ctx);
     this.fx.draw(ctx, 'top');
     for (const a of this.actors.values()) a.drawOverlay(ctx, now);
     if (this.focusId && this.actors.has(this.focusId)) this.drawFocus(ctx, this.actors.get(this.focusId), now);
@@ -675,11 +655,11 @@ export class Office {
 
   drawPodFront(ctx, p, img, a, now) {
     ctx.drawImage(img.front, p.x, p.y);
-    // емблемата на екипа: флагче на бюрото на оркестратора, стикер на предния панел на бюрата на под-агентите
-    const lead = this.actors.get(this.teams[p.team]), e = lead ? this.emblemOf(lead) : null;
-    if (e != null) {
-      if (p.role === 'lead') { const fx = p.x + 60, fy = p.y + 12; ctx.drawImage(pennantImg(), fx, fy); ctx.drawImage(emblemCanvas(e), fx + PENNANT.emb.x, fy + PENNANT.emb.y); }
-      else drawSticker(ctx, p.x + 12, p.y + 40, e);
+    // чашата: в цвета на екипа на човека на това бюро (празно бюро – без чаша)
+    const who = p.role === 'lead' ? this.actors.get(this.teams[p.team]) : [...this.actors.values()].find((x) => x.pod === p.i);
+    if (who) {
+      const t = this.leadOf(who)?.seat?.team;
+      drawMug(ctx, p.x + DESK_MUG.x, p.y + DESK_MUG.y, t != null ? TEAM_MUGS[t] : NO_TEAM_MUG);
     }
     const s = POD.screen;
     if (a) {
@@ -767,46 +747,12 @@ export class Office {
     R(ctx, '#ffffff', ax - 3, ay, 7, 1); R(ctx, '#ffffff', ax - 2, ay + 1, 5, 1); R(ctx, '#ffffff', ax - 1, ay + 2, 3, 1); R(ctx, '#ffffff', ax, ay + 3, 1, 1);
   }
 
-  // ================================================================ екипи: емблема и осветяване
+  // ================================================================ екипи
   /** Оркестраторът на агента (самият той или по веригата parent); null – под-агент без известен родител. */
   leadOf(a) {
     let x = a;
     for (let i = 0; i < 6 && x && x.agent.subagent; i++) x = x.agent.parent ? this.actors.get(x.agent.parent) : null;
     return x && !x.agent.subagent ? x : null;
-  }
-
-  /** Емблемата на екипа на агента: по името на проекта, но различна от тези на другите оркестратори в офиса. */
-  emblemOf(a) {
-    const l = this.leadOf(a);
-    if (!l) return null;
-    let e = this.emblems.get(l.id);
-    if (e == null) {
-      const used = new Set([...this.emblems].filter(([id]) => this.actors.has(id)).map(([, v]) => v));
-      e = hashStr(l.agent.label || l.id) % EMBLEMS.length;
-      for (let k = 0; k < EMBLEMS.length && used.has(e); k++) e = (e + 1) % EMBLEMS.length;
-      this.emblems.set(l.id, e);
-    }
-    return e;
-  }
-
-  /** Колко оркестратора има в офиса (осветяването има смисъл само при поне двама). */
-  leadCount() { let n = 0; for (const a of this.actors.values()) if (!a.agent.subagent && a.alpha > 0.3) n++; return n; }
-
-  /** Посочен член на екип: всичко освен екипа му леко притъмнява. */
-  drawTeamFocus(ctx) {
-    const lead = this.hoverLead && this.actors.get(this.hoverLead);
-    if (!lead || this.leadCount() < 2) return;
-    const L = this.L;
-    // маска: тъмен цвят навсякъде, изрязани местата на екипа (застъпванията не притъмняват двойно)
-    const m = this.focusMask && this.focusMask.width === L.W && this.focusMask.height === L.H ? this.focusMask : (this.focusMask = makeCanvas(L.W, L.H));
-    const g = m.getContext('2d');
-    g.fillStyle = '#6a6488'; g.fillRect(0, 0, L.W, L.H);
-    for (const a of this.actors.values()) {
-      if (a.alpha < 0.3 || this.leadOf(a) !== lead) continue;
-      if (a.isAtDesk(L)) { const p = L.pods[a.pod]; g.clearRect(p.x + 2, p.y + 4, 68, 50); }
-      else g.clearRect(Math.round(a.x) - 11, Math.round(a.y) - 33, 22, 36);
-    }
-    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(m, 0, 0); ctx.restore();
   }
 
   /** Кой агент е под точката (логически координати). */

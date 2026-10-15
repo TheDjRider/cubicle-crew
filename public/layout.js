@@ -19,30 +19,26 @@ export const POD = {
 };
 
 
-/** Редове под-агенти на всеки екип: spec.rows е масив [екип 1, екип 2] (число = еднакво за всички – стар вид). */
-export const teamRows = (spec) => (Array.isArray(spec.rows) ? spec.rows : Array(spec.teams).fill(spec.rows || 1)).slice(0, spec.teams);
-
-/** Колко място иска дадена подредба на екипи (логически px). Общ килим: колоните са винаги SUB_PER_ROW,
- *  вторият екип добавя бюро до първото оркестраторско и свои редове отдолу – офисът расте надолу, не встрани. */
-export function teamNeed(spec, podH = CFG.POD_H) {
-  const rows = teamRows(spec).reduce((s, r) => s + r, 0);
+/** Колко място иска стаята (логически px). Подредбата е постоянна: горе бюрата на двата оркестратора
+ *  с принтера между тях, отдолу един ред с SUB_PER_ROW общи бюра за под-агентите. Нищо не се появява. */
+export function teamNeed(podH = CFG.POD_H) {
   return {
     w: Math.max(CFG.MIN_W, CFG.MARGIN_L + CFG.SUB_PER_ROW * CFG.POD_W + CFG.LOUNGE_W + CFG.MARGIN_R),
-    h: Math.max(CFG.MIN_H, CFG.WALL_H + CFG.TOP_GAP + (1 + rows) * podH + CFG.MARGIN_B),
+    h: Math.max(CFG.MIN_H, CFG.WALL_H + CFG.TOP_GAP + 2 * podH + CFG.MARGIN_B),
   };
 }
 
 /**
- * Подредба: общ килим, решетка от SUB_PER_ROW колони. Горе – бюрата на оркестраторите (екип 1 в средната колона,
- * екип 2 – до него вдясно), под тях редовете на под-агентите: първо на екип 1, после на екип 2.
- * devW/devH – размер на прозореца във ФИЗИЧЕСКИ пиксели; spec = { teams: 1|2, rows: [редове на екип] }.
+ * Подредба: общ килим, решетка от SUB_PER_ROW колони. Горе – бюрата на оркестраторите (екип 1 в лявата колона,
+ * екип 2 – в дясната, принтерът и растението – в средата), отдолу общите бюра на под-агентите (всеки сяда на свободно).
+ * devW/devH – размер на прозореца във ФИЗИЧЕСКИ пиксели.
  * Връща логическия размер на стаята, мащаба (цяло число) и позициите на всичко.
  */
-export function computeLayout(devW, devH, spec) {
+export function computeLayout(devW, devH) {
   let best = null;
   // втори вариант с по-гъсти редове – за малки прозорци (печели само ако дава по-голям мащаб)
   for (const podH of [CFG.POD_H, CFG.POD_H_COMPACT]) {
-    const need = teamNeed(spec, podH);
+    const need = teamNeed(podH);
     const scale = Math.max(1, Math.min(CFG.MAX_SCALE, Math.floor(Math.min(devW / need.w, devH / need.h))));
     const score = scale * 1000 - (podH < CFG.POD_H ? 500 : 0);
     if (!best || score > best.score) best = { scale, score, needW: need.w, needH: need.h, podH };
@@ -50,7 +46,7 @@ export function computeLayout(devW, devH, spec) {
   const { scale, podH } = best;
   const W = Math.max(best.needW, Math.floor(devW / scale));
   const H = Math.max(best.needH, Math.floor(devH / scale));
-  const per = CFG.SUB_PER_ROW, tr = teamRows(spec), rows = 1 + tr.reduce((s, r) => s + r, 0);
+  const per = CFG.SUB_PER_ROW, rows = 2;
 
   // зоната с бюрата
   const ax0 = CFG.MARGIN_L, ax1 = W - CFG.LOUNGE_W - CFG.MARGIN_R;
@@ -69,15 +65,13 @@ export function computeLayout(devW, devH, spec) {
     const i = pods.length;
     pods.push({ i, team, role, slot, r, x: Math.round(x), y: Math.round(y), cx: Math.round(x) + POD.seat.x, aisleY: Math.round(y) + POD.aisle.y, seatY: Math.round(y) + POD.seat.y });
   };
-  // колоните на оркестраторите: екип 1 – в средата (както при един екип, не се мести), екип 2 – вдясно от него
-  const LEAD_COL = [Math.floor(per / 2), Math.min(per - 1, Math.floor(per / 2) + 1)];
-  let r0 = 1;
-  for (let t = 0; t < spec.teams; t++) {
-    teams.push({ x: Math.round(ox), y: oy, w: Math.round(gridW), h: Math.round(gridH), gw, row: r0, rows: tr[t] });
+  // оркестраторите – в крайните колони, под-агентските бюра (team: null) – общи за всички екипи
+  const LEAD_COL = [0, per - 1];
+  for (let t = 0; t < CFG.MAX_TEAMS; t++) {
+    teams.push({ x: Math.round(ox), y: oy, w: Math.round(gridW), h: Math.round(gridH), gw });
     mk(t, 'lead', 0, ox + gw * LEAD_COL[t], oy, 0);
-    for (let k = 0; k < tr[t] * per; k++) mk(t, 'sub', k, ox + (k % per) * gw, oy + (r0 + Math.floor(k / per)) * gh, r0 + Math.floor(k / per));
-    r0 += tr[t];
   }
+  for (let k = 0; k < per; k++) mk(null, 'sub', k, ox + k * gw, oy + gh, 1);
   const rowYs = [...new Set(pods.map((p) => p.aisleY))];
 
   // зона за почивка вдясно
@@ -117,8 +111,8 @@ export function computeLayout(devW, devH, spec) {
   const rugs = [{ x: Math.round(ox) - 6, y: oy + 6, w: Math.round(gridW) + 12, h: Math.round(gridH) - 4 }]; // един общ килим
 
   return {
-    scale, W, H, cols, rows, spec, pods, teams, rugs, rowYs, lounge, door, podH,
-    need: teamNeed(spec), cap: pods.length,
+    scale, W, H, cols, rows, pods, teams, rugs, rowYs, lounge, door, podH,
+    need: teamNeed(), cap: pods.length,
     deskArea: { x0: ax0, x1: ax1, y0: ay0, y1: ay1 },
     leftLaneX: door.cx,
   };

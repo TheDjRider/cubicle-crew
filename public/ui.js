@@ -3,7 +3,6 @@
 import { CFG, STATES, STATE_ORDER, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
 import { shortDetail, fmtDuration } from './util.js';
 import { coinUrl } from './tokens.js';
-import { emblemUrl } from './emblems.js';
 import { soundOn, setSound } from './sound.js';
 
 // торбичка за пазаруване 9x9 (иконата на бутона за магазина) – рисува се тук, без външни файлове
@@ -178,7 +177,7 @@ export class UI {
       let it = this.items.get(a.id);
       if (!it) {
         it = { label: el('div', 'tag', this.overlay), bubble: el('div', 'bubble', this.overlay), c: {} };
-        it.label.innerHTML = '<i></i><span class="n"></span><span class="s"></span><img class="emb" alt="" hidden>';
+        it.label.innerHTML = '<i></i><span class="n"></span><span class="s"></span>';
         it.bubble.innerHTML = '<b></b><span></span>';
         this.items.set(a.id, it);
       }
@@ -195,11 +194,6 @@ export class UI {
         it.label.dataset.state = st;
         it.bubble.dataset.state = st;
       });
-      // емблемата на екипа пред името; при посочен член на друг екип етикетът избледнява
-      const emb = office.emblemOf(a);
-      this.set(it, 'emb', emb, () => { const im = it.label.children[3]; im.hidden = emb == null; if (emb != null) im.src = emblemUrl(emb); it.lw = 0; });
-      const hl = office.hoverLead && office.leadCount() > 1 ? office.leadOf(a)?.id !== office.hoverLead : false;
-      this.set(it, 'hl', hl, () => it.label.classList.toggle('other', hl));
       const lx = this.clampX(anc.label.x, it, 'lw', it.label);
       // на дивана и при кафето/водата двама стоят близо – етикетът на втория е ред по-долу, за да не се застъпват
       const ly = this.px(anc.label.y) + (a.mode !== 'walk' && (a.loc.type === 'sofa' || a.loc.type === 'cooler') ? (a.loc.type === 'sofa' ? a.loc.i : 1) * (it.lh ||= (it.label.offsetHeight || 14) + 2) : 0);
@@ -268,10 +262,9 @@ export class UI {
 
   updateTooltip(now) {
     const m = this.mouse;
-    if (!m) { this.tip.hidden = true; this.canvas.style.cursor = ''; this.hoverId = null; this.office.hoverLead = null; return; }
+    if (!m) { this.tip.hidden = true; this.canvas.style.cursor = ''; this.hoverId = null; return; }
     const a = this.office.hitTest(m.x, m.y);
     this.hoverId = a ? a.id : null;
-    this.office.hoverLead = a ? this.office.leadOf(a)?.id || null : null;
     let html = null;
     if (a) html = this.describe(a, now);
     else {

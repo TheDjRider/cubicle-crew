@@ -196,7 +196,9 @@ function drawLamp(ctx, color) {
   R(ctx, shade(color, 0.7), l.x + 3, 21, 9, 2); R(ctx, color, l.x + 4, 21, 6, 1);
 }
 
-function drawMug(ctx, x, y, color) {
+/** Чашата на бюрото – рисува се всеки кадър в office.js (цветът е на екипа на седящия); x, y спрямо pod-а. */
+export const DESK_MUG = { x: 38, y: 30 };
+export function drawMug(ctx, x, y, color) {
   R(ctx, shade(color, 0.6), x - 1, y, 5, 5);
   R(ctx, color, x, y, 3, 4); R(ctx, shade(color, 0.78), x + 2, y, 1, 4);
   R(ctx, '#4a2c1c', x, y, 3, 1);
@@ -258,22 +260,8 @@ export function buildPod(variantSeed, lead = false, decor = DEFAULT_DECOR, team 
   fx.drawImage(prop('monitor', W, H, (c) => drawMonitor(c, sticky)), 0, 0);
   drawKeyboard(fx);
   drawLamp(fx, lampColor);
-  drawMug(fx, 38, 30, mugColor);
   DESK_ITEMS[item](fx);
   return { back, front, item, mugColor, lampColor };
-}
-
-/** Флагче на бюрото на оркестратора (12x20): пилон вдясно + платно 10x10; емблемата на екипа се рисува отгоре
- *  в office.js (на 1,2 от горния ляв ъгъл), затова платното е празно. Основата стъпва на плота (долният ред). */
-export const PENNANT = { w: 12, h: 20, emb: { x: 1, y: 2 } };
-export function pennantImg() {
-  return prop('pennant', PENNANT.w, PENNANT.h, (c) => {
-    const R = (col, x, y, w, h) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-    R('#5a5a68', 10, 0, 1, 19); R('#c8c8d4', 10, 0, 1, 1);           // пилон
-    R('#3a3448', 8, 18, 5, 2); R('#5a5468', 9, 18, 3, 1);            // основа
-    R('#c8bc9a', 0, 1, 10, 10); R('#f0e8d0', 0, 1, 9, 9);            // платно (с тъмна долна/дясна част)
-    R('#a89a78', 1, 10, 3, 1); R('#a89a78', 5, 10, 3, 1);            // ресни
-  });
 }
 
 function drawPrinter(ctx, w, h) {
@@ -953,17 +941,12 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   add(smallPlant, L.door.x + L.door.w + 1, CFG.WALL_H + 4);
   if (H - Math.max(...L.rugs.map((r) => r.y + r.h)) > 26) add(bigPlant(), 4, H - 6);
 
-  // до бюрото на оркестратора: растение отляво и шкаф с принтер отдясно; с два оркестратора (един до друг)
-  // двете отиват в свободната лява част на горния ред
+  // между бюрата на двамата оркестратори: шкаф с принтер и растение
   const leads = L.pods.filter((p) => p.role === 'lead');
-  if (leads.length === 1) {
-    const p = leads[0];
-    add(bigPlant(), p.x - 30, p.y + 48);
-    add(prop('printer', 26, 30, (c) => drawPrinter(c, 26, 30)), p.x + CFG.POD_W + 10, p.y + 48);
-  } else if (leads.length) {
-    const p = leads.reduce((m, q) => (q.x < m.x ? q : m)), x0 = p.x - (L.teams[0]?.gw || CFG.POD_W);
-    add(bigPlant(), x0 + 4, p.y + 48);
-    add(prop('printer', 26, 30, (c) => drawPrinter(c, 26, 30)), x0 + 38, p.y + 48);
+  if (leads.length) {
+    const p = leads.reduce((m, q) => (q.x < m.x ? q : m)), mx = p.x + (L.teams[0]?.gw || CFG.POD_W);
+    add(prop('printer', 26, 30, (c) => drawPrinter(c, 26, 30)), mx + 8, p.y + 48);
+    add(bigPlant(), mx + 38, p.y + 48);
   }
 
   // ---------- небе: звезди, облаци, силует на града ----------

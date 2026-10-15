@@ -13,7 +13,7 @@ export const SLOTS = {
   'rug.lounge':  { group: 'lrug',     def: 'lrug.red' },
   sofa:          { group: 'sofa',     def: 'sofa.modern.teal' },
   'chair.team0': { group: 'chair',    def: 'chair.navy' },
-  'chair.team1': { group: 'chair',    def: 'chair.navy' },
+  'chair.team1': { group: 'chair',    def: 'chair.navy', hidden: true }, // под-агентските бюра са общи от 1.9 – остава заради записите
   'chair.lead':  { group: 'chair',    def: 'chair.red' },
   plants:        { group: 'plants',   def: 'plants.ficus' },
   posters:       { group: 'posters',  def: 'posters.classic' },
