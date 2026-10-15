@@ -66,6 +66,19 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  // лична статистика (само локално): обобщение по дни и CSV
+  if (urlPath === '/api/stats') {
+    const days = Math.max(1, Math.min(60, Number(new URL(req.url, 'http://x').searchParams.get('days')) || 7));
+    res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({ ok: true, days: wallet.statsView().summary(days) }));
+    return;
+  }
+  if (urlPath === '/api/stats.csv') {
+    const days = Math.max(1, Math.min(60, Number(new URL(req.url, 'http://x').searchParams.get('days')) || 30));
+    res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="cubicle-crew-stats-${days}d.csv"`, 'Cache-Control': 'no-store' });
+    res.end('\ufeff' + wallet.statsView().csv(days));
+    return;
+  }
   // времето навън: състояние, търсене на град, избор/изключване
   if (urlPath === '/api/weather' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
@@ -143,7 +156,8 @@ function scanSessions() {
   if (key === liveKey) return;
   liveKey = key; live = list;
   if (DEBUG) console.log('живи сесии:', list.map((x) => `${x.label}/${x.agent.slice(0, 8)} ${x.status}`).join(', ') || '—');
-  wallet.setLive(list.map((x) => x.agent), list.filter((x) => x.status === 'busy').map((x) => x.agent));
+  wallet.setLive(list.map((x) => x.agent), list.filter((x) => x.status === 'busy').map((x) => x.agent),
+    list.filter((x) => x.status === 'waiting').map((x) => x.agent), Object.fromEntries(list.map((x) => [x.agent, x.label])));
   broadcast({ type: 'sessions', list });
 }
 
@@ -246,6 +260,8 @@ function handleLine(file, line) {
     if (L.desc) base.desc = L.desc;
     if (DEBUG && L.source) base.link = L.source;
   }
+  // истинските токени (за личната статистика) – само числата от usage, нищо от текста
+  if (obj.type === 'assistant' && obj.message?.usage) wallet.usage(agent, base.label, subagent, obj.message);
   const content = obj.message?.content;
   const out = [];
 

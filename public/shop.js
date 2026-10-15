@@ -13,6 +13,8 @@ import { makeCanvas } from './util.js';
 
 const el = (tag, cls, parent, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; };
 const fmt = (n) => Number(n).toLocaleString(LANG === 'bg' ? 'bg-BG' : 'en-US');
+// 1 ч 05 мин / 42 мин – за статистиката
+const fmtDurationShort = (ms) => { const m = Math.round(ms / 60000); return m < 60 ? `${m} ${T.min}` : `${Math.floor(m / 60)} ${T.hour} ${String(m % 60).padStart(2, '0')} ${T.min}`; };
 
 /** Любимец на парче под (иначе тъмните котки/кучета не се виждат на тъмната карта); кучето седи, за да личи породата. */
 export function petThumb(it, mode = 'sit') {
@@ -54,6 +56,9 @@ export class Shop {
     });
     window.pixelOffice?.onOpenShop?.(() => this.open());
     window.pixelOffice?.onOpenWeather?.(() => this.open('weather'));
+    window.pixelOffice?.onOpenTab?.((tab) => this.open(tab)); // „Статистика“ от менюто в трея
+    // статистиката се опреснява, докато разделът е отворен
+    setInterval(() => { if (!this.root.hidden && this.tab === 'stats') this.renderStats(true); }, 15000);
     this.weather = null; // последното {type:'weather'} от сървъра
   }
 
@@ -65,7 +70,7 @@ export class Shop {
     r.innerHTML = '';
     const panel = el('div', 'shop-panel', r);
     const head = el('header', null, panel);
-    el('b', 'ttl', head, T.shop.title);
+    this.ttl = el('b', 'ttl', head, T.shop.title);
     this.bal = el('span', 'bal', head);
     const x = el('button', 'x', head, '✕'); x.title = 'Esc';
     x.onclick = () => this.close();
@@ -84,7 +89,7 @@ export class Shop {
 
   open(tab) {
     if (document.body.classList.contains('setting-up')) return; // първо началната настройка
-    if (prefs.focus && tab !== 'weather') return; // „Фокус“: без магазин (времето остава)
+    if (prefs.focus && tab !== 'weather' && tab !== 'stats') return; // „Фокус“: без магазин (времето и статистиката остават)
     if (tab) this.tab = tab;
     if (this.tokens.tokens == null) return;
     const was = this.root.hidden;
@@ -107,12 +112,16 @@ export class Shop {
   render() {
     const t = this.tokens, s = t.save;
     this.bal.innerHTML = `<i style="background-image:url(${this.coin ||= coinUrl()})"></i>${fmt(t.tokens ?? 0)}`;
-    for (const b of this.nav.children) { b.classList.toggle('on', b.dataset.tab === this.tab); b.hidden = prefs.focus && b.dataset.tab !== 'weather'; }
+    // статистиката и времето не са „магазин“; във „Фокус“ няма и монети
+    const info = this.tab === 'stats' || this.tab === 'weather';
+    this.ttl.textContent = info ? T.shop.tabs[this.tab] : T.shop.title;
+    this.bal.hidden = prefs.focus;
+    for (const b of this.nav.children) { b.classList.toggle('on', b.dataset.tab === this.tab); b.hidden = prefs.focus && b.dataset.tab !== 'weather' && b.dataset.tab !== 'stats'; }
     const tab = TABS.find((x) => x.id === this.tab);
     // пълно прерисуване само ако нещо видимо се е променило (иначе посочването "мига")
     const afford = ITEMS.filter((it) => tab.groups.includes(it.group) && !owns(s, it.id) && it.price <= t.tokens).map((it) => it.id).join();
     const key = [this.tab, JSON.stringify(s.owned), JSON.stringify(s.equipped), JSON.stringify(s.achievements), afford,
-      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', JSON.stringify(s.avatar), tab.id === 'weather' ? JSON.stringify(this.weather) : '', JSON.stringify(s.petNames)].join('|');
+      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', tab.id === 'stats' ? 'stats' : '', JSON.stringify(s.avatar), tab.id === 'weather' ? JSON.stringify(this.weather) : '', JSON.stringify(s.petNames)].join('|');
     if (key === this.key) return;
     this.key = key;
     const scroll = this.body.scrollTop;
@@ -123,6 +132,7 @@ export class Shop {
     if (tab.id === 'trophies') this.renderTrophies();
     else if (tab.id === 'avatar') this.renderAvatar();
     else if (tab.id === 'weather') this.renderWeather();
+    else if (tab.id === 'stats') this.renderStats();
     else if (tab.id === 'pets') this.renderPets();
     else if (tab.merge) this.renderGroup(tab.groups, T.shop.tabs[tab.id]); // по един предмет на група – обща решетка
     else for (const g of tab.groups) this.renderGroup([g], T.shop.groups[g]);
@@ -301,6 +311,56 @@ export class Shop {
       else { b.dataset.equip = S.def || ITEM[S.need].gives; b.disabled = full; }
     }
     el('p', 'hint', el('section', null, this.body), P.limit);
+  }
+
+  /** Лична статистика: днес + 7 дни + по проекти; експорт CSV/JSON. Данните са от сървъра (stats.js). */
+  async renderStats(refresh = false) {
+    const S = T.stats;
+    let sec = this.body.querySelector('section.stats');
+    if (!sec) { sec = el('section', 'stats', this.body); el('p', 'dim', sec).textContent = S.loading; }
+    if (PARAMS.demo) { sec.innerHTML = ''; el('p', 'hint', sec).textContent = S.demo; return; }
+    let r = null;
+    try { r = await (await fetch('api/stats?days=7')).json(); } catch { /* */ }
+    if (this.tab !== 'stats' || !sec.isConnected) return;
+    if (!r?.ok) { if (!refresh) { sec.innerHTML = ''; el('p', 'hint', sec).textContent = S.offline; } return; }
+    const dur = (ms) => (ms < 60000 ? (ms > 0 ? '<1 ' + T.min : '–') : fmtDurationShort(ms));
+    const tok = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n));
+    const today = r.days[0], t = today.total;
+    sec.innerHTML = '';
+    el('h3', null, sec, S.today);
+    const cards = el('div', 'cards', sec);
+    const card = (k, v, sub) => { const c = el('div', 'stat', cards); el('b', null, c).textContent = v; el('span', null, c).textContent = k; if (sub) el('small', null, c).textContent = sub; };
+    card(S.work, dur(t.activeMs), `${S.leads}: ${dur(t.leadActiveMs)}`);
+    card(S.waited, dur(t.waitingMs));
+    card(S.tools, fmt(t.tools), S.sessions(t.sessions, t.subagents));
+    card(S.tokens, `${tok(t.tokIn)} / ${tok(t.tokOut)}`, `${S.cache}: ${tok(t.tokCache)}`);
+    if (!t.sessions && !t.subagents) el('p', 'hint', sec).textContent = S.empty;
+    // 7 дни: работа (зелено) и чакане за теб (червено) – обща скала
+    el('h3', null, sec, S.days);
+    const max = Math.max(1, ...r.days.map((d) => d.total.activeMs + d.total.waitingMs));
+    const bars = el('div', 'bars', sec);
+    for (const d of [...r.days].reverse()) {
+      const col = el('div', 'day', bars);
+      const stack = el('div', 'stack', col);
+      const a = el('i', 'w', stack); a.style.height = `${(d.total.activeMs / max) * 100}%`;
+      const w = el('i', 'q', stack); w.style.height = `${(d.total.waitingMs / max) * 100}%`;
+      col.title = `${d.day}: ${S.active} ${dur(d.total.activeMs)} · ${S.waiting} ${dur(d.total.waitingMs)}`;
+      el('span', null, col).textContent = d.day.slice(8) + '.' + d.day.slice(5, 7);
+    }
+    if (today.projects.length) {
+      const tb = el('table', 'proj', sec);
+      tb.innerHTML = `<thead><tr><th>${S.project}</th><th>${S.active}</th><th>${S.waiting}</th><th>${S.calls}</th><th>${S.tok}</th></tr></thead>`;
+      const body = el('tbody', null, tb);
+      for (const p of today.projects) {
+        const tr = el('tr', null, body);
+        el('td', null, tr).textContent = p.project; // името на папката – само като текст
+        for (const v of [dur(p.activeMs), dur(p.waitingMs), fmt(p.tools), `${tok(p.tokIn)} / ${tok(p.tokOut)}`]) el('td', 'n', tr, v);
+      }
+    }
+    const act = el('div', 'sw', sec);
+    const a1 = el('a', 'btn', act, S.csv); a1.href = 'api/stats.csv?days=30'; a1.download = 'cubicle-crew-stats-30d.csv';
+    const a2 = el('a', 'btn', act, S.json); a2.href = 'api/stats?days=30'; a2.download = 'cubicle-crew-stats-30d.json';
+    el('p', 'hint', sec).textContent = S.note;
   }
 
   /** Времето навън: избран град + търсене; текстът от интернет се слага само като textContent. */

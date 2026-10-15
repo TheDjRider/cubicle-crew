@@ -6,6 +6,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { Earner, dayKey } from './public/rules.js';
 import { buyItem, equipItem, setAvatar, grantAchievements, setupOffice, setPetName } from './public/catalog.js';
+import { Stats } from './stats.js';
 
 const DIR = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office');
 const FILE = path.join(DIR, 'save.json');
@@ -36,6 +37,9 @@ export class Wallet {
     this.owner = false; this.dirty = false; this.lastWrite = 0; this.mtime = 0;
     this.activeMs = 0;
     this.port = 0;           // за препращане на покупки към процеса, който брои
+    this.stats = new Stats(DIR); // лична статистика по дни (пише само собственикът на save.lock)
+    this.info = new Map();   // агент -> { label, sub } (за статистиката)
+    this.waiting = new Set(); // живи сесии, които чакат теб (въпрос за разрешение)
   }
 
   start() {
@@ -69,11 +73,23 @@ export class Wallet {
     return this.save.tokens !== before;
   }
 
-  /** Живите сесии на Claude Code (id-та) – почиващите също печелят по малко. */
-  setLive(ids, busy) { this.earner.setLive(ids, busy); }
+  /** Живите сесии на Claude Code (id-та) – почиващите също печелят по малко; waiting = чакат теб (за статистиката). */
+  setLive(ids, busy, waiting = [], labels = {}) {
+    this.earner.setLive(ids, busy);
+    this.waiting = new Set(waiting);
+    for (const id of ids) if (labels[id] && !this.info.has(id)) this.info.set(id, { label: labels[id], sub: false });
+  }
+
+  /** message.usage от ред на асистента – истинските токени (само за статистиката). */
+  usage(agent, label, sub, msg) { if (this.owner) this.stats.usage(agent, label, sub, msg); }
+
+  /** За GET /api/stats – друг процес брои -> четем неговия файл. */
+  statsView() { if (!this.owner) this.stats.reload(); return this.stats; }
 
   /** Всяко събитие от транскриптите. */
   ingest(evt) {
+    if (evt?.agent) this.info.set(evt.agent, { label: evt.label, sub: !!evt.subagent });
+    if (this.owner) this.stats.event(evt);
     for (const b of this.earner.ingest(evt)) this.add(b.amount, b.reason, b.src);
   }
 
@@ -87,6 +103,13 @@ export class Wallet {
       if (m !== this.mtime) { this.mtime = m; if (this.reload()) this.broadcast(this.msg(0, 'sync', null, null, true)); }
       return;
     }
+    // статистика: колко време всеки агент е в кое състояние (чакащите теб – по файла на сесията)
+    const now = Date.now();
+    this.stats.step([...this.earner.agents.values()].map((a) => {
+      const i = this.info.get(a.id) || {};
+      return [a.id, this.waiting.has(a.id) ? 'waiting' : this.earner.stateOf(a, now), i.label, a.sub || i.sub];
+    }), now);
+    this.stats.flush();
     this.activeMs += r.activeMs;
     if (this.activeMs >= 1000) { const s = Math.floor(this.activeMs / 1000); this.save.lifetimeActiveSec += s; this.activeMs -= s * 1000; this.dirty = true; this.achievements(); }
     if (r.total > 0) this.add(r.total, 'work', null, r.by);
@@ -164,6 +187,7 @@ export class Wallet {
   /** При изход: запис и освобождаване на заключването. */
   close() {
     this.flush();
+    if (this.owner) this.stats.flush(true);
     if (this.owner) { try { if (readJson(LOCK)?.pid === process.pid) fs.unlinkSync(LOCK); } catch { /* */ } }
     this.owner = false;
   }

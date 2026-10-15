@@ -11,6 +11,9 @@ const MARGIN = 8;                  // разстояние от ръба на р
 const TARGET = { w: 790, h: 470 }; // физически пиксели – един екип в мащаб 2 (растe автоматично при втори)
 const SHORTCUT = 'CommandOrControl+Alt+P';
 const COMPACT = { w: 300, h: 170 }; // сутрешното прозорче (DIP), докато няма сесия
+const STRIP_W = 330;                // тънката лента (DIP): широчина; височината я казва страницата
+// цветовете на състоянията (както STATES в public/config.js) – за точките в иконата в трея
+const STATE_RGB = { idle: [107, 107, 128], thinking: [224, 194, 74], typing: [74, 194, 107], reading: [74, 143, 224], running: [224, 122, 74], delegating: [176, 74, 224], waiting: [224, 74, 107] };
 
 // дневник за проблеми при старт: %APPDATA%/pixel-office/desktop.log
 let LOG = null;
@@ -26,13 +29,13 @@ log('start', process.argv.join(' '));
 if (!app.requestSingleInstanceLock()) { log('second instance – exit'); app.quit(); }
 app.setAppUserModelId('com.pixeloffice.desktop');
 
-let win = null, tray = null, port = 4317, stats = { agents: 0, subs: 0, tools: 0, waiting: [], sound: true, focus: false, private: false };
+let win = null, tray = null, port = 4317, stats = { agents: 0, subs: 0, tools: 0, waiting: [], sound: true, focus: false, private: false, leads: [] };
 let quitting = false;
 let waiting = false; // сутрешен екран: малко прозорче до първата сесия
 
 // ---------------------------------------------------------------- настройки
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false };
+let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false, strip: false };
 let programmatic = 0; // setBounds от нас – да не се брои като ръчно преоразмеряване
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* първо пускане */ }
@@ -61,20 +64,20 @@ function visible(b) {
 // език: изричен избор от менюто, иначе езикът на Windows (български -> bg, всичко друго -> en)
 const lang = () => settings.lang || (/^bg/i.test(app.getLocale() || '') ? 'bg' : 'en');
 const L = {
-  bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', weather: 'Времето навън…', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
-    sound: 'Звук, когато агент чака или приключи', focus: 'Режим „Фокус“ (без игра и анимации)', private: 'Скривай команди и пътища',
+  bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', stats: 'Статистика', weather: 'Времето навън…', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
+    sound: 'Звук, когато агент чака или приключи', focus: 'Режим „Фокус“ (без игра и анимации)', private: 'Скривай команди и пътища', strip: 'Тънка лента вместо офиса',
     demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', lang: 'Език / Language', resetSize: 'Нулирай размера',
     resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход',
     tip: (a, s, w) => `агенти ${a} · под-агенти ${s}${w ? ` · чакат те ${w}` : ''}`, one: (n) => `${n} чака теб`, many: (k) => `${k} агента чакат теб` },
-  en: { hide: 'Hide', show: 'Show', shop: 'Shop', weather: 'Weather outside…', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
-    sound: 'Sound when an agent waits or finishes', focus: 'Focus mode (no game, no animations)', private: 'Hide commands and paths',
+  en: { hide: 'Hide', show: 'Show', shop: 'Shop', stats: 'Stats', weather: 'Weather outside…', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
+    sound: 'Sound when an agent waits or finishes', focus: 'Focus mode (no game, no animations)', private: 'Hide commands and paths', strip: 'Thin strip instead of the office',
     demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', lang: 'Language / Език', resetSize: 'Reset size',
     resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit',
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
 };
 const tr = () => L[lang()];
 function setLang(l) { settings.lang = l; saveSettings(); win?.loadURL(pageUrl()); refreshTray(); }
-function pageUrl() { return `http://localhost:${port}/?desktop${settings.demo ? '&demo' : ''}${waiting ? '&wait' : ''}&lang=${lang()}`; }
+function pageUrl() { return `http://localhost:${port}/?desktop${settings.demo ? '&demo' : ''}${waiting ? '&wait' : ''}${settings.strip ? '&strip' : ''}&lang=${lang()}`; }
 // презареждане винаги с актуалния адрес (reload() би запазил &wait и след събуждане)
 const reloadPage = () => win?.loadURL(pageUrl());
 
@@ -104,9 +107,34 @@ function wake() {
   refreshTray();
 }
 
+// тънка лента вместо офиса: малък прозорец в същия долен десен ъгъл, височината я казва страницата (strip-size)
+function stripBounds(n, h = 60) {
+  const wa = screen.getDisplayMatching(n).workArea;
+  const w = Math.min(STRIP_W, wa.width - 2 * MARGIN), hh = Math.min(Math.max(30, h), wa.height - 2 * MARGIN);
+  return { x: n.x + n.width - w, y: n.y + n.height - hh, width: w, height: hh };
+}
+function setStrip(on, then) {
+  if (!win || settings.strip === on) { then?.(); return; }
+  if (on) { if (!waiting) settings.bounds = win.getBounds(); }
+  settings.strip = on; saveSettings();
+  if (on) wake();
+  programmatic = Date.now();
+  if (on) { win.setMinimumSize(200, 30); win.setResizable(false); win.setBounds(stripBounds(win.getBounds())); }
+  else {
+    const c = win.getBounds(), n = visible(settings.bounds) ? settings.bounds : defaultBounds();
+    win.setMinimumSize(320, 190); win.setResizable(true);
+    win.setBounds({ x: c.x + c.width - n.width, y: c.y + c.height - n.height, width: n.width, height: n.height });
+  }
+  if (then) win.webContents.once('did-finish-load', then);
+  reloadPage();
+  refreshTray();
+}
+// раздел от менюто (магазин, статистика, време): в лентата няма място – първо обратно към офиса
+function openTab(send) { wake(); setStrip(false, () => { toggleWindow(true); win.focus(); send(); }); }
+
 // никой не работи (страницата брои минута): обратно към малкото прозорче в същия долен десен ъгъл
 function sleep() {
-  if (waiting || !win || !settings.waitWindow || shopRestore || !win.isVisible()) return;
+  if (waiting || !win || !settings.waitWindow || shopRestore || !win.isVisible() || settings.strip) return;
   settings.bounds = win.getBounds(); saveSettings();
   waiting = true;
   programmatic = Date.now();
@@ -120,12 +148,12 @@ function sleep() {
 
 function createWindow() {
   const n = visible(settings.bounds) ? settings.bounds : defaultBounds();
-  const b = waiting ? compactBounds(n) : n;
+  const b = waiting ? compactBounds(n) : settings.strip ? stripBounds(n) : n;
   win = new BrowserWindow({
     ...b,
-    minWidth: waiting ? 200 : 320, minHeight: waiting ? 120 : 190,
+    minWidth: waiting || settings.strip ? 200 : 320, minHeight: waiting ? 120 : settings.strip ? 30 : 190,
     // maximizable: false – двоен клик върху лентата за местене иначе разпъва прозореца на цял екран
-    frame: false, resizable: !waiting, maximizable: false, fullscreenable: false, skipTaskbar: true, show: false,
+    frame: false, resizable: !waiting && !settings.strip, maximizable: false, fullscreenable: false, skipTaskbar: true, show: false,
     alwaysOnTop: settings.onTop, backgroundColor: '#0e0c14', title: 'Cubicle Crew',
     // autoplayPolicy: звукът "чака те" трябва да свири и преди първия клик в прозореца
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' },
@@ -135,10 +163,10 @@ function createWindow() {
   win.loadURL(pageUrl());
   win.once('ready-to-show', () => win.showInactive());
   // временният размер на магазина не се помни
-  const remember = () => { if (!win.isMinimized() && !shopRestore && !waiting) { settings.bounds = win.getBounds(); saveSettings(); } };
+  const remember = () => { if (!win.isMinimized() && !shopRestore && !waiting && !settings.strip) { settings.bounds = win.getBounds(); saveSettings(); } };
   win.on('moved', remember);
   // ръчно преоразмеряване = нов базов размер (автоматичното само го увеличава временно)
-  win.on('resized', () => { if (Date.now() - programmatic > 600 && !waiting) { const nb = win.getBounds(); settings.baseSize = { w: nb.width, h: nb.height }; } remember(); });
+  win.on('resized', () => { if (Date.now() - programmatic > 600 && !waiting && !settings.strip) { const nb = win.getBounds(); settings.baseSize = { w: nb.width, h: nb.height }; } remember(); });
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win.hide(); refreshTray(); } });
   win.webContents.on('did-finish-load', sendState);
   // скрит/минимизиран прозорец -> страницата спира да рисува (backgroundThrottling е изключен)
@@ -160,11 +188,13 @@ function toggleWindow(force) {
 }
 
 // ---------------------------------------------------------------- икона в трея: рисунката 16x16 от icon-art.js (x2 за остър HiDPI)
-function trayIcon(alert) {
+function trayIcon(alert, leads = []) {
   const S = 32, buf = Buffer.alloc(S * S * 4);
   const px = (x, y, [r, g, b, a = 255]) => { if (x < 0 || y < 0 || x >= S || y >= S) return; const i = (y * S + x) * 4; buf[i] = b; buf[i + 1] = g; buf[i + 2] = r; buf[i + 3] = a; };
   const rect = (x, y, w, h, c) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(x + i, y + j, c); };
   drawIcon16((x, y, w, h, c) => rect(x * 2, y * 2, w * 2, h * 2, c));
+  // по една точка на сесия (до 4) в цвета на състоянието ѝ – долу, върху рисунката
+  leads.slice(0, 4).forEach((st, i) => { const x = 1 + i * 8; rect(x, 25, 7, 7, [20, 14, 28]); rect(x + 1, 26, 5, 5, STATE_RGB[st] || STATE_RGB.idle); });
   if (alert) { rect(20, 0, 12, 12, [42, 10, 20]); rect(21, 1, 10, 10, [224, 74, 107]); rect(25, 3, 2, 4, [255, 255, 255]); rect(25, 8, 2, 2, [255, 255, 255]); }
   return nativeImage.createFromBitmap(buf, { width: S, height: S, scaleFactor: 2 });
 }
@@ -224,8 +254,9 @@ function menuTemplate() {
   const li = loginItem(), t = tr();
   return [
     { label: win?.isVisible() ? t.hide : t.show, accelerator: SHORTCUT, click: () => toggleWindow() },
-    { label: t.shop, click: () => { wake(); toggleWindow(true); win.focus(); win.webContents.send('open-shop'); } },
-    { label: t.weather, click: () => { wake(); toggleWindow(true); win.focus(); win.webContents.send('open-weather'); } },
+    { label: t.shop, click: () => openTab(() => win.webContents.send('open-shop')) },
+    { label: t.stats, click: () => openTab(() => win.webContents.send('open-tab', 'stats')) },
+    { label: t.weather, click: () => openTab(() => win.webContents.send('open-weather')) },
     { type: 'separator' },
     { label: t.onTop, type: 'checkbox', checked: settings.onTop, click: (m) => { settings.onTop = m.checked; applyOnTop(); saveSettings(); } },
     { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => { settings.through = m.checked; applyThrough(); saveSettings(); } },
@@ -233,6 +264,7 @@ function menuTemplate() {
     // звукът е настройка на страницата (localStorage) – менюто само я сменя там
     { label: t.sound, type: 'checkbox', checked: stats.sound, click: (m) => { stats.sound = m.checked; win?.webContents.send('sound', m.checked); } },
     // настройки на страницата (localStorage) – менюто само ги сменя там, страницата ги връща в stats
+    { label: t.strip, type: 'checkbox', checked: settings.strip, click: (m) => setStrip(m.checked) },
     { label: t.focus, type: 'checkbox', checked: stats.focus, click: (m) => { stats.focus = m.checked; win?.webContents.send('pref', 'focus', m.checked); } },
     { label: t.private, type: 'checkbox', checked: stats.private, click: (m) => { stats.private = m.checked; win?.webContents.send('pref', 'private', m.checked); } },
     { label: t.demo, type: 'checkbox', checked: settings.demo, click: (m) => { settings.demo = m.checked; saveSettings(); win.loadURL(pageUrl()); } },
@@ -254,7 +286,7 @@ function menuTemplate() {
 function refreshTray() {
   if (!tray) return;
   const w = stats.waiting.length;
-  tray.setImage(trayIcon(w > 0));
+  tray.setImage(trayIcon(w > 0, stats.leads));
   tray.setToolTip(`Cubicle Crew — ${tr().tip(stats.agents, stats.subs, w)}`);
   tray.setContextMenu(Menu.buildFromTemplate(menuTemplate()));
 }
@@ -270,6 +302,7 @@ ipcMain.on('action', (_e, act) => {
   else if (act === 'reset-size') resetSize();
   else if (act === 'wake') wake();
   else if (act === 'sleep') sleep();
+  else if (act === 'strip:off') setStrip(false);
 });
 
 // страницата казва какъв размер дава мащаб 2. Ръчно избраният размер е минимумът:
@@ -297,8 +330,16 @@ ipcMain.on('shop', (_e, open) => {
   }
 });
 
+ipcMain.on('strip-size', (_e, h) => {
+  if (!win || !settings.strip) return;
+  const b = win.getBounds(), n = stripBounds(b, Number(h) | 0);
+  if (Math.abs(n.height - b.height) < 2) return;
+  programmatic = Date.now();
+  win.setBounds({ ...n, x: b.x + b.width - n.width, y: b.y + b.height - n.height });
+});
+
 ipcMain.on('prefer-size', (_e, sz) => {
-  if (!win || shopRestore || waiting) return;
+  if (!win || shopRestore || waiting || settings.strip) return;
   const b = win.getBounds();
   const wa = screen.getDisplayMatching(b).workArea;
   const base = settings.baseSize || { w: b.width, h: b.height };
@@ -314,7 +355,8 @@ ipcMain.on('prefer-size', (_e, sz) => {
 
 ipcMain.on('stats', (_e, s) => {
   const before = new Set(stats.waiting);
-  stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [], sound: s.sound !== false, focus: !!s.focus, private: !!s.private };
+  stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [], sound: s.sound !== false, focus: !!s.focus, private: !!s.private,
+    leads: Array.isArray(s.leads) ? s.leads.filter((x) => STATE_RGB[x]).slice(0, 4) : [] };
   const fresh = stats.waiting.filter((n) => !before.has(n));
   if (fresh.length && settings.notify && Notification.isSupported() && !win.isFocused()) {
     // страницата свири свой звук -> известието е без системния (иначе звъни два пъти)
@@ -338,7 +380,7 @@ app.whenReady().then(async () => {
   migrateLoginItem();
   // при всяко пускане (от Windows, от инсталатора, ръчно): малко прозорче със сутрешна сцена, докато не се появи сесия.
   // Ако вече има сесия, страницата го събужда веднага.
-  waiting = settings.waitWindow !== false;
+  waiting = settings.waitWindow !== false && !settings.strip; // лентата и без това е малка
   const server = await import('../server.js');
   const { startServer } = server;
   flushWallet = server.flushWallet; // токените се записват преди изход  // собствен сървър (ако 4317 е зает, напр. от `npm start` – друг свободен порт), за да не зависи от друг процес

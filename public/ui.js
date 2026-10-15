@@ -15,6 +15,15 @@ function bagUrl() {
   return c.toDataURL();
 }
 
+// стълбчета 9x9 (бутонът „Статистика“)
+const BARS = ['.........', '......aa.', '......aa.', '...bb.aa.', '...bb.aa.', 'cc.bb.aa.', 'cc.bb.aa.', 'cc.bb.aa.', 'ddddddddd'];
+function barsUrl() {
+  const c = document.createElement('canvas'), g = c.getContext('2d'), col = { a: '#4ac26b', b: '#4a8fe0', c: '#e0c24a', d: '#8a8aa0' };
+  c.width = 9; c.height = 9;
+  BARS.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
+  return c.toDataURL();
+}
+
 // звънче 9x9 (известия/звук); изключено – сиво и зачеркнато
 const BELL = ['....a....', '...aba...', '..abbba..', '..abbba..', '..abbba..', '.abbbbba.', 'aaaaaaaaa', '....c....', '.........'];
 function bellUrl(on) {
@@ -51,6 +60,7 @@ export class UI {
     this.hud.addEventListener('click', (e) => {
       if (e.target.closest('.tok, .shopbtn')) this.onShop?.();
       else if (e.target.closest('.help')) this.toggleHelp();
+      else if (e.target.closest('.statsbtn')) this.onStats?.();
       else if (e.target.closest('.snd')) {
         setSound(!soundOn()); this.lastHud = 0; // Electron научава новия избор от stats (sound)
       }
@@ -90,11 +100,13 @@ export class UI {
     if (!this.bridge) return;
     const waiting = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => (!prefs.private && a.agent.desc) || this.displayName(a.agent));
     const sound = soundOn();
-    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}`;
+    // състоянията на оркестраторите по ред на идване -> точките в иконата в трея
+    const leads = [...this.office.actors.values()].filter((a) => !a.agent.subagent).sort((a, b) => a.joinSeq - b.joinSeq).map((a) => a.vstate);
+    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
     // sound: приложението пуска известието без системния звук, щом страницата свири своя
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private });
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads });
   }
 
   setScale(scale, dpr, W, H) {
@@ -329,6 +341,7 @@ export class UI {
       `<span>${T.toolCalls} <b>${s.tools}</b></span>` +
       (s.waiting ? `<span class="alert">${T.waitingYou} <b>${s.waiting}</b></span>` : '') +
       (this.conn !== 'demo' ? `<span class="snd" title="${soundOn() ? T.sound.on : T.sound.off}"><i style="background-image:url(${(this.bells ||= [bellUrl(false), bellUrl(true)])[+soundOn()]})"></i></span>` : '') +
+      (this.conn !== 'demo' ? `<span class="statsbtn" title="${T.stats.open}"><i style="background-image:url(${this.barsIcon ||= barsUrl()})"></i></span>` : '') +
       `<span class="help" title="${T.help.open}">?</span>` +
       `<span class="lang" title="${T.lang}">${LANG === 'bg' ? 'БГ' : 'EN'}</span>`;
     if (this.hud._html !== html) { this.hud.innerHTML = html; this.hud._html = html; }

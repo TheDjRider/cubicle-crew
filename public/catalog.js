@@ -40,6 +40,7 @@ export const TABS = [
   { id: 'pets', groups: ['cat', 'catslot', 'dog'] },
   { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade'], merge: true },
   { id: 'avatar', groups: [] },
+  { id: 'stats', groups: [] },
   { id: 'weather', groups: [] },
   { id: 'trophies', groups: [] },
 ];

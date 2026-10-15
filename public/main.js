@@ -13,6 +13,7 @@ import { Shop } from './shop.js';
 import { Morning } from './morning.js';
 import { Setup } from './setup.js';
 import { prefs } from './prefs.js';
+import { Strip } from './strip.js';
 import { play } from './sound.js';
 
 const canvas = document.getElementById('c');
@@ -28,6 +29,7 @@ const shop = new Shop(tokens, ui);
 ui.onShop = () => shop.open();
 ui.onWeather = () => shop.open('weather');
 ui.onPet = (slot) => shop.openPet(slot);
+ui.onStats = () => shop.open('stats');
 // докато магазинът (или началната настройка) е отворен, Electron пренебрегва prefer-size -> след затваряне
 // искаме размера наново, иначе втори екип, дошъл междувременно, остава в малкия прозорец (мащаб 1)
 shop.onToggle = () => { lastSpecKey = ''; resize(); };
@@ -50,7 +52,8 @@ if (!PARAMS.demo) {
 }
 
 // ?wait: сутрешен екран, докато не се появи първият агент (или клик) – после Electron връща нормалния размер
-const morning = PARAMS.wait ? new Morning(office, () => { lastSpecKey = ''; window.pixelOffice?.action('wake'); resize(); }) : null;
+const strip = PARAMS.strip ? new Strip(model, ui) : null;
+const morning = PARAMS.wait && !strip ? new Morning(office, () => { lastSpecKey = ''; window.pixelOffice?.action('wake'); resize(); }) : null;
 window.pixelOffice?.onWake?.(() => morning?.wake());
 
 // начална настройка (първо пускане): любимец + град; сутрешният екран не чака – настройката е в истинския прозорец
@@ -115,7 +118,7 @@ function nowDate() {
 const SLEEP_AFTER_MS = 60000;
 let quietSince = 0, slept = false;
 function checkSleep(now) {
-  if (!PARAMS.desktop || PARAMS.demo || morning?.active || slept || !window.pixelOffice?.action) return;
+  if (!PARAMS.desktop || PARAMS.demo || strip || morning?.active || slept || !window.pixelOffice?.action) return;
   if (model.agents.size || !shop.root.hidden || setup.open || ui.mouse) { quietSince = 0; return; }
   if (!quietSince) quietSince = now;
   else if (now - quietSince > SLEEP_AFTER_MS) { slept = true; window.pixelOffice.action('sleep'); }
@@ -145,7 +148,8 @@ function frame(now) {
   checkSleep(now);
   if (shown) {
     const date = nowDate();
-    if (morning?.active) morning.render(now, date, currentWx());
+    if (strip) strip.render(now);
+    else if (morning?.active) morning.render(now, date, currentWx());
     else office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date);
   }
   ui.sync(now);

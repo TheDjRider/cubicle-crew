@@ -75,6 +75,18 @@ const T_BG = {
   },
   thinking: 'мисли…',
   legendHint: 'L – легенда · Esc – без фокус',
+  // лична статистика (раздел в чекмеджето; работи и във „Фокус“)
+  stats: {
+    open: 'Статистика', today: 'Днес', days: 'Последните 7 дни',
+    work: 'Работа на агентите', leads: 'от тях оркестратори', waited: 'Чакаха теб', tools: 'Извиквания', tokens: 'Токени (вход / изход)', cache: 'кеш',
+    sessions: (n, s) => `${n} ${n === 1 ? 'сесия' : 'сесии'} · ${s} ${s === 1 ? 'под-агент' : 'под-агенти'}`,
+    project: 'Проект', active: 'Работа', waiting: 'Чакане', calls: 'Извикв.', tok: 'Токени',
+    empty: 'Още няма данни за днес – броенето започва, щом агент заработи.',
+    csv: 'CSV за 30 дни', json: 'JSON за 30 дни',
+    note: 'Само на този компютър (~/.pixel-office/stats.json). Нищо не се изпраща. Токените са от транскриптите на Claude Code.',
+    demo: 'В демото няма истинска статистика – пусни приложението без ?demo.',
+    loading: 'Зареждам…', offline: 'Няма връзка със сървъра.',
+  },
   // помощ (?): какво значи всеки цвят + личните настройки
   help: {
     open: 'Какво значат цветовете и настройки (?)', title: 'Какво прави агентът',
@@ -104,7 +116,7 @@ const T_BG = {
   shop: {
     title: 'Магазин',
     open: 'Магазин (B)',
-    tabs: { walls: 'Стени', floor: 'Под и килими', furniture: 'Мебели', decor: 'Декор', pets: 'Любимци', special: 'Специални', avatar: 'Аватар', weather: 'Времето', trophies: 'Постижения' },
+    tabs: { walls: 'Стени', floor: 'Под и килими', furniture: 'Мебели', decor: 'Декор', pets: 'Любимци', special: 'Специални', avatar: 'Аватар', stats: 'Статистика', weather: 'Времето', trophies: 'Постижения' },
     groups: {
       wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под бюрата', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
@@ -213,6 +225,17 @@ const T_EN = {
   },
   thinking: 'thinking…',
   legendHint: 'L – legend · Esc – clear focus',
+  stats: {
+    open: 'Stats', today: 'Today', days: 'Last 7 days',
+    work: 'Agent work', leads: 'of which orchestrators', waited: 'Waited for you', tools: 'Tool calls', tokens: 'Tokens (in / out)', cache: 'cache',
+    sessions: (n, s) => `${n} session${n === 1 ? '' : 's'} · ${s} sub-agent${s === 1 ? '' : 's'}`,
+    project: 'Project', active: 'Work', waiting: 'Waiting', calls: 'Calls', tok: 'Tokens',
+    empty: 'No data for today yet – counting starts as soon as an agent works.',
+    csv: 'CSV for 30 days', json: 'JSON for 30 days',
+    note: 'Only on this computer (~/.pixel-office/stats.json). Nothing is sent anywhere. Tokens come from the Claude Code transcripts.',
+    demo: 'The demo has no real stats – run the app without ?demo.',
+    loading: 'Loading…', offline: 'No connection to the server.',
+  },
   help: {
     open: 'What the colours mean, and settings (?)', title: 'What the agent is doing',
     states: {
@@ -241,7 +264,7 @@ const T_EN = {
   shop: {
     title: 'Shop',
     open: 'Shop (B)',
-    tabs: { walls: 'Walls', floor: 'Floor & rugs', furniture: 'Furniture', decor: 'Decor', pets: 'Pets', special: 'Special', avatar: 'Avatar', weather: 'Weather', trophies: 'Achievements' },
+    tabs: { walls: 'Walls', floor: 'Floor & rugs', furniture: 'Furniture', decor: 'Decor', pets: 'Pets', special: 'Special', avatar: 'Avatar', stats: 'Stats', weather: 'Weather', trophies: 'Achievements' },
     groups: {
       wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Office rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',
@@ -378,6 +401,7 @@ export const PARAMS = {
   setup: Q.has('setup'),       // ?setup — показва началната настройка отново (за тестове; в демото – в паметта)
   overlay: Q.has('overlay'),   // ?overlay – за OBS/стрийм: без HUD и легенда, командите и пътищата са скрити
   focus: Q.has('focus'),       // ?focus – режим „Фокус“ (за тестове; иначе се пази в настройките)
+  strip: Q.has('strip'),       // ?strip – тънка лента: по един ред на сесия вместо офиса (Electron го слага от менюто)
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
 /** Име на любимец по място (save.petNames или името по подразбиране на текущия език). */
