@@ -37,7 +37,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 
 | | |
 |---|---|
-| 🧑‍💻 **Teams** | Each session (orchestrator) gets a lead desk with a ★ nameplate, and its sub-agents sit in rows of three below it. Up to two teams work at once. Extra sessions queue in the lounge and swap in when a lead goes idle. |
+| 🧑‍💻 **Teams** | Each session (orchestrator) gets a lead desk with a ★ nameplate, and its sub-agents sit in rows of three below it. Up to two teams work at once: the second lead takes the desk next to the first, on the same rug, and its sub-agents get their own rows. Every team has a little emblem (a fox, an owl, a rocket…) on its desks and labels, and hovering anyone lights up their whole team. Extra sessions queue in the lounge and swap in when a lead goes idle. |
 | 🎨 **7 states** | `idle` · `thinking` · `typing` · `reading` · `running` · `delegating` · `waiting`. Each one has its own poses, monitor content and particles. |
 | 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. Up to three pets roam the lounge: cats with coat patterns and a dog (beagle, golden, corgi, husky, dachshund…) that likes to sit next to whoever is resting. Hover a pet to see its name; click it to rename it. |
 | 🌇 **Real sky** | The tall French windows follow the clock of your city (or your computer's clock): dawn, golden hour, night. Lamps, monitors and the neon sign glow after dark. |

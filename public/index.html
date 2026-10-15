@@ -24,6 +24,11 @@
   .tag i { flex: none; width: 7px; height: 7px; border-radius: 1px; box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
   .tag .n { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .tag .s { flex: none; color: var(--ui-dim); font-size: 11px; }
+  /* емблемата на екипа (emblems.js) – между точката за състояние и името */
+  .tag i { order: -2; }
+  .tag .emb { order: -1; flex: none; width: 14px; height: 14px; margin: 0 -1px; image-rendering: pixelated; }
+  .tag.other { opacity: .3 !important; }
+  body.tiny .tag .emb { width: 11px; height: 11px; }
   .tag[data-state="waiting"] { background: #e04a6b; border-color: #ff9ab0; animation: pulse 0.64s steps(2) infinite; }
   .tag[data-state="waiting"] .s { color: #fff; font-weight: 600; }
   .tag.focus { outline: 2px solid #fff; }

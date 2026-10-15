@@ -9,7 +9,7 @@ export const SLOTS = {
   wainscot:      { group: 'wainscot', def: 'wainscot.dark' },
   floor:         { group: 'floor',    def: 'floor.oak' },
   'rug.team0':   { group: 'rug',      def: 'rug.plain.blue' },
-  'rug.team1':   { group: 'rug',      def: 'rug.plain.green' },
+  'rug.team1':   { group: 'rug',      def: 'rug.plain.green', hidden: true }, // един общ килим от 1.9 – слотът остава заради записите
   'rug.lounge':  { group: 'lrug',     def: 'lrug.red' },
   sofa:          { group: 'sofa',     def: 'sofa.modern.teal' },
   'chair.team0': { group: 'chair',    def: 'chair.navy' },
@@ -163,7 +163,7 @@ export const ITEMS = [
 ];
 export const ITEM = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
 export const GROUP_SLOTS = {};
-for (const [slot, s] of Object.entries(SLOTS)) (GROUP_SLOTS[s.group] ||= []).push(slot);
+for (const [slot, s] of Object.entries(SLOTS)) if (!s.hidden) (GROUP_SLOTS[s.group] ||= []).push(slot);
 
 // ---- постижения (фаза 4): проверяват се след всяка промяна; наградата отива само в tokens (не в lifetimeTokens) ----
 // котката/кучето "от другия вид" (alt) не се брои – всеки може да купи само едното

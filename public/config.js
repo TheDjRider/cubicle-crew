@@ -17,7 +17,6 @@ export const CFG = {
   MAX_SCALE: 6,          // по-едро от това изглежда като мозайка
   MAX_TEAMS: 2,          // колко оркестратора (сесии) имат бюра едновременно; останалите чакат в зоната за почивка
   SUB_PER_ROW: 3,        // бюра за под-агенти на ред под всеки оркестратор (растат с нов ред при нужда)
-  TEAM_GAP: 28,          // пространство между два екипа
   SWAP_IDLE_MS: 20000,   // чакаща активна сесия сменя оркестратор, който почива толкова (и няма живи под-агенти)
   SPREAD_X: 1.3,         // колко може да се разреждат бюрата, ако има място
   SPREAD_Y: 1.4,
@@ -88,7 +87,7 @@ const T_BG = {
     open: 'Магазин (B)',
     tabs: { walls: 'Стени', floor: 'Под и килими', furniture: 'Мебели', decor: 'Декор', pets: 'Любимци', special: 'Специални', avatar: 'Аватар', weather: 'Времето', trophies: 'Постижения' },
     groups: {
-      wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под екипа', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
+      wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под бюрата', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
       cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
     },
@@ -207,7 +206,7 @@ const T_EN = {
     open: 'Shop (B)',
     tabs: { walls: 'Walls', floor: 'Floor & rugs', furniture: 'Furniture', decor: 'Decor', pets: 'Pets', special: 'Special', avatar: 'Avatar', weather: 'Weather', trophies: 'Achievements' },
     groups: {
-      wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Team rug', lrug: 'Lounge rug', sofa: 'Sofa',
+      wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Office rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',
       cat: 'Cat', cat2: 'One more cat', dog: 'Dog', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
     },
