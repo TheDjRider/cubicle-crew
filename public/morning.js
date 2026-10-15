@@ -221,9 +221,11 @@ export class Morning {
     const scr = mix('#103a30', '#1a5a48', 0.5);
     R(ctx, scr, x + 2, y + 2, w - 4, h - 4);
     const hh = String(date.getHours()).padStart(2, '0'), mm = String(date.getMinutes()).padStart(2, '0');
-    const txt = `${hh}${t % 1 < 0.5 ? ':' : ' '}${mm}`;
-    const tw = textWidth(`${hh}:${mm}`);
-    drawText(ctx, txt, x + Math.round((w - tw) / 2), y + 3, '#8af0b8');
+    // ' ' е по-широк от ':' – затова часът, двоеточието и минутите се рисуват поотделно, на постоянни места
+    const full = `${hh}:${mm}`, x0 = x + Math.round((w - textWidth(full)) / 2);
+    drawText(ctx, hh, x0, y + 3, '#8af0b8');
+    if (t % 1 < 0.5) drawText(ctx, ':', x0 + textWidth(`${hh}:`) - textWidth(':'), y + 3, '#8af0b8');
+    drawText(ctx, mm, x0 + textWidth(full) - textWidth(mm), y + 3, '#8af0b8');
     // курсор "чака" под часа
     if (t % 1.2 < 0.6) R(ctx, '#8af0b8', x + 4, y + 9, 3, 1);
     R(ctx, ENV.monitorDk, x + 9, y + h, 4, 2); R(ctx, ENV.monitorHi, x + 6, y + h + 1, 10, 1);
@@ -256,7 +258,8 @@ export class Morning {
   updateText(date) {
     const h = date.getHours();
     const hello = h >= 4 && h < 12 ? T.wait.morning : h >= 12 && h < 18 ? T.wait.day : T.wait.evening;
-    const html = `<b>${hello}</b><span>${T.wait.msg}</span>`;
+    // има отворени сесии, но всички почиват – друг текст (екранът се връща сам след минута без работа)
+    const html = `<b>${hello}</b><span>${this.office.actors.size ? T.wait.idle : T.wait.msg}</span>`;
     if (this.box._html !== html) { this.box.innerHTML = html; this.box._html = html; }
   }
 }

@@ -99,7 +99,7 @@ the tray and stays on top of other windows. Hover it to show a drag bar with set
 quit buttons.
 `Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has notifications, sound, start with Windows, demo mode and size reset.
 
-The installed app starts with Windows by default. Whenever it starts and no Claude Code session is open yet, it waits in a small window above the tray with a morning scene (your avatar with a coffee, your pet asleep on the sill, the sky at the real time of day); when a session appears, or you click it, it opens into the full office. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.
+The installed app starts with Windows by default. Whenever it starts and no Claude Code session is open yet, it waits in a small window above the tray with a morning scene (your avatar with a coffee, your pet asleep on the sill, the sky at the real time of day); when an agent starts working, or you click it, it opens into the full office, and after a minute with nobody working it goes back to the small window. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.
 
 <p align="center">
   <img src="docs/media/morning.gif" alt="The morning window while no session is open yet" width="450">
