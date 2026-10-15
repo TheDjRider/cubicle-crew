@@ -3,7 +3,7 @@
 import { T, itemName, LANG, PARAMS, petName } from './config.js';
 import { prefs } from './prefs.js';
 import { wxFrom } from './weather.js';
-import { ITEMS, ITEM, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, unlocked, resolveDecor, PET_SLOTS, petCount, MAX_PETS, PET_NAME_MAX } from './catalog.js';
+import { ITEMS, ITEM, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, unlocked, resolveDecor, PET_SLOTS, petCount, MAX_PETS, PET_NAME_MAX, inSeason } from './catalog.js';
 import { CharacterSprites, avatarLook, AVATAR_TOPS, AVATAR_BOTTOMS, DRESS_TOPS } from './sprites.js';
 import { SKINS, HAIRS } from './palette.js';
 import { thumb } from './environment.js';
@@ -165,9 +165,10 @@ export class Shop {
       el('div', 'pr', card, price);
       const act = el('div', 'act', card);
       if (!have) {
-        const short = it.price - (this.tokens.tokens ?? 0);
-        const b = el('button', 'buy', act, short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
-        b.dataset.buy = it.id; b.disabled = short > 0;
+        const short = it.price - (this.tokens.tokens ?? 0), off = !inSeason(it);
+        // сезонен извън сезона: „от 01.12“
+        const b = el('button', 'buy', act, off ? T.shop.seasonFrom(it.from.split('-').reverse().join('.')) : short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
+        b.dataset.buy = it.id; b.disabled = short > 0 || off;
       } else if (slots.length > 1) {
         for (const sl of slots) {
           const b = el('button', where.includes(sl) ? 'on' : '', act, T.shop.slots[sl]);

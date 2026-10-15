@@ -303,6 +303,8 @@ class Pet {
       this.tx = clamp(t.x, area.x0, area.x1); this.ty = clamp(t.y, area.y0, area.y1);
     }
   }
+  /** Погален: сяда за малко (кучето маха по-бързо с опашка). */
+  pet(now) { this.mode = 'sit'; this.until = now + 4500; this.pettedAt = now; }
   /** Попадение с мишката (логически пиксели) – за името при посочване. */
   hit(x, y) { return x >= this.x - 8 && x <= this.x + 8 && y >= this.y - 14 && y <= this.y + 2; }
 }
@@ -374,7 +376,7 @@ export class Dog extends Pet {
       dogPattern(ctx, lk, 'sleep', x, y, b0, 11 + len, y - 4);
     } else if (this.mode === 'sit') {
       // седнал изправен, гледа надясно; опашката маха по пода
-      const s = short ? 2 : 0, tw = frameAt(now, 220) ? 1 : 0;
+      const s = short ? 2 : 0, tw = frameAt(now, now - (this.pettedAt || -1e9) < 4500 ? 90 : 220) ? 1 : 0;
       R(ctx, C, x - 4, y - 5 + s, 5, 5 - s);                          // задница
       R(ctx, C, x, y - 9 + s, 4, 9 - s); R(ctx, H, x + 1, y - 9 + s, 2, 1); // гърди
       R(ctx, legC, x + 2, y - 4 + s, 1, 4 - s); R(ctx, legC, x + 4, y - 3 + s, 1, 3 - s); // предни крака

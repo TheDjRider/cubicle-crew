@@ -109,6 +109,9 @@ export class Office {
     this.pets = prefs.focus ? [] : PET_SLOTS.map((s) => this.petBySlot[s]).filter(Boolean);
   }
 
+  /** Галене: любимецът сяда, над него – сърчица. */
+  petPet(p, now = performance.now()) { p.pet(now); this.fx.hearts(p.x, p.y - 16); }
+
   /** Любимецът под мишката (най-предният). */
   petAt(x, y) {
     let best = null;
@@ -711,6 +714,10 @@ export class Office {
     }
     const lo = L.lounge;
     glow(ctx, room.lampGlow.x, room.lampGlow.y, 34, '#ffd890', 0.05 + 0.38 * night);
+    // сезонната украса свети нощем: лицето на тиквата, лампичките на елхата
+    const se = room.season;
+    if (se?.style === 'pumpkins') glow(ctx, se.x + 9, se.base - 7, 14, '#ffb040', (0.08 + 0.4 * night) * (0.85 + 0.15 * Math.sin(now / 160)));
+    else if (se?.style === 'tree') glow(ctx, se.x + 15, se.base - 17, 18, Math.floor(now / 700) % 2 ? '#ffd860' : '#ff8a8a', 0.06 + 0.32 * night);
     if (room.neon) glow(ctx, room.neon.x, room.neon.y, 18, room.neon.c, (0.25 + 0.35 * night) * (0.9 + 0.1 * Math.sin(now / 130)));
     if (room.aquarium) glow(ctx, room.aquarium.x + 14, room.aquarium.y + 12, 22, '#4ab8f0', 0.08 + 0.3 * night);
     if (room.arcade) glow(ctx, room.arcade.x + 9, room.arcade.y + 12, 16, '#a06ae0', 0.1 + 0.3 * night);

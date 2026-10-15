@@ -125,14 +125,15 @@ const T_BG = {
     groups: {
       wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под бюрата', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
-      cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
+      cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', season: 'Сезонно', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
     },
     slots: { 'rug.team0': 'Екип 1', 'rug.team1': 'Екип 2', 'chair.team0': 'Под-агенти', 'chair.team1': 'Екип 2', 'chair.lead': '★ Оркестратори' },
     buy: 'Купи', equip: 'Сложи', equipped: 'Сложено', remove: 'Махни', free: 'безплатно', owned: 'твое',
     need: (n) => `още ${n}`,
     hint: 'Посочи предмет – виждаш го в офиса. Затвори с Esc.',
     errors: { avatar: 'Невалиден аватар.', funds: 'Нямаш достатъчно монети.', locked: 'Първо го купи.', busy: 'Друг Cubicle Crew брои монетите – опитай пак след малко.', offline: 'Няма връзка със сървъра.',
-      pets: 'В офиса има място за най-много 3 любимци – първо прибери някой у дома.' },
+      pets: 'В офиса има място за най-много 3 любимци – първо прибери някой у дома.', season: 'Продава се само в сезона си.' },
+    seasonFrom: (d) => `от ${d}`,
     achievement: 'Постижение',
     reward: (n) => `+${n} монети`,
     progress: (v, g) => `${v} / ${g}`,
@@ -160,7 +161,7 @@ const T_BG = {
   pets: {
     names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Шаро' },
     kinds: { cat: 'Офисна котка', dog: 'Офисно куче' },
-    tip: 'Клик – ново име и външен вид',
+    tip: 'Клик – погали · двоен клик – име и външен вид',
   },
   // начална настройка (първо пускане)
   setup: {
@@ -278,14 +279,15 @@ const T_EN = {
     groups: {
       wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Office rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',
-      cat: 'Cat', cat2: 'One more cat', dog: 'Dog', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
+      cat: 'Cat', cat2: 'One more cat', dog: 'Dog', season: 'Seasonal', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
     },
     slots: { 'rug.team0': 'Team 1', 'rug.team1': 'Team 2', 'chair.team0': 'Sub-agents', 'chair.team1': 'Team 2', 'chair.lead': '★ Leads' },
     buy: 'Buy', equip: 'Use', equipped: 'In use', remove: 'Remove', free: 'free', owned: 'owned',
     need: (n) => `${n} more`,
     hint: 'Hover an item to preview it in the office. Esc closes.',
     errors: { avatar: 'Invalid avatar.', funds: 'Not enough coins.', locked: 'Buy it first.', busy: 'Another Cubicle Crew is counting coins – try again in a moment.', offline: 'No connection to the server.',
-      pets: 'The office has room for 3 pets at most – send one home first.' },
+      pets: 'The office has room for 3 pets at most – send one home first.', season: 'Only sold in its season.' },
+    seasonFrom: (d) => `from ${d}`,
     achievement: 'Achievement',
     reward: (n) => `+${n} coins`,
     progress: (v, g) => `${v} / ${g}`,
@@ -312,7 +314,7 @@ const T_EN = {
   pets: {
     names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex' },
     kinds: { cat: 'Office cat', dog: 'Office dog' },
-    tip: 'Click to rename or change the look',
+    tip: 'Click to pet · double-click to rename or change the look',
   },
   setup: {
     hello: 'Welcome to Cubicle Crew!',
@@ -373,6 +375,7 @@ const T_EN = {
     'cat1.extra': 'Cat', 'dog.extra': 'Dog',
     'dog.beagle': 'Beagle', 'dog.golden': 'Golden retriever', 'dog.black': 'Black labrador', 'dog.dachshund': 'Dachshund', 'dog.corgi': 'Corgi',
     'dog.husky': 'Husky', 'dog.dalmatian': 'Dalmatian', 'dog.pug': 'Pug',
+    'season.pumpkins': 'Pumpkins', 'season.tree': 'Christmas tree', 'season.tulips': 'Tulips', 'season.fan': 'Standing fan',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',
     'neon.code': 'Neon sign', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet',
   },

@@ -48,6 +48,10 @@ export class Particles {
       this.add({ kind: 'px', layer: 'top', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 8, g: 0, drag: 2.5, life: 0.8 + Math.random() * 0.5, color, size: Math.random() < 0.3 ? 2 : 1 });
     }
   }
+  /** Сърчица над погален любимец. */
+  hearts(x, y, n = 3) {
+    for (let i = 0; i < n; i++) this.add({ kind: 'heart', layer: 'top', x: x + (i - (n - 1) / 2) * 5, y: y - i, vx: (Math.random() - 0.5) * 4, vy: -10 - Math.random() * 4, g: 0, life: 1.3 + i * 0.15 });
+  }
   /** "+N" с монета – спечелени токени; big = бонус (по-дълго и с искри). */
   token(x, y, n, big) {
     this.add({ kind: 'token', layer: 'top', txt: `+${n}`, x, y, vx: 0, vy: big ? -7 : -9, g: 0, drag: big ? 0.3 : 0, life: big ? 2.6 : 1.8 });
@@ -108,6 +112,10 @@ export class Particles {
         drawText(ctx, p.txt, x0 + 7, y, '#2a1a08');
         drawText(ctx, p.txt, x0 + 6, y, '#ffe27a');
         drawCoin(ctx, x0, y);
+        ctx.globalAlpha = 1;
+      } else if (p.kind === 'heart') {
+        ctx.globalAlpha = fade;
+        R(ctx, '#e04a6b', x, y, 2, 1); R(ctx, '#e04a6b', x + 3, y, 2, 1); R(ctx, '#e04a6b', x, y + 1, 5, 1); R(ctx, '#e04a6b', x + 1, y + 2, 3, 1); R(ctx, '#e04a6b', x + 2, y + 3, 1, 1); R(ctx, '#ffb0c0', x, y, 1, 1);
         ctx.globalAlpha = 1;
       } else if (p.kind === 'plane') {
         const d = p.dir || 1;

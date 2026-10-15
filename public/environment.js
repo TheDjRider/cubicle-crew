@@ -264,6 +264,46 @@ export function buildPod(variantSeed, lead = false, decor = DEFAULT_DECOR, team 
   return { back, front, item, mugColor, lampColor };
 }
 
+/** Сезонна украса (catalog: group 'season'), 30x36, стъпва на долния ред. Светлините – в office.drawGlows (room.season). */
+export const SEASON = { w: 30, h: 36 };
+function drawSeasonal(ctx, w, h, style) {
+  const R2 = (c, x, y, ww, hh) => R(ctx, c, x, y, ww, hh);
+  const b = h - 1;
+  if (style === 'pumpkins') {
+    // голяма тиква с лице + две малки
+    const pk = (cx, cy, rw, rh, face) => {
+      R2('#8a3a10', cx - rw, cy - rh + 1, rw * 2, rh * 2 - 1); R2('#e07a2a', cx - rw + 1, cy - rh + 1, rw * 2 - 2, rh * 2 - 2);
+      R2('#f0a050', cx - rw + 2, cy - rh + 2, 2, rh - 1);
+      for (let x = cx - rw + 3; x < cx + rw - 1; x += 3) R2('#c05a18', x, cy - rh + 2, 1, rh * 2 - 4);
+      R2('#4a6a2a', cx - 1, cy - rh - 2, 2, 3); R2('#6a8a3a', cx, cy - rh - 3, 2, 1);
+      if (face) { R2('#ffd860', cx - 4, cy - 2, 2, 2); R2('#ffd860', cx + 2, cy - 2, 2, 2); R2('#ffd860', cx - 3, cy + 2, 6, 1); R2('#ffd860', cx - 2, cy + 3, 4, 1); }
+    };
+    R2('rgba(16,10,24,0.3)', 2, b, 26, 1);
+    pk(9, b - 6, 7, 6, true); pk(22, b - 4, 5, 4, false); pk(18, b - 2, 3, 2, false);
+  } else if (style === 'tree') {
+    R2('#7a1e1e', 11, b - 4, 8, 5); R2('#a83030', 12, b - 4, 6, 1);           // саксия
+    R2('#5a3a24', 14, b - 7, 2, 3);                                           // ствол
+    const tier = (y, half, hgt) => { for (let j = 0; j < hgt; j++) { const ww = Math.round(half * (j + 1) / hgt); R2(j % 3 ? '#2e7a3e' : '#246a32', 15 - ww, y + j, ww * 2, 1); } };
+    tier(b - 30, 5, 8); tier(b - 23, 8, 9); tier(b - 15, 11, 9);
+    R2('#3e9a4e', 12, b - 20, 2, 1); R2('#3e9a4e', 9, b - 11, 3, 1);
+    for (const [x, y, c] of [[13, b - 25, '#e04a4a'], [17, b - 21, '#4a8fe0'], [11, b - 17, '#f0c840'], [19, b - 14, '#e04a4a'], [8, b - 9, '#4a8fe0'], [15, b - 11, '#f0c840'], [21, b - 9, '#f0c840'], [16, b - 17, '#e04a4a']]) R2(c, x, y, 2, 2);
+    R2('#f0d040', 14, b - 33, 2, 3); R2('#f0d040', 13, b - 32, 4, 1);         // звезда
+  } else if (style === 'tulips') {
+    R2('#a8603a', 9, b - 7, 12, 8); R2('#c07848', 9, b - 7, 12, 2); R2('#8a4a2a', 18, b - 5, 3, 6); // саксия
+    const tul = (x, top, c) => { R2('#3e8a3e', x, top + 3, 1, b - 7 - top - 3); R2(c, x - 1, top, 3, 3); R2(c, x - 2, top + 1, 1, 2); R2(c, x + 2, top + 1, 1, 2); R2('#ffffff40', x, top, 1, 1); };
+    tul(11, b - 22, '#e04a5a'); tul(15, b - 26, '#f0c040'); tul(19, b - 21, '#f08ab8'); tul(13, b - 17, '#f08ab8'); tul(17, b - 16, '#e04a5a');
+    R2('#4a9a4a', 10, b - 12, 3, 1); R2('#4a9a4a', 18, b - 11, 3, 1);
+  } else if (style === 'fan') {
+    R2('rgba(16,10,24,0.3)', 7, b, 16, 1);
+    R2('#3a3a48', 8, b - 2, 14, 2); R2('#5a5a68', 9, b - 2, 12, 1);         // основа
+    R2('#6a6a78', 14, b - 18, 2, 16);                                       // стойка
+    R2('#3a3a48', 6, b - 33, 18, 16); R2('#c8ccd8', 7, b - 32, 16, 14);     // решетка
+    for (let i = 0; i < 4; i++) R2('#8a8ea0', 7, b - 31 + i * 4, 16, 1);
+    R2('#4a8fe0', 9, b - 27, 12, 4); R2('#4a8fe0', 13, b - 31, 4, 12); R2('#e8e8f0', 14, b - 26, 2, 2); // перки
+  }
+}
+export function seasonImg(it) { return prop('season', SEASON.w, SEASON.h, (c) => drawSeasonal(c, SEASON.w, SEASON.h, it.style), it.id); }
+
 function drawPrinter(ctx, w, h) {
   const cab = '#d8d2c4', dk = '#a8a090';
   R(ctx, dk, 1, h - 16, w - 2, 16); R(ctx, cab, 2, h - 15, w - 4, 14); R(ctx, dk, 2, h - 9, w - 4, 1);
@@ -938,7 +978,10 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   }
   // растения около бюрата, ако има място
   const smallPlant = prop('plant_small', 16, 20, (c) => drawPlant(c, 16, 20, false, pl.style), pv);
-  add(smallPlant, L.door.x + L.door.w + 1, CFG.WALL_H + 4);
+  // до вратата: сезонната украса (ако е сложена), иначе малко растение – мястото се вижда при всякакъв размер
+  let season = null;
+  if (decor.season) { const sx = L.door.x + L.door.w + 1; add(seasonImg(decor.season), sx, CFG.WALL_H + 6); season = { x: sx, base: CFG.WALL_H + 6, style: decor.season.style }; }
+  else add(smallPlant, L.door.x + L.door.w + 1, CFG.WALL_H + 4);
   if (H - Math.max(...L.rugs.map((r) => r.y + r.h)) > 26) add(bigPlant(), 4, H - 6);
 
   // между бюрата на двамата оркестратори: шкаф с принтер и растение
@@ -964,7 +1007,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 17, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, season, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 17, c: decor.neon.c } : null,
     doorOpen: 0,
   };
 }
@@ -1240,6 +1283,7 @@ export function thumb(it) {
     case 'espresso': return mk(30, 42, (g) => drawCounter(g, 30, 42, true));
     case 'aquarium': return mk(AQUA.w, AQUA.h, (g) => { drawAquarium(g); drawAquariumFish(g, { x: 0, y: 0 }, 1200); });
     case 'arcade': return mk(ARCADE.w, ARCADE.h, (g) => { drawArcade(g); drawArcadeScreen(g, { x: 0, y: 0 }, 900); });
+    case 'season': return mk(SEASON.w, SEASON.h, (g) => drawSeasonal(g, SEASON.w, SEASON.h, it.style));
     default: return null;
   }
 }

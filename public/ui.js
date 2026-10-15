@@ -178,13 +178,18 @@ export class UI {
     this.canvas.addEventListener('mousemove', (e) => { this.mouse = toLogical(e); });
     this.canvas.addEventListener('mouseleave', () => { this.mouse = null; });
     // двоен клик върху агент -> неговият терминал
-    this.canvas.addEventListener('dblclick', (e) => { const a = this.office.hitTest(toLogical(e).x, toLogical(e).y); if (a) this.goTerminal(a.id); });
+    this.canvas.addEventListener('dblclick', (e) => {
+      const m = toLogical(e), a = this.office.hitTest(m.x, m.y);
+      if (a) { this.goTerminal(a.id); return; }
+      const pet = this.office.petAt(m.x, m.y);
+      if (pet) this.onPet?.(pet.slot);
+    });
     this.canvas.addEventListener('click', (e) => {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       const pet = !a && this.office.petAt(m.x, m.y);
-      if (pet) { this.onPet?.(pet.slot); return; }
+      if (pet) { this.office.petPet(pet); return; } // клик = погали; двоен клик = име и външен вид
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
   }

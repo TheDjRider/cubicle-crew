@@ -29,6 +29,7 @@ export const SLOTS = {
   aquarium:      { group: 'aquarium', def: null },
   arcade:        { group: 'arcade',   def: null },
   espresso:      { group: 'espresso', def: null },
+  season:        { group: 'season',   def: null },  // сезонна украса в долния ляв ъгъл (купува се само в сезона си)
 };
 
 // ---- раздели в магазина (ред на табовете) ----
@@ -36,7 +37,7 @@ export const TABS = [
   { id: 'walls', groups: ['wall', 'wainscot'] },
   { id: 'floor', groups: ['floor', 'rug', 'lrug'] },
   { id: 'furniture', groups: ['sofa', 'chair', 'lamp'] },
-  { id: 'decor', groups: ['plants', 'posters', 'window'] },
+  { id: 'decor', groups: ['plants', 'posters', 'window', 'season'] },
   { id: 'pets', groups: ['cat', 'catslot', 'dog'] },
   { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade'], merge: true },
   { id: 'avatar', groups: [] },
@@ -156,6 +157,11 @@ export const ITEMS = [
   I('window.city', 'window', 0, 'Град', { style: 'city' }),
   I('window.sea', 'window', 500, 'Море', { style: 'sea' }),
   I('window.mountains', 'window', 500, 'Планини', { style: 'mountains' }),
+  // сезонни: продават се само между from и to (ММ-ДД, може да минава през Нова година); купеното остава завинаги
+  I('season.pumpkins', 'season', 200, 'Тикви', { style: 'pumpkins', from: '10-01', to: '11-15' }),
+  I('season.tree', 'season', 300, 'Коледна елха', { style: 'tree', from: '12-01', to: '01-10' }),
+  I('season.tulips', 'season', 200, 'Лалета', { style: 'tulips', from: '03-01', to: '05-31' }),
+  I('season.fan', 'season', 200, 'Вентилатор', { style: 'fan', from: '06-01', to: '08-31' }),
   // специални
   I('neon.code', 'neon', 350, 'Неонов надпис', { c: '#ff4ad0' }),
   I('espresso.pro', 'espresso', 800, 'Еспресо машина', {}),
@@ -168,8 +174,9 @@ for (const [slot, s] of Object.entries(SLOTS)) if (!s.hidden) (GROUP_SLOTS[s.gro
 
 // ---- постижения (фаза 4): проверяват се след всяка промяна; наградата отива само в tokens (не в lifetimeTokens) ----
 // котката/кучето "от другия вид" (alt) не се брои – всеки може да купи само едното
-const paid = (s) => (s.owned || []).filter((id) => ITEM[id]?.price > 0 && !ITEM[id].alt).length;
-const ALL_PAID = ITEMS.filter((it) => it.price > 0 && !it.alt).length;
+// сезонните също не се броят – иначе „всичко“ би чакало цяла година
+const paid = (s) => (s.owned || []).filter((id) => ITEM[id]?.price > 0 && !ITEM[id].alt && !ITEM[id].from).length;
+const ALL_PAID = ITEMS.filter((it) => it.price > 0 && !it.alt && !it.from).length;
 const M = {
   tokens: (s) => s.lifetimeTokens || 0,
   tasks: (s) => s.tasksDone || 0,
@@ -209,11 +216,19 @@ const emptyPet = (save, slot) => !!SLOTS[slot]?.pet && !resolveDecor(save.equipp
 // стари записи: на мястото cat2 стоеше самият 'cat2.tabby'
 const LEGACY = { 'cat2.tabby': 'cat.tabby' };
 
+/** Сезонен предмет: продава се ли днес (from/to = 'ММ-ДД'; 12-01..01-10 минава през Нова година). */
+export function inSeason(it, d = new Date()) {
+  if (!it?.from) return true;
+  const md = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return it.from <= it.to ? md >= it.from && md <= it.to : md >= it.from || md <= it.to;
+}
+
 /** Купува предмет. Връща { ok, error } и променя save на място. Купен предмет от слот с един вариант се слага веднага. */
 export function buyItem(save, id, slot = null) {
   const it = ITEM[id];
   if (!it) return { ok: false, error: 'unknown' };
   if (owns(save, id)) return { ok: false, error: 'owned' };
+  if (!inSeason(it)) return { ok: false, error: 'season' };
   if (it.slot) {
     // ново място за любимец: предишната котка трябва да я има, а в офиса – място
     const s = SLOTS[it.slot];
