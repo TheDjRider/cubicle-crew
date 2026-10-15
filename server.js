@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
 import { focusPid } from './focus.js';
+import { execFile } from 'node:child_process';
 
 const PORT = Number(process.env.PORT) || 4317;
 const ROOT = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
@@ -21,6 +22,12 @@ const SESSIONS = process.env.CLAUDE_SESSIONS_DIR || path.join(path.dirname(ROOT)
 const SESSIONS_MS = 1000;                // и молбите за разрешение идват оттук – да не закъсняват
 const LINK_WINDOW_MS = 15000;            // евристика: под-агент, появил се до толкова след Task/Agent
 const DEBUG = !!process.env.DEBUG || process.argv.includes('--debug');
+// още папки с транскрипти: CLAUDE_PROJECTS_EXTRA (разделени с ;) + на Windows сами – ~/.claude/projects във вече пуснатите
+// WSL дистрибуции (\\wsl.localhost\<distro>\home\<user>\...). WSL не се пуска от нас; CLAUDE_WSL=0 го изключва.
+const EXTRA = (process.env.CLAUDE_PROJECTS_EXTRA || '').split(';').map((s) => s.trim()).filter(Boolean);
+const WSL_MS = 60000;
+let wslRoots = [];
+const roots = () => [ROOT, ...EXTRA, ...wslRoots];
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const SPRITES = path.join(PUBLIC, 'sprites');
 const HOST = '127.0.0.1';                 // само локално – никой от мрежата (Wi-Fi в офиса/кафенето) не вижда сесиите
@@ -351,11 +358,29 @@ function consider(file, now) {
   tracked.set(file, st);
 }
 
+/** Пуснатите WSL дистрибуции с ~/.claude/projects (само Windows; без CLAUDE_PROJECTS_DIR и без CLAUDE_WSL=0). */
+function detectWsl() {
+  if (process.platform !== 'win32' || process.env.CLAUDE_PROJECTS_DIR || process.env.CLAUDE_WSL === '0') return;
+  execFile('wsl.exe', ['-l', '--running', '-q'], { encoding: 'buffer', timeout: 5000, windowsHide: true }, (err, out) => {
+    if (err || !out) return;
+    const names = out.toString('utf16le').replace(/\uFEFF/g, '').split(/\r?\n/).map((s) => s.replace(/\0/g, '').trim()).filter(Boolean);
+    const found = [];
+    for (const n of names) {
+      if (!/^[\w.-]+$/.test(n)) continue;
+      const base = `\\\\wsl.localhost\\${n}`;
+      const homes = [path.join(base, 'root')];
+      try { for (const u of fs.readdirSync(path.join(base, 'home'))) homes.push(path.join(base, 'home', u)); } catch { /* няма /home */ }
+      for (const h of homes) { const p = path.join(h, '.claude', 'projects'); try { if (fs.statSync(p).isDirectory()) found.push(p); } catch { /* */ } }
+    }
+    if (found.join('|') !== wslRoots.join('|')) { wslRoots = found; for (const p of found) console.log(`WSL: следя ${p}`); }
+  });
+}
+
 function poll() {
   const now = Date.now();
   if (now - lastFull >= SCAN_MS) {
     lastFull = now;
-    for (const file of listJsonl(ROOT)) if (!tracked.has(file)) consider(file, now);
+    for (const root of roots()) for (const file of listJsonl(root)) if (!tracked.has(file)) consider(file, now);
     firstScan = false;
   } else {
     // между пълните обхождания – само папките на проектите (нова сесия) и на активните сесии (нов под-агент);
@@ -409,7 +434,8 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   weather.start();
   process.once('exit', () => wallet.close());
   console.log(`Cubicle Crew: http://localhost:${actual}   (демо без Claude: /?demo   витрина: /?demo=showcase)`);
-  console.log(`Следя: ${ROOT}`);
+  console.log(`Следя: ${[ROOT, ...EXTRA].join(', ')}`);
+  detectWsl(); setInterval(detectWsl, WSL_MS).unref?.();
   return { port: actual, external: false };
 }
 
