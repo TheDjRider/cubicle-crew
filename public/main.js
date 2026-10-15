@@ -27,7 +27,9 @@ const shop = new Shop(tokens, ui);
 ui.onShop = () => shop.open();
 ui.onWeather = () => shop.open('weather');
 ui.onPet = (slot) => shop.openPet(slot);
-shop.onToggle = () => resize();
+// докато магазинът (или началната настройка) е отворен, Electron пренебрегва prefer-size -> след затваряне
+// искаме размера наново, иначе втори екип, дошъл междувременно, остава в малкия прозорец (мащаб 1)
+shop.onToggle = () => { lastSpecKey = ''; resize(); };
 if (PARAMS.debug) window.__shop = shop;
 
 model.on('join', (a) => office.join(a, performance.now()));
@@ -47,6 +49,7 @@ window.pixelOffice?.onWake?.(() => morning?.wake());
 // начална настройка (първо пускане): любимец + град; сутрешният екран не чака – настройката е в истинския прозорец
 const setup = new Setup(tokens);
 setup.onWeather = (m) => { onWeather(m); shop.setWeather(m); };
+setup.onClose = () => { lastSpecKey = ''; resize(); };
 tokens.onChange(() => {
   if (morning?.active && setup.need()) morning.wake();
   setup.maybeOpen();
