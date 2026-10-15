@@ -93,6 +93,8 @@ Environment variables: `PORT` (default `4317`), `CLAUDE_PROJECTS_DIR` (default `
 
 **Easiest:** grab `CubicleCrew-Setup-<version>.exe` from the [latest release](https://github.com/rezored/cubicle-crew/releases/latest) and run it.
 
+The installer isn't code-signed (Cubicle Crew is a free side project), so Windows may show **"Windows protected your PC"** the first time. Click **More info**, then **Run anyway**. It's the same file as in this repository's releases, and [docs/security.md](docs/security.md) lists everything the app reads, writes and sends.
+
 From source:
 
 ```bash
