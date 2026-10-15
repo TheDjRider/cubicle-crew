@@ -110,7 +110,7 @@ export class Morning {
     R(ctx, ENV.deskFrontDk, dx + 4, dTop + 8, 18, 1); R(ctx, ENV.deskFrontDk, dx + deskW - 22, dTop + 8, 18, 1);
     R(ctx, ENV.shadow, dx - 2, floorY + 1, deskW + 4, 2);
     ctx.drawImage(f.front, px, py);
-    // монитор вляво на бюрото: часът и мигащ курсор
+    // монитор вляво на бюрото: часът (двоеточието мига)
     this.drawMonitor(ctx, dx + 2, dTop - 15, date, t);
     // чаша на бюрото, когато не е в ръката – с пара
     if (pose.name !== 'sip') this.drawMug(ctx, dx + deskW - 12, dTop - 4, t);
@@ -226,8 +226,6 @@ export class Morning {
     drawText(ctx, hh, x0, y + 3, '#8af0b8');
     if (t % 1 < 0.5) drawText(ctx, ':', x0 + textWidth(`${hh}:`) - textWidth(':'), y + 3, '#8af0b8');
     drawText(ctx, mm, x0 + textWidth(full) - textWidth(mm), y + 3, '#8af0b8');
-    // курсор "чака" под часа
-    if (t % 1.2 < 0.6) R(ctx, '#8af0b8', x + 4, y + 9, 3, 1);
     R(ctx, ENV.monitorDk, x + 9, y + h, 4, 2); R(ctx, ENV.monitorHi, x + 6, y + h + 1, 10, 1);
   }
 
@@ -258,8 +256,7 @@ export class Morning {
   updateText(date) {
     const h = date.getHours();
     const hello = h >= 4 && h < 12 ? T.wait.morning : h >= 12 && h < 18 ? T.wait.day : T.wait.evening;
-    // има отворени сесии, но всички почиват – друг текст (екранът се връща сам след минута без работа)
-    const html = `<b>${hello}</b><span>${this.office.actors.size ? T.wait.idle : T.wait.msg}</span>`;
+    const html = `<b>${hello}</b><span>${T.wait.msg}</span>`;
     if (this.box._html !== html) { this.box.innerHTML = html; this.box._html = html; }
   }
 }

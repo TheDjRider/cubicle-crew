@@ -103,14 +103,13 @@ function nowDate() {
 }
 
 // ---------------------------------------------------------------- обратно към малкия прозорец
-// работещ = не почива (мисли, пише, чака теб…). Без нито един такъв минута (и без мишка/магазин/настройка)
+// офисът е празен (няма нито една сесия, и почиващите се броят) минута, без мишка/магазин/настройка ->
 // Electron връща сутрешното прозорче (само ако „Малко прозорче до първата сесия“ е включено – решава main.js там).
 const SLEEP_AFTER_MS = 60000;
-const working = () => { for (const a of model.agents.values()) if (a.state !== 'idle') return true; return false; };
 let quietSince = 0, slept = false;
 function checkSleep(now) {
   if (!PARAMS.desktop || PARAMS.demo || morning?.active || slept || !window.pixelOffice?.action) return;
-  if (working() || !shop.root.hidden || setup.open || ui.mouse) { quietSince = 0; return; }
+  if (model.agents.size || !shop.root.hidden || setup.open || ui.mouse) { quietSince = 0; return; }
   if (!quietSince) quietSince = now;
   else if (now - quietSince > SLEEP_AFTER_MS) { slept = true; window.pixelOffice.action('sleep'); }
 }
@@ -135,7 +134,7 @@ function frame(now) {
   while (dt > 0) { const s = Math.min(0.1, dt); office.update(s, now); fx.update(s); dt -= s; } // стъпки ≤0.1 s и при скрит прозорец
   if (office.layoutVersion !== appliedVersion) applyCanvas();
   tokens.update(now);
-  if (morning?.active && working()) morning.wake();
+  if (morning?.active && model.agents.size) morning.wake();
   checkSleep(now);
   if (shown) {
     const date = nowDate();
