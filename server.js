@@ -18,7 +18,8 @@ const ACTIVE_WINDOW_MS = 60 * 60 * 1000; // следим файлове, пип�
 const POLL_MS = 400;
 const SCAN_MS = 2000;                    // пълно обхождане на папката (стари/възобновени файлове)
 const SESSIONS = process.env.CLAUDE_SESSIONS_DIR || path.join(path.dirname(ROOT), 'sessions'); // <pid>.json на всяка жива сесия
-const SESSIONS_MS = 1000;                // и молбите за разрешение идват оттук – да не закъсняватconst LINK_WINDOW_MS = 15000;            // евристика: под-агент, появил се до толкова след Task/Agent
+const SESSIONS_MS = 1000;                // и молбите за разрешение идват оттук – да не закъсняват
+const LINK_WINDOW_MS = 15000;            // евристика: под-агент, появил се до толкова след Task/Agent
 const DEBUG = !!process.env.DEBUG || process.argv.includes('--debug');
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const SPRITES = path.join(PUBLIC, 'sprites');
