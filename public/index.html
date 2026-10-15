@@ -283,7 +283,12 @@
 
   /* картата при фокус: бутон „Преименувай“ */
   #card { pointer-events: auto; }
-  #card .ren { margin-top: 6px; }
+  #card .ren { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+  #card .hist { margin-top: 6px; padding-top: 5px; border-top: 1px solid #3a3452; max-height: 150px; overflow-y: auto; font-size: 11px; }
+  #card .hist > b { display: block; color: var(--ui-dim); font-weight: 600; margin-bottom: 2px; }
+  #card .hist div { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 6px; align-items: baseline; }
+  #card .hist .t { color: var(--ui-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #card .hist .d { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); }
   #card .ren button { font: inherit; font-size: 11px; color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; border-radius: 3px; padding: 1px 8px; cursor: pointer; }
   #card .ren input { width: 100%; box-sizing: border-box; font: inherit; color: var(--ui-text); background: #0f0c16; border: 1px solid #3a3452; border-radius: 3px; padding: 2px 6px; }
 

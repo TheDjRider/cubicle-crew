@@ -63,12 +63,17 @@ export class Model {
         a.pending.set(e.id, { tool: e.tool, detail: e.detail || '', start: now });
         a.toolCalls++; this.totalTools++;
         a.lastTool = { tool: e.tool, detail: e.detail || '' };
+        // хронология за картата („какво правеше, докато ме нямаше“) – последните 40, с часа
+        (a.history ||= []).push({ id: e.id, at: Date.now(), tool: e.tool, detail: e.detail || '', ms: null });
+        if (a.history.length > 40) a.history.shift();
         this.emit('tool_start', a, e);
         break;
       }
       case 'tool_end': {
         const p = a.pending.get(e.tool_use_id);
         a.pending.delete(e.tool_use_id);
+        const h = a.history?.findLast((x) => x.id === e.tool_use_id);
+        if (h) h.ms = Date.now() - h.at;
         this.emit('tool_end', a, e, p);
         // Task/Agent на родителя приключи -> детето е готово
         for (const cid of a.children) {

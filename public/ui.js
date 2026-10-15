@@ -286,8 +286,15 @@ export class UI {
     if (ag.parent) { const p = this.model.agents.get(ag.parent); rows.push([T.childOf, esc(p ? this.displayName(p) : ag.parent.slice(0, 8))]); }
     if (ag.children.size) rows.push([T.parentOf, String(this.model.liveChildren(ag)) + ' / ' + ag.children.size]);
     const title = ag.desc && !priv ? `<div class="title">${esc(ag.desc)}</div>` : '';
+    // картата: последните действия на агента (най-новото горе) – часът, инструментът, колко продължи
+    let hist = '';
+    if (card && ag.history?.length) {
+      const hm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+      hist = `<div class="hist"><b>${T.history}</b>` + ag.history.slice(-10).reverse().map((h) =>
+        `<div><span class="t">${hm(h.at)}</span><b>${esc(h.tool)}</b><span class="d">${priv ? '' : esc(shortDetail(h.detail, 34))}</span><span class="t">${h.ms == null ? T.running : fmtDuration(h.ms, T)}</span></div>`).join('') + '</div>';
+    }
     const ren = card ? `<div class="ren"><button type="button" data-term title="${T.terminalHint}">↗ ${T.terminal}</button>${ag.subagent ? '' : ` <button type="button" data-ren>✎ ${T.rename}</button>`}</div>` : '';
-    return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>' + ren;
+    return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>' + hist + ren;
   }
 
   updateTooltip(now) {

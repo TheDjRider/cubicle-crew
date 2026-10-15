@@ -39,7 +39,7 @@ prefs.onChange((k) => {
   office.syncPets();
   if (prefs.focus) { shop.close(); fx.list.length = 0; for (const a of office.actors.values()) if (a.sofaAct === 'game' || a.sofaAct === 'doze') a.sofaAct = 'rest'; }
 });
-if (PARAMS.debug) window.__shop = shop;
+if (PARAMS.debug) { window.__shop = shop; window.__ui = ui; }
 
 model.on('join', (a) => office.join(a, performance.now()));
 model.on('leave', (a) => office.leave(a));

@@ -106,6 +106,7 @@ const T_BG = {
     close: 'Затвори',
   },
   rename: 'Преименувай', renameHint: 'Име на сесията (празно = името на проекта)',
+  history: 'Последни действия', running: 'тече…',
   terminal: 'Към терминала', terminalHint: 'Изкарва отпред прозореца на сесията (двоен клик върху агента прави същото)',
   terminalFail: { nopid: 'Сесията не е отворена в терминал на този компютър.', window: 'Не намерих прозореца на сесията.', offline: 'Няма връзка със сървъра.' },
   states: {
@@ -256,6 +257,7 @@ const T_EN = {
     close: 'Close',
   },
   rename: 'Rename', renameHint: 'Session name (empty = project name)',
+  history: 'Recent actions', running: 'running…',
   terminal: 'Go to terminal', terminalHint: 'Brings the session\'s window to the front (double-clicking the agent does the same)',
   terminalFail: { nopid: 'This session is not open in a terminal on this computer.', window: 'Could not find the session\'s window.', offline: 'No connection to the server.' },
   states: {
