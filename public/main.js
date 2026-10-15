@@ -14,6 +14,7 @@ import { Morning } from './morning.js';
 import { Setup } from './setup.js';
 import { prefs } from './prefs.js';
 import { Strip } from './strip.js';
+import { Capture } from './capture.js';
 import { play } from './sound.js';
 
 const canvas = document.getElementById('c');
@@ -30,6 +31,10 @@ ui.onShop = () => shop.open();
 ui.onWeather = () => shop.open('weather');
 ui.onPet = (slot) => shop.openPet(slot);
 ui.onStats = () => shop.open('stats');
+// споделяне: снимка / 10 s клип (кадрите се добавят в цикъла)
+const capture = new Capture(canvas);
+ui.onSnapshot = () => { capture.snapshot(); ui.note(T.help.saved); };
+ui.onClip = () => { ui.note(T.help.recording); capture.clip((ok) => ui.note(ok ? T.help.saved : T.help.noclip)); };
 // докато магазинът (или началната настройка) е отворен, Electron пренебрегва prefer-size -> след затваряне
 // искаме размера наново, иначе втори екип, дошъл междувременно, остава в малкия прозорец (мащаб 1)
 shop.onToggle = () => { lastSpecKey = ''; resize(); };
@@ -137,7 +142,7 @@ function schedule() {
   else timer = setTimeout(() => frame(performance.now()), HIDDEN_MS);
 }
 function frame(now) {
-  if (shown && now - last < CALM_MS && !office.animating()) { schedule(); return; }
+  if (shown && now - last < CALM_MS && !office.animating() && !capture.recording) { schedule(); return; }
   let dt = Math.min(shown ? 0.1 : HIDDEN_MS / 1000 * 2, (now - last) / 1000);
   last = now;
   model.tick(now);
@@ -150,7 +155,7 @@ function frame(now) {
     const date = nowDate();
     if (strip) strip.render(now);
     else if (morning?.active) morning.render(now, date, currentWx());
-    else office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date);
+    else { office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date); capture.frame(now); }
   }
   ui.sync(now);
   schedule();

@@ -413,7 +413,11 @@ export class UI {
       this.help.id = 'help'; this.help.hidden = true;
       this.help.setAttribute('role', 'dialog');
       this.help.addEventListener('change', (e) => { const k = e.target.dataset?.pref; if (k) prefs.set(k, e.target.checked); });
-      this.help.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) this.toggleHelp(false); });
+      this.help.addEventListener('click', (e) => {
+        if (e.target.closest('[data-close]')) this.toggleHelp(false);
+        else if (e.target.closest('[data-snap]')) this.onSnapshot?.();
+        else if (e.target.closest('[data-clip]')) { this.toggleHelp(false); this.onClip?.(); }
+      });
     }
     const open = show ?? this.help.hidden;
     if (open) this.renderHelp();
@@ -425,7 +429,8 @@ export class UI {
       '<ul>' + STATE_ORDER.map((s) => `<li data-state="${s}"><i style="background:${STATES[s].color}"></i><span><b>${T.states[s]}</b> – ${esc(H.states[s].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + '</ul>' +
       `<p class="dim">${H.shapes}</p><h3>${H.settings}</h3>` +
       `<label><input type="checkbox" id="pref-focus" data-pref="focus"${prefs.focus ? ' checked' : ''}><span><b>${H.focus}</b><small>${H.focusHint}</small></span></label>` +
-      `<label><input type="checkbox" id="pref-private" data-pref="private"${prefs.private ? ' checked' : ''}><span><b>${H.private}</b><small>${H.privateHint}</small></span></label></div>`;
+      `<label><input type="checkbox" id="pref-private" data-pref="private"${prefs.private ? ' checked' : ''}><span><b>${H.private}</b><small>${H.privateHint}</small></span></label>` +
+      `<h3>${H.share}</h3><div class="share"><button type="button" data-snap>${H.snapshot}</button><button type="button" data-clip>${H.clip}</button></div><p class="dim">${H.shareHint}</p></div>`;
   }
 
   updateDebug(now) {
