@@ -476,7 +476,8 @@ export class UI {
     h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p></details>`;
     h += `<h3>${H.feedback}</h3><p class="dim">${H.feedbackHint}</p><div class="share">` +
       `<a href="https://github.com/rezored/cubicle-crew/discussions" target="_blank" rel="noopener">${H.discuss}</a>` +
-      `<a href="https://github.com/rezored/cubicle-crew/issues/new" target="_blank" rel="noopener">${H.issue}</a></div></div>`;
+      `<a href="https://github.com/rezored/cubicle-crew/issues/new" target="_blank" rel="noopener">${H.issue}</a>` +
+      `<a href="https://buymeacoffee.com/rezored" target="_blank" rel="noopener">${H.coffee}</a></div></div>`;
     this.help.innerHTML = h;
   }
 

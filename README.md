@@ -153,6 +153,8 @@ Everything is in the **`?` panel** (the `?` button in the bottom bar, the `?` ke
 
 Cubicle Crew is a free side project and grows from what people say. Ideas and questions go to [GitHub Discussions](https://github.com/rezored/cubicle-crew/discussions), bugs to [Issues](https://github.com/rezored/cubicle-crew/issues). The `?` panel links to both.
 
+If Cubicle Crew saves you time, you can [buy me a coffee](https://buymeacoffee.com/rezored) ☕ – it stays free either way.
+
 ## How it works
 
 Everything stays on your machine. [docs/security.md](docs/security.md) lists exactly what the app reads, writes and sends.
