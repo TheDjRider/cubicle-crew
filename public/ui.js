@@ -72,7 +72,10 @@ export class UI {
     document.documentElement.lang = LANG;
     if (PARAMS.overlay) document.body.classList.add('overlay');
     // фокус (клик върху агент): картата е интерактивна – бутон за ново име на сесията
-    this.card.addEventListener('click', (e) => { if (e.target.closest('[data-ren]')) this.startRename(); });
+    this.card.addEventListener('click', (e) => {
+      if (e.target.closest('[data-ren]')) this.startRename();
+      else if (e.target.closest('[data-term]')) this.goTerminal(this.office.focusId);
+    });
     prefs.onChange(() => { this.lastHud = 0; this.card._html = ''; for (const it of this.items.values()) it.c = {}; if (this.help && !this.help.hidden) this.renderHelp(); });
     if (PARAMS.debug) this.debugEl.hidden = false;
     if (PARAMS.desktop) this.initDesktop();
@@ -106,7 +109,8 @@ export class UI {
     if (key === this._lastStats) return;
     this._lastStats = key;
     // sound: приложението пуска известието без системния звук, щом страницата свири своя
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads });
+    const waitingIds = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => this.office.leadOf(a)?.id || a.id);
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds });
   }
 
   setScale(scale, dpr, W, H) {
@@ -173,6 +177,8 @@ export class UI {
     };
     this.canvas.addEventListener('mousemove', (e) => { this.mouse = toLogical(e); });
     this.canvas.addEventListener('mouseleave', () => { this.mouse = null; });
+    // двоен клик върху агент -> неговият терминал
+    this.canvas.addEventListener('dblclick', (e) => { const a = this.office.hitTest(toLogical(e).x, toLogical(e).y); if (a) this.goTerminal(a.id); });
     this.canvas.addEventListener('click', (e) => {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
@@ -263,7 +269,7 @@ export class UI {
     // ако няколко сесии са в един проект – добавяме кратко id
     let dup = 0;
     for (const o of this.model.agents.values()) if (o.label === ag.label && !o.subagent) dup++;
-    return dup > 1 && !ag.subagent ? `${ag.label} #${ag.id.slice(0, 4)}` : ag.label;
+    return dup > 1 && !ag.subagent ? ag.sessionName || `${ag.label} #${ag.id.slice(0, 4)}` : ag.label;
   }
 
   describe(a, now, card = false) {
@@ -280,7 +286,7 @@ export class UI {
     if (ag.parent) { const p = this.model.agents.get(ag.parent); rows.push([T.childOf, esc(p ? this.displayName(p) : ag.parent.slice(0, 8))]); }
     if (ag.children.size) rows.push([T.parentOf, String(this.model.liveChildren(ag)) + ' / ' + ag.children.size]);
     const title = ag.desc && !priv ? `<div class="title">${esc(ag.desc)}</div>` : '';
-    const ren = card && !ag.subagent ? `<div class="ren"><button type="button" data-ren>✎ ${T.rename}</button></div>` : '';
+    const ren = card ? `<div class="ren"><button type="button" data-term title="${T.terminalHint}">↗ ${T.terminal}</button>${ag.subagent ? '' : ` <button type="button" data-ren>✎ ${T.rename}</button>`}</div>` : '';
     return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>' + ren;
   }
 
@@ -354,6 +360,22 @@ export class UI {
   }
 
   fmtTokens() { return this.tokens.toLocaleString(LANG === 'bg' ? 'bg-BG' : 'en-US'); }
+
+  // ------------------------------------------------------------------ към терминала (сървърът изкарва прозореца отпред)
+  async goTerminal(id) {
+    const a = this.office.actors.get(id);
+    const lead = a ? this.office.leadOf(a) : null;
+    const agent = lead ? lead.id : id;
+    let r = null;
+    try { r = await (await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent }) })).json(); } catch { r = { ok: false, error: 'offline' }; }
+    if (!r?.ok) this.note(T.terminalFail[r?.error] || T.terminalFail.window);
+  }
+  /** Кратко съобщение долу в средата. */
+  note(text) {
+    if (!this.noteEl) { this.noteEl = el('div', null, document.body); this.noteEl.id = 'note'; }
+    this.noteEl.textContent = text; this.noteEl.hidden = false;
+    clearTimeout(this.noteT); this.noteT = setTimeout(() => { this.noteEl.hidden = true; }, 3500);
+  }
 
   // ------------------------------------------------------------------ ново име на сесия (от картата при фокус)
   startRename() {

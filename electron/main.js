@@ -29,7 +29,7 @@ log('start', process.argv.join(' '));
 if (!app.requestSingleInstanceLock()) { log('second instance – exit'); app.quit(); }
 app.setAppUserModelId('com.pixeloffice.desktop');
 
-let win = null, tray = null, port = 4317, stats = { agents: 0, subs: 0, tools: 0, waiting: [], sound: true, focus: false, private: false, leads: [] };
+let win = null, tray = null, port = 4317, stats = { agents: 0, subs: 0, tools: 0, waiting: [], sound: true, focus: false, private: false, leads: [], waitingIds: [] };
 let quitting = false;
 let waiting = false; // сутрешен екран: малко прозорче до първата сесия
 
@@ -356,12 +356,19 @@ ipcMain.on('prefer-size', (_e, sz) => {
 ipcMain.on('stats', (_e, s) => {
   const before = new Set(stats.waiting);
   stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [], sound: s.sound !== false, focus: !!s.focus, private: !!s.private,
-    leads: Array.isArray(s.leads) ? s.leads.filter((x) => STATE_RGB[x]).slice(0, 4) : [] };
+    leads: Array.isArray(s.leads) ? s.leads.filter((x) => STATE_RGB[x]).slice(0, 4) : [],
+    waitingIds: Array.isArray(s.waitingIds) ? s.waitingIds.map(String).slice(0, 20) : [] };
   const fresh = stats.waiting.filter((n) => !before.has(n));
   if (fresh.length && settings.notify && Notification.isSupported() && !win.isFocused()) {
     // страницата свири свой звук -> известието е без системния (иначе звъни два пъти)
     const n = new Notification({ title: 'Cubicle Crew', body: fresh.length === 1 ? tr().one(fresh[0]) : tr().many(fresh.length), silent: stats.sound });
-    n.on('click', () => { toggleWindow(true); win.focus(); });
+    // клик -> терминалът на чакащата сесия (ако го намерим), иначе прозорецът с офиса
+    const target = stats.waitingIds[stats.waiting.indexOf(fresh[0])] || stats.waitingIds[0];
+    n.on('click', async () => {
+      let ok = false;
+      if (target) try { ok = (await (await fetch(`http://127.0.0.1:${port}/api/focus`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: target }) })).json()).ok; } catch { /* */ }
+      if (!ok) { toggleWindow(true); win.focus(); }
+    });
     n.show();
   }
   refreshTray();

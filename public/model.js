@@ -95,6 +95,7 @@ export class Model {
       if (!this.agents.has(s.agent)) this.ingest({ agent: s.agent, label: s.label, type: 'presence' }, now);
       const a = this.agents.get(s.agent);
       a.live = true; a.ended = false;
+      if (typeof s.name === 'string' && s.name) a.sessionName = s.name;
       a.busy = s.status === 'busy';   // Claude Code: "busy" докато мисли/работи (в транскрипта може да няма редове), "idle" – чака промпт
       // "waiting" (+ waitingFor: "permission prompt"…) – чака теб; щом стане пак "busy"/"idle", е отговорено
       const was = a.statusWaiting;

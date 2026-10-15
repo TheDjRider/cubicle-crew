@@ -287,6 +287,10 @@
   #card .ren button { font: inherit; font-size: 11px; color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; border-radius: 3px; padding: 1px 8px; cursor: pointer; }
   #card .ren input { width: 100%; box-sizing: border-box; font: inherit; color: var(--ui-text); background: #0f0c16; border: 1px solid #3a3452; border-radius: 3px; padding: 2px 6px; }
 
+  #note { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 36; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 5px 12px;
+    background: var(--ui-bg); border: 1px solid #5a5278; border-radius: 3px; box-shadow: 2px 2px 0 rgba(0,0,0,.35); font-size: 12px; pointer-events: none; }
+  body.strip #note { bottom: 4px; }
+  #strip .row { cursor: pointer; }
   /* тънка лента (?strip): по един ред на сесия вместо офиса */
   body.strip #stage, body.strip #hud, body.strip #legend, body.strip #empty, body.strip #tooltip, body.strip #card, body.strip #toast { display: none !important; }
   body.strip #winbar { display: none; }

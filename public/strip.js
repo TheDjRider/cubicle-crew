@@ -14,8 +14,8 @@ export class Strip {
     this.root.id = 'strip';
     document.body.classList.add('strip');
     this.last = 0; this.key = ''; this.h = 0;
-    // двоен клик – обратно към офиса (Electron сменя режима)
-    this.root.addEventListener('dblclick', () => window.pixelOffice?.action?.('strip:off'));
+    // клик върху ред -> терминалът на тази сесия
+    this.root.addEventListener('click', (e) => { const id = e.target.closest('.row')?.dataset.id; if (id) this.ui.goTerminal(id); });
   }
 
   render(now) {
@@ -35,7 +35,7 @@ export class Strip {
     if (!rows.length) el('div', 'none', this.root).textContent = T.waitingActivity;
     for (const r of rows) {
       const row = el('div', `row${r.st === 'waiting' ? ' wait' : ''}`, this.root);
-      row.dataset.state = r.st;
+      row.dataset.state = r.st; row.dataset.id = r.id; row.title = T.terminalHint;
       const dot = el('i', null, row); dot.style.background = STATES[r.st].color;
       el('b', null, row).textContent = r.name;
       el('span', 'what', row).textContent = r.what;

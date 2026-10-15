@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
+import { focusPid } from './focus.js';
 
 const PORT = Number(process.env.PORT) || 4317;
 const ROOT = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
@@ -63,6 +64,22 @@ const server = http.createServer((req, res) => {
       const r = await wallet.act(urlPath.slice(5), data);
       res.writeHead(r.ok ? 200 : 400, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(r));
+    });
+    return;
+  }
+  // „Към терминала“: изкарва отпред прозореца на сесията (POST JSON от localhost, както магазина)
+  if (urlPath === '/api/focus') {
+    const origin = req.headers.origin;
+    if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
+    let body = '';
+    req.on('data', (d) => { body += d; if (body.length > 1024) req.destroy(); });
+    req.on('end', async () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch { /* празно */ }
+      const pid = pidOf.get(String(data.agent || ''));
+      const app = pid ? await focusPid(pid) : null;
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(app ? { ok: true, app } : { ok: false, error: pid ? 'window' : 'nopid' }));
     });
     return;
   }
@@ -135,6 +152,7 @@ wss.on('connection', (ws) => {
 // остава в офиса (на дивана), дори да няма нови редове в транскрипта или сървърът да е пуснат след него.
 // Съобщението {type:'sessions', list:[{agent, label, status}]} няма поле `agent` – старите клиенти го пропускат.
 let live = [], liveKey = '';
+const pidOf = new Map(); // сесия -> pid (за „Към терминала“; не се праща към страницата)
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 function scanSessions() {
   let names = [];
@@ -146,9 +164,12 @@ function scanSessions() {
     try { s = JSON.parse(fs.readFileSync(path.join(SESSIONS, n), 'utf8')); } catch { continue; }
     if (!s || typeof s.sessionId !== 'string' || !Number.isInteger(s.pid) || !alive(s.pid)) continue;
     if (list.some((x) => x.agent === s.sessionId)) continue;
+    pidOf.set(s.sessionId, s.pid);
     const item = { agent: s.sessionId, label: s.cwd ? path.basename(s.cwd) : s.sessionId.slice(0, 8), status: s.status || null };
     // status "waiting" + waitingFor ("permission prompt", …) – Claude Code чака теб (молба за разрешение и т.н.)
     if (typeof s.waitingFor === 'string' && s.waitingFor) item.waitingFor = s.waitingFor.slice(0, 40);
+    // името, което Claude Code дава на сесията (напр. "pixel-office-24") – различава две сесии в един проект
+    if (typeof s.name === 'string' && s.name) item.name = s.name.slice(0, 40);
     list.push(item);
   }
   list.sort((x, y) => (x.agent < y.agent ? -1 : 1));
