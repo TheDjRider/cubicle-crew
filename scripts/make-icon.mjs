@@ -64,6 +64,8 @@ const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'build
 fs.mkdirSync(dir, { recursive: true });
 fs.writeFileSync(path.join(dir, 'icon.png'), png(256));
 fs.writeFileSync(path.join(dir, 'icon.ico'), ico([16, 32, 48, 64, 128, 256]));
+// macOS иска поне 512 px (electron-builder прави .icns от него)
+fs.writeFileSync(path.join(dir, 'icon-mac.png'), png(1024));
 // ?preview: всички размери един до друг (x4 за малките) – за преглед
 if (process.argv.includes('--preview')) {
   const out = process.argv[process.argv.indexOf('--preview') + 1];

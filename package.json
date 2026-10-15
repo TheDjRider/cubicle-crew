@@ -9,7 +9,8 @@
     "desktop": "electron .",
     "icon": "node scripts/make-icon.mjs",
     "predist": "node -e \"fs.rmSync('release', { recursive: true, force: true })\"",
-    "dist": "electron-builder --win nsis"
+    "dist": "electron-builder --win nsis",
+    "dist:mac": "electron-builder --mac --publish never"
   },
   "engines": {
     "node": ">=18"
@@ -38,6 +39,8 @@
       "server.js",
       "wallet.js",
       "weather.js",
+      "stats.js",
+      "focus.js",
       "electron/**",
       "public/**",
       "!public/sprites/*.psd"
@@ -64,6 +67,35 @@
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false,
       "artifactName": "CubicleCrew-Setup-${version}.exe"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon-mac.png",
+      "category": "public.app-category.developer-tools",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSHumanReadableCopyright": "Copyright © 2026 Kalin Dimitrov"
+      },
+      "artifactName": "CubicleCrew-${version}-mac.${ext}"
+    },
+    "dmg": {
+      "title": "Cubicle Crew ${version}"
     }
   },
   "homepage": "https://github.com/rezored/cubicle-crew",

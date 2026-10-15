@@ -112,6 +112,14 @@ The installed app starts with Windows by default. Whenever it starts and no Clau
 </p>
 
 
+## Desktop widget (macOS)
+
+Grab `CubicleCrew-<version>-mac.dmg` from the [latest release](https://github.com/rezored/cubicle-crew/releases/latest) (one build for Apple Silicon and Intel), open it and drag **Cubicle Crew** to Applications.
+
+The app isn't signed with an Apple Developer ID yet, so the first launch needs one extra step: right-click the app → **Open** → **Open**. On macOS 15 and later: open it once, then **System Settings → Privacy & Security → Open Anyway**. If macOS says the app "is damaged", run `xattr -cr "/Applications/Cubicle Crew.app"` once.
+
+On a Mac the widget lives in the menu bar (no Dock icon), opens at the top right under the menu bar, follows you across desktops, and does **not** start at login unless you tick **Start at login** in its menu. `⌘⌥P` shows or hides it. Notifications, the strip, Focus mode and "jump to the terminal" (Terminal, iTerm, VS Code…) work the same as on Windows.
+
 ## How it works
 
 Everything stays on your machine. [docs/security.md](docs/security.md) lists exactly what the app reads, writes and sends.
@@ -163,7 +171,7 @@ Drop PNGs into `public/sprites/` and reload the page:
 - The JSONL transcript format isn't an official API. If parsing ever breaks, `npm run debug` shows what's happening.
 - Without the session status (older Claude Code versions), an agent counts as idle after 8 seconds without new transcript lines, so long thinking looks like a break.
 - Permission prompts are only seen through the session status, so older Claude Code versions that don't write it only show `waiting` for `AskUserQuestion`.
-- The installer only targets Windows x64 for now. The browser version runs anywhere Node does.
+- Installers exist for Windows x64 and macOS (universal, not signed with an Apple Developer ID yet). On Linux use the browser version (`npm start`); jumping to the terminal isn't supported there.
 
 ## Tech
 

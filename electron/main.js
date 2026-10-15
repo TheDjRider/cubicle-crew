@@ -8,6 +8,7 @@ import { drawIcon16 } from './icon-art.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MARGIN = 8;                  // разстояние от ръба на работния плот (над лентата със задачи)
+const MAC = process.platform === 'darwin'; // macOS: горе вдясно под менюто, без икона в Dock, без стартиране при вход по подразбиране
 const TARGET = { w: 790, h: 470 }; // физически пиксели – един екип в мащаб 2 (растe автоматично при втори)
 const SHORTCUT = 'CommandOrControl+Alt+P';
 const COMPACT = { w: 300, h: 170 }; // сутрешното прозорче (DIP), докато няма сесия
@@ -53,8 +54,8 @@ function defaultBounds() {
   const d = screen.getPrimaryDisplay();
   const wa = d.workArea, k = d.scaleFactor || 1;
   const w = Math.min(Math.ceil(TARGET.w / k), wa.width - 2 * MARGIN), h = Math.min(Math.ceil(TARGET.h / k), wa.height - 2 * MARGIN);
-  // долу вдясно = точно над часовника/трея
-  return { x: wa.x + wa.width - w - MARGIN, y: wa.y + wa.height - h - MARGIN, width: w, height: h };
+  // Windows: долу вдясно = точно над часовника/трея; macOS: горе вдясно = под иконата в лентата с менюто
+  return { x: wa.x + wa.width - w - MARGIN, y: MAC ? wa.y + MARGIN : wa.y + wa.height - h - MARGIN, width: w, height: h };
 }
 function visible(b) {
   return b && screen.getAllDisplays().some(({ workArea: a }) => b.x < a.x + a.width - 40 && b.x + b.width > a.x + 40 && b.y >= a.y - 10 && b.y < a.y + a.height - 40);
@@ -75,6 +76,8 @@ const L = {
     resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit',
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
 };
+// macOS: „при вход“, не „с Windows“
+if (MAC) { L.bg.login = 'Стартирай при вход'; L.en.login = 'Start at login'; }
 const tr = () => L[lang()];
 function setLang(l) { settings.lang = l; saveSettings(); win?.loadURL(pageUrl()); refreshTray(); }
 function pageUrl() { return `http://localhost:${port}/?desktop${settings.demo ? '&demo' : ''}${waiting ? '&wait' : ''}${settings.strip ? '&strip' : ''}&lang=${lang()}`; }
@@ -160,6 +163,7 @@ function createWindow() {
   });
   applyOnTop();
   applyThrough();
+  if (MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); // следва те по всички работни плотове (Spaces)
   win.loadURL(pageUrl());
   win.once('ready-to-show', () => win.showInactive());
   // временният размер на магазина не се помни
@@ -201,7 +205,7 @@ function trayIcon(alert, leads = []) {
 
 // След преименуването exe-то е на нов път; записът в Run (същото име = AUMID) още сочи стария "Pixel Office.exe" -> пренасочваме го.
 function migrateLoginItem() {
-  if (!app.isPackaged) return;
+  if (!app.isPackaged || MAC) return;
   try {
     const s = app.getLoginItemSettings();
     const old = (s.launchItems || []).some((i) => i.enabled && i.path && /pixel office/i.test(i.path) && path.resolve(i.path) !== path.resolve(process.execPath));
@@ -217,7 +221,7 @@ function loginItem() {
 // Стартирането с Windows е включено по подразбиране: веднъж, при първото пускане на тази версия.
 // После решава само потребителят (отметката в менюто).
 function initLoginItem() {
-  if (!app.isPackaged || settings.loginInit) return;
+  if (!app.isPackaged || settings.loginInit || MAC) return; // на macOS – само ако потребителят го включи от менюто
   try { loginItem().set(true); settings.loginInit = true; saveSettings(); log('login item on by default'); } catch (e) { log('login item init', e?.message || e); }
 }
 
@@ -382,6 +386,7 @@ app.on('before-quit', () => { quitting = true; flushWallet(); });
 app.on('will-quit', () => globalShortcut.unregisterAll());
 
 app.whenReady().then(async () => {
+  if (MAC) app.dock?.hide(); // уиджет: живее в лентата с менюто, не в Dock
   loadSettings();
   initLoginItem();
   migrateLoginItem();
