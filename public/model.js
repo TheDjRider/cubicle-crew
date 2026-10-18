@@ -3,6 +3,8 @@
 // с едно разширение: родител, чийто Task/Agent още работи чрез жив под-агент, остава 'delegating'.
 import { CFG, TOOL_STATE, DELEGATE_TOOLS } from './config.js';
 
+const CRASH_STAY_MS = 15 * 60e3; // прекъсната сесия стои посивяла най-много толкова
+
 export class Model {
   constructor() {
     this.agents = new Map();
@@ -59,6 +61,7 @@ export class Model {
 
     a.lastEvent = now;
     a.lastType = e.type;
+    a.crashed = 0; // пак пише (напр. claude --resume)
     if (a.done && e.type !== 'tool_end') { a.done = false; } // пак работи
     // молбата е отговорена (резултат/нов текст) – и ако статусът на сесията още не е дошъл. Нов tool_start
     // веднага след молбата е закъснял ред от същото съобщение – той не я маха.
@@ -114,8 +117,15 @@ export class Model {
       if (a.statusWaiting && !was) this.attention({ session: a.id, kind: /permission/i.test(s.waitingFor || '') ? 'permission' : 'input' }, now);
       else if (!a.statusWaiting && was) this.clearAsk(a);
     }
-    for (const a of this.agents.values()) if (a.live && !ids.has(a.id)) { a.live = false; a.ended = true; a.busy = false; a.statusWaiting = false; this.clearAsk(a); }
+    for (const a of this.agents.values()) if (a.live && !ids.has(a.id)) {
+      // сесията изчезна насред работа (незавършен инструмент / Claude още „мислеше“) – остава посивяла, докато я видиш
+      if (a.busy || [...a.pending.values()].some((p) => !DELEGATE_TOOLS.has(p.tool))) { a.crashed = now; a.crashSeen = false; a.pending.clear(); }
+      a.live = false; a.ended = true; a.busy = false; a.statusWaiting = false; this.clearAsk(a);
+    }
   }
+
+  /** Потребителят е видял прекъснатата сесия (посочи или кликна) – вече може да си тръгне. */
+  seen(id) { const a = this.agents.get(id); if (a?.crashed && !a.crashSeen) { a.crashSeen = true; a.lastEvent = performance.now(); } }
 
   /** Сесията вече не чака – махаме молбата от нея и от под-агентите ѝ. */
   clearAsk(a) {
@@ -193,6 +203,7 @@ export class Model {
       const quiet = now - a.lastEvent;
       let leave = false;
       if (a.ask) { /* чака разрешение – остава, колкото и да е тихо */ }
+      else if (a.crashed && !a.crashSeen && now - a.crashed < CRASH_STAY_MS) { /* прекъсната – чака да я видиш */ }
       else if (a.subagent) {
         if (a.done && now - a.doneAt > CFG.CHILD_EXIT_DELAY_MS && quiet > CFG.CHILD_EXIT_DELAY_MS) leave = true;
         // дълъг tool (напр. Bash) без нови редове – чакаме повече, преди да приемем, че е приключил

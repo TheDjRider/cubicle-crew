@@ -72,6 +72,7 @@ const T_BG = {
   childOf: 'Под-агент на',
   agentKind: 'Агент',
   context: 'Контекст',
+  crashed: { title: 'Сесията прекъсна', hint: 'насред работа' },
   needsYou: 'Чака теб!',
   allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
   sound: {
@@ -253,6 +254,7 @@ const T_EN = {
   childOf: 'Sub-agent of',
   agentKind: 'Agent',
   context: 'Context',
+  crashed: { title: 'Session ended', hint: 'in the middle of the work' },
   needsYou: 'Needs you!',
   allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
   sound: {

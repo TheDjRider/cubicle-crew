@@ -223,9 +223,12 @@ export class Actor {
     const img = layer === 'front' ? f.front : f.body;
     const x = Math.round(this.x) - 12, y = Math.round(this.y) - (FH - 1);
     if (this.alpha < 1) ctx.globalAlpha = this.alpha;
+    const grey = this.agent.crashed && !this.agent.crashSeen; // сесията прекъсна насред работа
+    if (grey) { ctx.save(); ctx.filter = 'grayscale(1) brightness(0.75)'; }
     if (this.flip) {
       ctx.save(); ctx.translate(x + FW, y); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0); ctx.restore();
     } else ctx.drawImage(img, x, y);
+    if (grey) ctx.restore();
     if (this.alpha < 1) ctx.globalAlpha = 1;
   }
 

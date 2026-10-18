@@ -222,7 +222,8 @@ export class UI {
   /** Мишката е върху метеостанцията на стената. */
   onPlaque(m) { const p = this.office.room?.wxPlaque; return !!p && m.x >= p.x && m.x < p.x + p.w && m.y >= p.y && m.y < p.y + p.h; }
 
-  focus(id) { this.office.focusId = id; this.card.hidden = !id; }
+  focus(id) {
+    if (id) this.model.seen(id); this.office.focusId = id; this.card.hidden = !id; }
 
   // ------------------------------------------------------------------ всеки кадър
   sync(now) {
@@ -262,6 +263,7 @@ export class UI {
       const tool = this.model.currentTool(ag);
       let btxt = null;
       if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, prefs.private ? '' : shortDetail(tool.detail, 38)];
+      if (ag.crashed && !ag.crashSeen) btxt = [T.crashed.title, T.crashed.hint];
       else if (st === 'waiting') btxt = [T.needsYou, ag.ask ? T.allow(ag.ask.kind === 'permission' && tool ? tool.tool : '') : tool ? tool.tool : ''];
       const bkey = btxt ? btxt.join('|') : '';
       this.set(it, 'btxt', bkey, () => {
@@ -334,6 +336,7 @@ export class UI {
     if (!m) { this.tip.hidden = true; this.canvas.style.cursor = ''; this.hoverId = null; return; }
     const a = this.office.hitTest(m.x, m.y);
     this.hoverId = a ? a.id : null;
+    if (a) this.model.seen(a.id);
     let html = null;
     if (a) html = this.describe(a, now);
     else {
