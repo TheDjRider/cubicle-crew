@@ -75,6 +75,7 @@ const T_BG = {
   crashed: { title: 'Сесията прекъсна', hint: 'насред работа' },
   needsYou: 'Чака теб!',
   allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
+  perm: { allow: 'Разреши', deny: 'Откажи', more: (n) => `още ${n}`, keys: 'Y / N' },
   sound: {
     on: 'Звук: включен – звъни, когато агент чака теб или сесия приключи (само ако не гледаш прозореца). Клик – изключи.',
     off: 'Звук: изключен. Клик – включи.',
@@ -117,6 +118,8 @@ const T_BG = {
     lang: 'Език',
     alerts: 'Известия',
     sound: 'Звук', soundHint: 'Кратка мелодия, когато агент чака теб или приключи дълга задача – само когато не гледаш прозореца.',
+    perm: 'Отговаряй на разрешенията оттук', permHint: 'Добавя малък hook в настройките на Claude Code (~/.claude/settings.json, пази се резервно копие). Когато Claude пита „Разреши ли …?“, долу се появяват бутони Разреши / Откажи (клавиши Y / N). Терминалът работи както досега; ако не отговориш тук до 45 с, въпросът си остава там. Изключването маха hook-а.',
+    permErr: { parse: 'settings.json не е валиден JSON – не го пипам.', write: 'Не успях да запиша settings.json.', offline: 'Сървърът не отговаря.' },
     notify: 'Известие от системата', notifyHint: 'Изскачащо известие, когато агент чака теб. Клик върху него отваря терминала на сесията.',
     privacy: 'Поверителност',
     private: 'Скривай команди и пътища', privateHint: 'Балончетата, картата и известията показват само инструмента и името на сесията – за споделен екран и стрийм.',
@@ -257,6 +260,7 @@ const T_EN = {
   crashed: { title: 'Session ended', hint: 'in the middle of the work' },
   needsYou: 'Needs you!',
   allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
+  perm: { allow: 'Allow', deny: 'Deny', more: (n) => `${n} more`, keys: 'Y / N' },
   sound: {
     on: 'Sound: on – chimes when an agent needs you or a session finishes (only while you are not looking at the window). Click to mute.',
     off: 'Sound: off. Click to turn it on.',
@@ -296,6 +300,8 @@ const T_EN = {
     lang: 'Language',
     alerts: 'Alerts',
     sound: 'Sound', soundHint: 'A short tune when an agent waits for you or finishes a long task – only when you are not looking at the window.',
+    perm: 'Answer permission prompts here', permHint: 'Adds a small hook to the Claude Code settings (~/.claude/settings.json, a backup is kept). When Claude asks “Allow …?”, Allow / Deny buttons appear at the bottom (keys Y / N). The terminal works as before; if you do not answer here within 45 s the question stays there. Turning it off removes the hook.',
+    permErr: { parse: 'settings.json is not valid JSON – leaving it alone.', write: 'Could not write settings.json.', offline: 'The server is not answering.' },
     notify: 'System notification', notifyHint: 'A pop-up when an agent waits for you. Clicking it opens that session\'s terminal.',
     privacy: 'Privacy',
     private: 'Hide commands and paths', privateHint: 'Bubbles, the card and notifications show only the tool and the session name – for screen sharing and streaming.',

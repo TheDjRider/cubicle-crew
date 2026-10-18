@@ -12,6 +12,7 @@ import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
+import { Permissions } from './permissions.js';
 import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine } from './providers.js';
 
 const PORT = Number(process.env.PORT) || 4317;
@@ -72,6 +73,32 @@ const server = http.createServer((req, res) => {
       try { data = JSON.parse(body || '{}'); } catch { /* празно */ }
       const r = await wallet.act(urlPath.slice(5), data);
       res.writeHead(r.ok ? 200 : 400, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(r));
+    });
+    return;
+  }
+  // „Разреши / Откажи“ от офиса: hook-ът на Claude Code (PermissionRequest, type http) – без Origin, JSON
+  if (urlPath === '/api/hook/permission') {
+    if (req.method !== 'POST' || req.headers.origin) { res.writeHead(403).end(); return; }
+    perms.handleHook(req, res);
+    return;
+  }
+  // решението от страницата, състоянието на hook-а и слагане/махане (POST JSON от localhost, както магазина)
+  if (urlPath === '/api/permission' || urlPath === '/api/hook') {
+    if (urlPath === '/api/hook' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ ok: true, ...perms.status() }));
+      return;
+    }
+    const origin = req.headers.origin;
+    if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
+    let body = '';
+    req.on('data', (d) => { body += d; if (body.length > 1024) req.destroy(); });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch { /* празно */ }
+      const r = urlPath === '/api/permission' ? { ok: perms.decide(String(data.id || ''), String(data.decision || '')) } : perms.install(!!data.on, wallet.port);
+      res.writeHead(r.ok || urlPath === '/api/permission' ? 200 : 400, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' }); // вече отговорена молба – не е грешка
       res.end(JSON.stringify(r));
     });
     return;
@@ -149,11 +176,21 @@ const broadcast = (evt) => {
   for (const c of wss.clients) if (c.readyState === 1) c.send(msg);
 };
 const wallet = new Wallet(broadcast, (m) => console.log(m));
+// молбите за разрешение (hook-ът е по желание – вж. permissions.js)
+const perms = new Permissions({
+  broadcast: (m) => broadcast(m),
+  settingsFile: path.join(process.env.CLAUDE_CONFIG_DIR || path.dirname(ROOT), 'settings.json'),
+  clients: () => wss.clients.size,
+  statusOf: (session) => live.find((x) => x.agent === session)?.status || null,
+  brief: (input) => brief(input),
+  log: (m) => console.log(m),
+});
 const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });// нов клиент веднага вижда портфейла и живите сесии
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify(wallet.msg(0, 'sync', null, null, true)));
   ws.send(JSON.stringify({ type: 'sessions', list: live }));
   ws.send(JSON.stringify(weather.msg()));
+  for (const p of perms.list()) ws.send(JSON.stringify(p));
 });
 
 // ---------- живи сесии ----------
@@ -457,6 +494,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx).catch(() => {});
   scanSessions();
   wallet.port = actual;
+  perms.syncPort(actual);
   wallet.start();
   weather.start();
   process.once('exit', () => wallet.close());

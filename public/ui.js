@@ -60,6 +60,10 @@ export class UI {
     this.lastHud = 0;
     this.buildLegend();
     this.bindMouse();
+    // Разреши / Откажи (hook-ът на Claude Code – вж. permissions.js): лента долу в средата
+    this.prompt = el('div', null, document.body);
+    this.prompt.id = 'prompt'; this.prompt.hidden = true;
+    this.prompt.addEventListener('click', (e) => { const b = e.target.closest('[data-perm]'); if (b) this.decide(b.dataset.id, b.dataset.perm); });
     // статистиката за прожекционния екран над дъската – веднага и после всяка минута
     this.loadBoardStats();
     setInterval(() => this.loadBoardStats(), 60000);
@@ -173,6 +177,12 @@ export class UI {
         this.legend.hidden = !this.legend.hidden;
         try { localStorage.setItem('po.legend', this.legend.hidden ? '0' : '1'); } catch { /* */ }
       }
+      // Y / N (и на фонетичната кирилица: ъ / н) – отговор на най-старата молба за разрешение
+      if (!this.prompt.hidden && e.key.length === 1 && !e.target?.closest?.('input, textarea')) {
+        const k = e.key.toLowerCase(), id = this.prompt.dataset.id;
+        if (k === 'y' || k === 'ъ') { this.decide(id, 'allow'); return; }
+        if (k === 'n' || k === 'н') { this.decide(id, 'deny'); return; }
+      }
       if (e.key === 'Escape') { this.focus(null); if (this.help && !this.help.hidden) this.toggleHelp(false); }
       if (e.key === '?' && !e.target?.closest?.('input, textarea')) this.toggleHelp();
     });
@@ -226,7 +236,33 @@ export class UI {
     if (id) this.model.seen(id); this.office.focusId = id; this.card.hidden = !id; }
 
   // ------------------------------------------------------------------ всеки кадър
+  /** Решение от лентата (бутон или Y/N) -> сървъра, който го връща на Claude Code. */
+  async decide(id, decision) {
+    if (!id) return;
+    this.model.permission({ id, done: true });
+    try { await fetch('api/permission', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, decision }) }); } catch { /* */ }
+  }
+
+  /** Лентата с най-старата чакаща молба за разрешение. */
+  renderPrompt() {
+    const list = [...this.model.prompts.values()];
+    const p = list[0];
+    const key = p ? `${p.id}|${list.length}|${prefs.private}|${LANG}` : '';
+    if (key === this.prompt._key) return;
+    this.prompt._key = key;
+    this.prompt.hidden = !p;
+    if (!p) return;
+    const ag = this.model.agents.get(p.session), P = T.perm;
+    this.prompt.dataset.id = p.id;
+    this.prompt.innerHTML = `<span class="q"><b>${esc(ag ? this.displayName(ag) : p.session.slice(0, 8))}</b> · ${esc(T.allow(p.tool))}</span>` +
+      (p.detail && !prefs.private ? `<code>${esc(shortDetail(p.detail, 60))}</code>` : '') +
+      `<button type="button" class="ok" data-perm="allow" data-id="${esc(p.id)}">${P.allow} <kbd>Y</kbd></button>` +
+      `<button type="button" data-perm="deny" data-id="${esc(p.id)}">${P.deny} <kbd>N</kbd></button>` +
+      (list.length > 1 ? `<span class="more">${P.more(list.length - 1)}</span>` : '');
+  }
+
   sync(now) {
+    this.renderPrompt();
     const office = this.office;
     const seen = new Set();
     for (const a of office.actors.values()) {
@@ -479,11 +515,26 @@ export class UI {
     else if (d.legend != null) { this.legend.hidden = !t.checked; try { localStorage.setItem('po.legend', t.checked ? '1' : '0'); } catch { /* */ } }
     else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
     else if (t.name === 'lang') { if (PARAMS.desktop && this.bridge?.action) this.bridge.action('lang:' + t.value); else setLang(t.value); }
+    else if (d.hook != null) this.setHook(t.checked);
     else if (d.desk) { this.bridge?.setDesktop?.(d.desk, t.checked); if (d.desk === 'strip' && t.checked) this.toggleHelp(false); }
   }
 
+  /** Hook-ът за разрешения: сложен ли е (за отметката в панела). */
+  async loadHook() {
+    try { this.hook = await (await fetch('api/hook')).json(); } catch { this.hook = null; }
+    if (this.help && !this.help.hidden) this.renderHelp(true);
+  }
+  async setHook(on) {
+    let r = null;
+    try { r = await (await fetch('api/hook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on }) })).json(); } catch { /* */ }
+    this.hookErr = !r ? T.help.permErr.offline : r.ok ? '' : T.help.permErr[r.error] || r.error;
+    if (r?.ok) this.hook = r;
+    this.renderHelp(true);
+  }
+
   /** Настройки и помощ: всяка опция с по едно изречение какво прави. */
-  renderHelp() {
+  renderHelp(fresh = false) {
+    if (!fresh && this.conn !== 'demo') this.loadHook();
     const H = T.help, D = this.desk, demo = this.conn === 'demo';
     const box = (attrs, on, title, hint) => `<label><input type="checkbox" ${attrs}${on ? ' checked' : ''}><span><b>${title}</b><small>${hint}</small></span></label>`;
     const radio = (name, value, on, title, hint) => `<label><input type="radio" name="${name}" value="${value}" id="${name}-${value}"${on ? ' checked' : ''}><span><b>${title}</b>${hint ? `<small>${hint}</small>` : ''}</span></label>`;
@@ -498,6 +549,7 @@ export class UI {
     h += `<h3>${H.alerts}</h3>`;
     if (!demo) h += box('id="opt-sound" data-sound', soundOn(), H.sound, H.soundHint);
     if (D) h += box('id="desk-notify" data-desk="notify"', D.notify, H.notify, H.notifyHint);
+    if (!demo) h += box('id="opt-perm" data-hook', !!this.hook?.installed, H.perm, H.permHint) + (this.hookErr ? `<p class="err">${this.hookErr}</p>` : '');
     // поверителност
     h += `<h3>${H.privacy}</h3>` + box('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint);
     // прозорецът (само в приложението)

@@ -12,6 +12,15 @@ export class Model {
     this.handlers = {};
     this.log = [];           // последни събития (за ?debug)
     this.pendingLinks = new Map(); // parentId -> Set(childId), ако детето дойде преди родителя
+    this.prompts = new Map();      // молби за разрешение от hook-а (Разреши / Откажи от офиса): id -> { session, tool, detail }
+  }
+
+  /** Молба за разрешение от hook-а на Claude Code (вж. permissions.js) или краят ѝ (done). */
+  permission(e, now = performance.now()) {
+    if (!e?.id) return;
+    if (e.done) { this.prompts.delete(e.id); for (const a of this.agents.values()) if (a.ask?.req?.id === e.id) a.ask.req = null; return; }
+    this.prompts.set(e.id, e);
+    this.attention({ session: e.session, kind: 'permission', req: e }, now);
   }
 
   on(name, fn) { (this.handlers[name] ||= []).push(fn); return this; }
@@ -141,7 +150,7 @@ export class Model {
     let target = lead, best = -1;
     const team = [lead, ...[...lead.children].map((id) => this.agents.get(id)).filter((c) => c && !c.done && !c.leaving)];
     for (const a of team) for (const p of a.pending.values()) if (!DELEGATE_TOOLS.has(p.tool) && p.start > best) { best = p.start; target = a; }
-    target.ask = { kind: m.kind === 'input' ? 'input' : 'permission', since: now };
+    target.ask = { kind: m.kind === 'input' ? 'input' : 'permission', since: now, req: m.req || (target.ask?.req && this.prompts.has(target.ask.req.id) ? target.ask.req : null) };
   }
 
   link(childId, parentId) {

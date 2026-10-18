@@ -30,6 +30,8 @@ The text of your prompts, Claude's answers, thinking, file contents and tool out
 
 ## What it writes
 
+**Only if you turn on "Answer permission prompts here"** (the `?` panel): one hook entry in `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`) – `hooks.PermissionRequest` → `{ "type": "http", "url": "http://127.0.0.1:<port>/api/hook/permission", "timeout": 60 }`. Before every change the old file is copied to `settings.cubicle-crew-backup.json` next to it; nothing else in the file is touched, and turning the option off removes the entry again. If the file isn't valid JSON, the app refuses to edit it. When Claude Code asks for a permission, it POSTs the request (tool name and input) to the app; the app keeps only the tool name and the first of `file_path`/`command`/`pattern`/`description`/`url`/`query` cut to 60 characters, shows it, and answers `allow`/`deny` – or nothing (the normal terminal question) if you don't answer within 45 s, answer in the terminal, or no window is open. The endpoint only accepts local requests without an `Origin`, so a web page can't fake one; the decision endpoint needs a local origin like the shop.
+
 All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
 
 - `save.json` (+ `.bak`) – coins, bought decor, achievements, avatar, pet names. No session content.
