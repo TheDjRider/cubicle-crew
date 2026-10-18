@@ -1,7 +1,7 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, glow, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG } from './environment.js';
+import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG } from './environment.js';
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
@@ -10,6 +10,7 @@ import { drawScreen } from './screens.js';
 import { Actor, Cat, Dog, DART_CYCLE, DART_RELEASE } from './characters.js';
 import { avatarLook } from './sprites.js';
 import { prefs } from './prefs.js';
+import { drawBoardScreen, boardGlow, boardMoving, BOARD_PAGES } from './board.js';
 import { rgba } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
 
@@ -18,6 +19,9 @@ const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts']);
 const TEAM_MUGS = ['#2fa8a8', '#d060b0'], NO_TEAM_MUG = '#e8e4dc';
 // откъде тръгва всеки любимец (част от зоната за почивка), за да не се появят един върху друг
 const PET_START = { cat: 0.5, cat2: 0.2, cat3: 0.82, dog: 0.36 };
+
+// примигване при включване: [до мс, яркост]
+const LIGHT_FLICKER = [[60, 0.9], [170, 0], [230, 0.8], [400, 0.08], [460, 1], [580, 0.3], [640, 1], [740, 0.6]];
 
 export class Office {
   constructor(model, particles) {
@@ -39,6 +43,31 @@ export class Office {
     this.seed = 1;
     this.layoutVersion = 0;
     this.darts = { stuck: [], flying: [] }; // дартс: забитите в дъската и летящите стрелички
+    // осветлението на тавана: включено/изключено (prefs.lights) и кога е щракнат ключът – за примигването
+    this.lights = { on: prefs.lights, at: -1e9 };
+    prefs.onChange((k, v) => { if (k === 'lights' && v !== this.lights.on) this.lights = { on: v, at: performance.now() }; });
+    // дъската / прожекционният екран със статистиката (board.js); boardStats пълни ui.loadBoardStats()
+    this.board = { page: prefs.board, prev: prefs.board, at: -1e9 };
+    this.boardStats = null;
+  }
+
+  /** Клик върху дъската: следващата страница (живата дъска -> днес -> 7 дни -> 30 дни -> живата). */
+  nextBoard(now = performance.now()) {
+    const page = (this.board.page + 1) % BOARD_PAGES;
+    this.board = { page, prev: this.board.page, at: now };
+    prefs.set('board', page);
+  }
+
+  /** Ключът до вратата. */
+  toggleLights() { prefs.set('lights', !this.lights.on); }
+
+  /** 0..1: колко светят лампите. Луминесцентните примигват няколко пъти, докато светнат; гаснат почти веднага. */
+  lightLevel(now) {
+    const { on, at } = this.lights, t = now - at;
+    if (!on) return Math.max(0, 1 - t / 160);
+    if (t >= 800) return 1;
+    for (const [end, v] of LIGHT_FLICKER) if (t < end) return v;
+    return 1;
   }
 
   // ================================================================ подредба
@@ -546,6 +575,7 @@ export class Office {
       if (a.mode === 'walk' || a.mode === 'pace' || a.alpha !== a.fadeTo) return true;
       if (a.pod >= 0 && (a.vstate === 'typing' || a.vstate === 'running')) return true; // пози по 75–110 мс
     }
+    if (performance.now() - this.lights.at < 900 || boardMoving(this.board, performance.now())) return true; // лампите примигват, екранът се движи
     const d = this.room.doorOpen;
     return (d > 0 && d < 1) || this.darts.flying.length > 0 || this.fx.list.some((p) => p.layer === 'top');
   }
@@ -605,6 +635,9 @@ export class Office {
     ctx.drawImage(room.bg, 0, 0);
     const st = this.model.stats();
     drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
+    drawBoardScreen(ctx, room, this.board, this.boardStats, now);
+    const lit = this.lightLevel(now);
+    drawLightFixtures(ctx, room, this.lights.on);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
     drawShafts(ctx, room, tod, now);
@@ -646,13 +679,15 @@ export class Office {
 
     this.drawDarts(ctx, now, 'air');
     // 5) нощен/вечерен оттенък
-    drawTint(ctx, room, tod);
+    drawTint(ctx, room, tod, lit);
     // светкавица при буря – цялата стая проблясва за миг
     const fl = flashAt(tod.wx, now);
     if (fl) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(170,180,230,${0.09 * fl})`; ctx.fillRect(0, 0, room.W, room.H); ctx.restore(); }
     // 6) светлини
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
+    lightGlows(ctx, room, tod, lit, now);
+    boardGlow(ctx, room, this.board, now, tod.night);
     this.drawGlows(ctx, now, tod, occupant);
     ctx.restore();
     // 7) частици и икони отгоре

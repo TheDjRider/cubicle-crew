@@ -5,6 +5,7 @@ import { shortDetail, fmtDuration } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
 import { prefs } from './prefs.js';
+import { boardData, demoBoardData, PAGE_DAYS } from './board.js';
 
 // торбичка за пазаруване 9x9 (иконата на бутона за магазина) – рисува се тук, без външни файлове
 const BAG = ['...aaa...', '..a...a..', '..a...a..', 'bbbbbbbbb', 'bcccccccb', 'bcccdcccb', 'bccdddccb', 'bcccdcccb', 'bbbbbbbbb'];
@@ -56,6 +57,9 @@ export class UI {
     this.lastHud = 0;
     this.buildLegend();
     this.bindMouse();
+    // статистиката за прожекционния екран над дъската – веднага и после всяка минута
+    this.loadBoardStats();
+    setInterval(() => this.loadBoardStats(), 60000);
     // монетата в HUD отваря магазина (onShop се задава в main.js)
     this.hud.addEventListener('click', (e) => {
       if (e.target.closest('.tok, .shopbtn')) this.onShop?.();
@@ -188,12 +192,29 @@ export class UI {
     this.canvas.addEventListener('click', (e) => {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
+      if (!a && this.onSwitch(m)) { this.office.toggleLights(); return; }
+      if (!a && this.onBoard(m)) { this.office.nextBoard(); this.loadBoardStats(); return; }
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       const pet = !a && this.office.petAt(m.x, m.y);
       if (pet) { this.office.petPet(pet); return; } // клик = погали; двоен клик = име и външен вид
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
   }
+
+  /** Мишката е върху дъската (или спуснатия екран пред нея). */
+  onBoard(m) { const b = this.office.room?.board; return !!b && m.x >= b.x - 2 && m.x < b.x + b.w + 2 && m.y >= b.y - 4 && m.y < b.y + b.h + 3; }
+
+  /** Статистиката за екрана: от сървъра (последните 30 дни), в ?demo – примерна. */
+  async loadBoardStats() {
+    if (PARAMS.demo) { this.office.boardStats ||= demoBoardData(); return; }
+    try {
+      const r = await (await fetch('api/stats?days=30')).json();
+      if (r?.ok) this.office.boardStats = boardData(r.days);
+    } catch { /* сървърът е стар или го няма – екранът показва „--“ */ }
+  }
+
+  /** Мишката е върху ключа за осветлението до вратата (с малко поле около него). */
+  onSwitch(m) { const s = this.office.room?.lightSwitch; return !!s && m.x >= s.x - 2 && m.x < s.x + s.w + 2 && m.y >= s.y - 2 && m.y < s.y + s.h + 2; }
 
   /** Мишката е върху метеостанцията на стената. */
   onPlaque(m) { const p = this.office.room?.wxPlaque; return !!p && m.x >= p.x && m.x < p.x + p.w && m.y >= p.y && m.y < p.y + p.h; }
@@ -311,22 +332,29 @@ export class UI {
     let html = null;
     if (a) html = this.describe(a, now);
     else {
-      const b = this.office.room?.board;
-      if (b && m.x >= b.x && m.x < b.x + b.w && m.y >= b.y && m.y < b.y + b.h) {
+      const page = this.office.board.page, B = T.board;
+      if (this.onBoard(m) && page > 0) {
+        // прожекционният екран: числата от страницата с думи
+        const d = this.office.boardStats?.[PAGE_DAYS[page]], tok = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n));
+        html = `<div class="title">${B.pages[page]}</div>` + (d
+          ? `<table><tr><th>${B.work}</th><td>${fmtDuration(d.activeMs, T)}</td></tr><tr><th>${B.waited}</th><td>${fmtDuration(d.waitingMs, T)}</td></tr><tr><th>${B.tools}</th><td>${d.tools}</td></tr><tr><th>${B.tokens}</th><td>${tok(d.tokIn)} / ${tok(d.tokOut)}</td></tr></table>`
+          : `<div>${B.none}</div>`) + `<div class="dim">${page === 3 ? B.back : B.next}</div>`;
+      } else if (this.onBoard(m)) {
         const s = this.model.stats(), coins = this.tokens != null && !prefs.focus;
-        html = `<table><tr><th>${T.board.agents}</th><td>${s.agents}</td></tr><tr><th>${T.board.tools}</th><td>${s.tools}</td></tr><tr><th>${T.board.subs}</th><td>${s.subs}</td></tr>` +
+        html = `<table><tr><th>${B.agents}</th><td>${s.agents}</td></tr><tr><th>${B.tools}</th><td>${s.tools}</td></tr><tr><th>${B.subs}</th><td>${s.subs}</td></tr>` +
           (coins ? `<tr><th>${T.tokens}</th><td>${this.fmtTokens()}</td></tr>` : '') + '</table>' +
-          (coins ? `<div class="dim">${T.tokensHint}</div>` : '');
+          (coins ? `<div class="dim">${T.tokensHint}</div>` : '') + `<div class="dim">${B.click}</div>`;
       }
     }
     if (!a && !html && this.onPlaque(m)) {
       const wm = this.office.weatherMsg, c = wm?.city;
       html = (c ? `<div class="title">${esc(c.name)}</div>` : '') + `<div class="dim">${T.weather.tip}</div>`;
     }
+    if (!a && !html && this.onSwitch(m)) html = `<div class="title">${T.lights.title}</div><div class="dim">${this.office.lights.on ? T.lights.off : T.lights.on}</div>`;
     // любимец: името му (може да се смени – клик отваря „Любимци“)
     const pet = !a && !html && this.office.petAt(m.x, m.y);
     if (pet) html = `<div class="title">${esc(petName(pet.slot, this.office.petNames))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}</div><div class="dim">${T.pets.tip}</div>`;
-    this.canvas.style.cursor = a || pet || this.onPlaque(m) ? 'pointer' : '';
+    this.canvas.style.cursor = a || pet || this.onPlaque(m) || this.onSwitch(m) || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
     this.tip.hidden = false;
@@ -456,6 +484,7 @@ export class UI {
     h += `<h3>${H.look}</h3><div class="pair">${radio('mode', 'office', !prefs.focus, H.office, H.officeHint)}${radio('mode', 'focus', prefs.focus, H.focus, H.focusHint)}</div>`;
     if (D) h += box('id="desk-strip" data-desk="strip"', D.strip, H.strip, H.stripHint);
     h += box('id="opt-legend" data-legend', !this.legend.hidden, H.legend, H.legendHint);
+    h += box('id="pref-lights" data-pref="lights"', prefs.lights, H.lights, H.lightsHint);
     h += `<div class="lang"><span>${H.lang}</span>${radio('lang', 'bg', LANG === 'bg', 'Български')}${radio('lang', 'en', LANG === 'en', 'English')}</div>`;
     // известия
     h += `<h3>${H.alerts}</h3>`;

@@ -1004,8 +1004,13 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   const k = WHH / 26;
   const skyline = skylineFor(view, skyX1 - skyX0, k);
 
+  // лампи на тавана (луминесцентни тела по горния ръб) и ключ за осветлението вляво от вратата
+  const nCeil = Math.max(2, Math.round((W - 60) / 95) + 1), ceil = [];
+  for (let i = 0; i < nCeil; i++) ceil.push(Math.round(30 + i * (W - 60) / (nCeil - 1)));
+  const lightSwitch = { x: Math.max(2, L.door.x - 7), y: 32, w: 5, h: 7 };
+
   return {
-    W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L,
+    W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
     lampGlow, aquarium, arcade, season, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 17, c: decor.neon.c } : null,
     doorOpen: 0,
@@ -1225,14 +1230,52 @@ export function drawWallDynamic(ctx, room, date, stats, t) {
   void t;
 }
 
-/** Цялостен оттенък според часа (multiply). */
-export function drawTint(ctx, room, tod) {
+/** Цялостен оттенък според часа (multiply). lit 0..1 = лампите на тавана: стаята е по-светла и топла,
+ *  стъклата на прозорците остават с нощния оттенък (навън си е тъмно). */
+export function drawTint(ctx, room, tod, lit = 0) {
   if (tod.tint === '#ffffff') return;
   ctx.save();
   ctx.globalCompositeOperation = 'multiply';
-  ctx.fillStyle = tod.tint;
-  ctx.fillRect(0, 0, room.W, room.H);
+  const k = lit * nightK(tod) * 0.72;
+  if (k > 0.01) {
+    ctx.fillStyle = mix(tod.tint, '#fff4e2', k);
+    ctx.beginPath(); ctx.rect(0, 0, room.W, room.H);
+    for (const w of room.windows) ctx.rect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
+    ctx.fill('evenodd');
+    ctx.fillStyle = tod.tint;
+    for (const w of room.windows) ctx.fillRect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
+  } else { ctx.fillStyle = tod.tint; ctx.fillRect(0, 0, room.W, room.H); }
   ctx.restore();
+}
+
+/** Колко „нощ“ е за осветлението (вечер вече пали, през деня – нищо). */
+export function nightK(tod) { return Math.min(1, tod.night * 1.6); }
+
+/** Телата на лампите по тавана и ключът до вратата (преди оттенъка; светлината – в lightGlows). */
+export function drawLightFixtures(ctx, room, on) {
+  for (const x of room.ceil || []) {
+    R(ctx, '#2a2436', x - 10, 0, 20, 3); R(ctx, '#4a4458', x - 9, 0, 18, 2);
+    R(ctx, '#9a96a6', x - 8, 1, 16, 1); R(ctx, '#1a1420', x - 10, 3, 20, 1);
+  }
+  const s = room.lightSwitch;
+  if (!s) return;
+  R(ctx, '#6a6478', s.x, s.y, s.w, s.h); R(ctx, '#dcd8cc', s.x, s.y, s.w - 1, s.h - 1);
+  R(ctx, '#a8a49a', s.x + 1, s.y + (on ? 1 : 3), 2, 2); R(ctx, '#f6f4ee', s.x + 1, s.y + (on ? 1 : 4), 2, 1);
+}
+
+/** Светлината от лампите (режим 'lighter'): светещите тръби, конус по стената, петна по пода. */
+export function lightGlows(ctx, room, tod, lit, now) {
+  const n = nightK(tod);
+  if (lit > 0.01 && n > 0.01) {
+    for (const x of room.ceil || []) {
+      R(ctx, rgba('#fff2d6', 0.9 * lit), x - 8, 1, 16, 1);
+      glow(ctx, x, 4, 24, '#fff0d0', 0.32 * lit * n);
+      glow(ctx, x, CFG.WALL_H + 46, 80, '#fff0d4', 0.07 * lit * n);
+    }
+  }
+  // светодиодът на ключа свети, докато лампите са изгасени – да се намира на тъмно
+  const s = room.lightSwitch;
+  if (s && lit < 0.5 && n > 0.05) glow(ctx, s.x + 2, s.y + 5, 3, '#ff9a3a', 0.6 * n * (0.85 + 0.15 * Math.sin(now / 400)));
 }
 
 /** Мека кръгла светлина (adds light). */
