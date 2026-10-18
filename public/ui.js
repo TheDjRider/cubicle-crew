@@ -117,12 +117,13 @@ export class UI {
     const sound = soundOn();
     // състоянията на оркестраторите по ред на идване -> точките в иконата в трея
     const leads = [...this.office.actors.values()].filter((a) => !a.agent.subagent).sort((a, b) => a.joinSeq - b.joinSeq).map((a) => a.vstate);
-    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}`;
+    const prompt = this.model.prompts.keys().next().value || null; // най-старата молба за разрешение (глобалните Ctrl+Alt+Y / N)
+    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
     // sound: приложението пуска известието без системния звук, щом страницата свири своя
     const waitingIds = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => this.office.leadOf(a)?.id || a.id);
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds });
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds, prompt });
   }
 
   setScale(scale, dpr, W, H) {
@@ -258,7 +259,8 @@ export class UI {
       (p.detail && !prefs.private ? `<code>${esc(shortDetail(p.detail, 60))}</code>` : '') +
       `<button type="button" class="ok" data-perm="allow" data-id="${esc(p.id)}">${P.allow} <kbd>Y</kbd></button>` +
       `<button type="button" data-perm="deny" data-id="${esc(p.id)}">${P.deny} <kbd>N</kbd></button>` +
-      (list.length > 1 ? `<span class="more">${P.more(list.length - 1)}</span>` : '');
+      (list.length > 1 ? `<span class="more">${P.more(list.length - 1)}</span>` : '') +
+      (this.bridge ? `<span class="more">${P.global}</span>` : '');
   }
 
   sync(now) {

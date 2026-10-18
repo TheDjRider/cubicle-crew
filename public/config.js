@@ -75,7 +75,7 @@ const T_BG = {
   crashed: { title: 'Сесията прекъсна', hint: 'насред работа' },
   needsYou: 'Чака теб!',
   allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
-  perm: { allow: 'Разреши', deny: 'Откажи', more: (n) => `още ${n}`, keys: 'Y / N' },
+  perm: { allow: 'Разреши', deny: 'Откажи', more: (n) => `още ${n}`, keys: 'Y / N', global: 'или Ctrl+Alt+Y / N отвсякъде' },
   sound: {
     on: 'Звук: включен – звъни, когато агент чака теб или сесия приключи (само ако не гледаш прозореца). Клик – изключи.',
     off: 'Звук: изключен. Клик – включи.',
@@ -260,7 +260,7 @@ const T_EN = {
   crashed: { title: 'Session ended', hint: 'in the middle of the work' },
   needsYou: 'Needs you!',
   allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
-  perm: { allow: 'Allow', deny: 'Deny', more: (n) => `${n} more`, keys: 'Y / N' },
+  perm: { allow: 'Allow', deny: 'Deny', more: (n) => `${n} more`, keys: 'Y / N', global: 'or Ctrl+Alt+Y / N from anywhere' },
   sound: {
     on: 'Sound: on – chimes when an agent needs you or a session finishes (only while you are not looking at the window). Click to mute.',
     off: 'Sound: off. Click to turn it on.',

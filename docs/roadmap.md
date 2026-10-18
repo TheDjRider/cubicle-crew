@@ -18,7 +18,8 @@ Ticked = done and merged.
 - [x] **Allow / Deny from the office** – opt-in hook (`?` panel), bar with Allow / Deny + Y / N, backup of
       `settings.json`, one-click removal. To check with a real session: is the terminal dialog shown while the
       hook waits? (if not, the terminal question appears only after 45 s – then shorten `HOLD_MS`)
-- [ ] Global hotkey for Allow / Deny in the desktop app (works while another window has focus)
+- [x] Global hotkey for Allow / Deny in the desktop app – `Ctrl+Alt+Y` / `Ctrl+Alt+N` (Cmd+Alt on a Mac),
+      registered only while a request is pending
 - [ ] **Phone / LAN view** – read-only, off by default, PIN-protected. Opens a port to the local network.
 - [ ] **More than two teams** – a second floor or a "command center" view when 3+ sessions work at once
       (the office is fixed by design today).

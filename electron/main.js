@@ -388,7 +388,8 @@ ipcMain.on('stats', (_e, s) => {
   const before = new Set(stats.waiting);
   stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [], sound: s.sound !== false, focus: !!s.focus, private: !!s.private,
     leads: Array.isArray(s.leads) ? s.leads.filter((x) => STATE_RGB[x]).slice(0, 4) : [],
-    waitingIds: Array.isArray(s.waitingIds) ? s.waitingIds.map(String).slice(0, 20) : [] };
+    waitingIds: Array.isArray(s.waitingIds) ? s.waitingIds.map(String).slice(0, 20) : [], prompt: typeof s.prompt === 'string' ? s.prompt.slice(0, 40) : null };
+  permKeys(stats.prompt);
   const fresh = stats.waiting.filter((n) => !before.has(n));
   if (fresh.length && settings.notify && Notification.isSupported() && !win.isFocused()) {
     // страницата свири свой звук -> известието е без системния (иначе звъни два пъти)
@@ -411,6 +412,24 @@ app.on('window-all-closed', () => { /* остава в трея */ });
 let flushWallet = () => {};
 app.on('before-quit', () => { quitting = true; flushWallet(); });
 app.on('will-quit', () => globalShortcut.unregisterAll());
+
+// Разреши / Откажи отвсякъде: Ctrl+Alt+Y / N (Cmd+Alt на Mac) – само докато има чакаща молба,
+// за да не държим клавишите заети за другите програми
+const PERM_KEYS = { allow: 'CommandOrControl+Alt+Y', deny: 'CommandOrControl+Alt+N' };
+let permOn = false;
+function permKeys(id) {
+  if (!!id === permOn) return;
+  permOn = !!id;
+  for (const [decision, acc] of Object.entries(PERM_KEYS)) {
+    if (!permOn) { globalShortcut.unregister(acc); continue; }
+    globalShortcut.register(acc, async () => {
+      const pid = stats.prompt;
+      if (!pid) return;
+      try { await fetch(`http://127.0.0.1:${port}/api/permission`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: pid, decision }) }); } catch { /* */ }
+      log(`permission ${decision} via hotkey`);
+    });
+  }
+}
 
 app.whenReady().then(async () => {
   if (MAC) app.dock?.hide(); // уиджет: живее в лентата с менюто, не в Dock
