@@ -39,6 +39,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 |---|---|
 | 🧑‍💻 **Teams** | Two lead desks with a ★ nameplate share one rug, with three desks for sub-agents below. Any sub-agent takes any free desk; the ones without a desk work on a laptop on the sofa until one frees up. Each team has its own mug colour, and lines connect every lead to its sub-agents. A third session works from the lounge until a lead desk is free. |
 | 📄 **Context on the desk** | A stack of paper on every desk grows with the agent's context window, gets a yellow and then a red sticker as it fills up, and flies off the desk when the conversation is compacted. The card shows the exact numbers. Works for Claude Code, Codex and OpenCode. |
+| ✅ **Allow / Deny from the office** *(optional)* | Turn on **Answer permission prompts here** in the `?` panel and Claude Code's "Allow …?" questions show up as a bar at the bottom of the office with **Allow** and **Deny** buttons (keys `Y` / `N`). It adds one hook to `~/.claude/settings.json` (a backup is kept) and removes it when you turn it off. The terminal keeps working: if you don't answer in the office within 45 s, or you answer in the terminal, nothing changes there. |
 | 💥 **Crashed sessions** | If a Claude Code session closes in the middle of a tool (a crash, a killed terminal), its agent doesn't just walk out: it stays at the desk in grey with a "Session ended" bubble until you hover or click it. |
 | 🎨 **7 states** | `idle` · `thinking` · `typing` · `reading` · `running` · `delegating` · `waiting`. Each one has its own poses, monitor content and particles. |
 | 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. Up to three pets roam the lounge: cats with coat patterns and a dog (beagle, golden, corgi, husky, dachshund…) that likes to sit next to whoever is resting. Hover a pet to see its name; click it to rename it. |
@@ -141,6 +142,7 @@ Everything is in the **`?` panel** (the `?` button in the bottom bar, the `?` ke
 - **Language** – English or Bulgarian.
 
 **Alerts**
+- **Answer permission prompts here** – adds a small hook to the Claude Code settings (`~/.claude/settings.json`, a backup is kept). When Claude asks “Allow …?”, Allow / Deny buttons appear at the bottom (keys `Y` / `N`). The terminal works as before; if you do not answer here within 45 s the question stays there. Turning it off removes the hook.
 - **Sound** – a short tune when an agent waits for you or finishes a long task, only when you are not looking at the window.
 - **System notification** *(app)* – a pop-up when an agent waits for you; clicking it opens that session's terminal.
 

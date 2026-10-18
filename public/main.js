@@ -211,6 +211,7 @@ if (PARAMS.demo) {
       try { e = JSON.parse(m.data); } catch { return; /* лош ред */ }
       if (e.type === 'wallet') tokens.onWallet(e);
       else if (e.type === 'sessions') model.sessions(e.list);
+      else if (e.type === 'permission') model.permission(e);
       else if (e.type === 'weather') { onWeather(e); shop.setWeather(e); }      else ingest(e);
     };
     ws.onclose = () => { ui.setConnection('down'); setTimeout(connect, retry); retry = Math.min(8000, retry * 1.5); };

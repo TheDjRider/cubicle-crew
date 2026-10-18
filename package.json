@@ -43,6 +43,7 @@
       "stats.js",
       "focus.js",
       "providers.js",
+      "permissions.js",
       "electron/**",
       "public/**",
       "!public/sprites/*.psd"

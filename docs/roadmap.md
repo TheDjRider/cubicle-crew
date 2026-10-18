@@ -15,8 +15,10 @@ Ticked = done and merged.
 - [x] Post drafts: Show HN, r/ClaudeAI, r/ChatGPTCoding (with the vertical video) – in out/posts/, not in the repo
 
 ## Needs a decision
-- [ ] **Allow / Deny from the office** (button in the card + hotkey). Needs a Claude Code hook – opt-in, with
-      consent, a backup of `settings.json` and a one-click removal.
+- [x] **Allow / Deny from the office** – opt-in hook (`?` panel), bar with Allow / Deny + Y / N, backup of
+      `settings.json`, one-click removal. To check with a real session: is the terminal dialog shown while the
+      hook waits? (if not, the terminal question appears only after 45 s – then shorten `HOLD_MS`)
+- [ ] Global hotkey for Allow / Deny in the desktop app (works while another window has focus)
 - [ ] **Phone / LAN view** – read-only, off by default, PIN-protected. Opens a port to the local network.
 - [ ] **More than two teams** – a second floor or a "command center" view when 3+ sessions work at once
       (the office is fixed by design today).
