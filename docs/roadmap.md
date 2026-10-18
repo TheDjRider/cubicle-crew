@@ -10,7 +10,7 @@ Ticked = done and merged.
 - [x] **Gemini CLI** sessions (`~/.gemini/tmp/*/chats/*.jsonl`, v0.64+ format; the old whole-file `.json` isn't read)
 - [ ] **GitHub Copilot CLI** sessions (the most requested agent in Pixel Agents' issues) – *blocked*: the on-disk
       `~/.copilot/session-state/<id>/events.jsonl` format is undocumented; needs one real session file to build against
-- [ ] **Ended / crashed sessions** – a session that ends in the middle of a tool greys out with a small mark
+- [x] **Ended / crashed sessions** – a session that ends in the middle of a tool greys out with a small mark
       until you've seen it, instead of quietly walking out
 - [ ] Post drafts: Show HN, r/ClaudeAI, r/ChatGPTCoding (with the vertical video)
 

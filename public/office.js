@@ -500,7 +500,7 @@ export class Office {
       return;
     }
     if (a.loc.type === 'seat') {
-      if (st === 'idle' && lt > CFG.WANDER_AFTER_MS && a.mode === 'seated') {
+      if (st === 'idle' && lt > CFG.WANDER_AFTER_MS && a.mode === 'seated' && !(ag.crashed && !ag.crashSeen)) { // прекъснатата остава на бюрото
         const spot = this.freeLoungeSpot(a);
         if (spot) this.route(a, spot);
       } else if (st === 'thinking' && lt > 6000 && a.mode === 'seated') {
