@@ -26,7 +26,21 @@ function toolFor(kind) {
   }
 }
 
+/** Измислен контекст за демото: расте с всяко събитие, а близо до тавана се „сбива“ (купчината листове на бюрото). */
+function withCtx(ingest) {
+  const ctx = new Map();
+  return (e) => {
+    let c = ctx.get(e.agent);
+    if (c == null) { let h = 0; for (const ch of e.agent) h = (h * 31 + ch.charCodeAt(0)) >>> 0; c = 20000 + (h % 150000); }
+    c += 300 + Math.random() * 2500;
+    if (c > 186000) c = 24000 + Math.random() * 10000;
+    ctx.set(e.agent, c);
+    ingest({ ...e, ctx: Math.round(c), ctxMax: 200000 });
+  };
+}
+
 export function startDemo(ingest, model) {
+  ingest = withCtx(ingest);
   if (PARAMS.demo === 'showcase') return showcase(ingest);
   CFG.WANDER_AFTER_MS = PARAMS.wander ?? 16000;
   const n = PARAMS.agents ?? 2;

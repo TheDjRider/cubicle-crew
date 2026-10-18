@@ -71,6 +71,7 @@ const T_BG = {
   parentOf: 'Под-агенти',
   childOf: 'Под-агент на',
   agentKind: 'Агент',
+  context: 'Контекст',
   needsYou: 'Чака теб!',
   allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
   sound: {
@@ -251,6 +252,7 @@ const T_EN = {
   parentOf: 'Sub-agents',
   childOf: 'Sub-agent of',
   agentKind: 'Agent',
+  context: 'Context',
   needsYou: 'Needs you!',
   allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
   sound: {
