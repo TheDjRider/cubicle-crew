@@ -50,6 +50,11 @@ export class Model {
     if (e.background) a.background = true;
     if (e.parent_tool_use_id && !a.parentToolUseId) a.parentToolUseId = e.parent_tool_use_id;
     if (e.parent && e.parent !== a.parent && e.parent !== a.id) this.link(a.id, e.parent);
+    // контекстът (ctx/ctxMax от сървъра): рязък спад = разговорът е сбит (compaction) – купчината отива в коша
+    if (e.ctx > 0) {
+      if (a.ctx > 30000 && e.ctx < a.ctx * 0.6) a.compactedAt = now;
+      a.ctx = e.ctx; a.ctxMax = e.ctxMax || a.ctxMax || 200000;
+    }
     if (e.type === 'presence') return;
 
     a.lastEvent = now;

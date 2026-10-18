@@ -734,6 +734,20 @@ export class Office {
     if (this.focusId && this.actors.has(this.focusId)) this.drawFocus(ctx, this.actors.get(this.focusId), now);
   }
 
+  /** Купчина листове в десния ъгъл на бюрото: колко е пълен контекстът на агента (жълто > 60%, червено > 85%). */
+  drawPaperStack(ctx, p, who, now) {
+    const ag = who.agent;
+    if (!(ag.ctx > 0)) return;
+    const r = Math.min(1, ag.ctx / (ag.ctxMax || 200000));
+    const x = p.x + 58, base = p.y + 36;
+    if (ag.compactedAt && ag.compactedAt !== who.paperFx) { who.paperFx = ag.compactedAt; if (!prefs.focus) this.fx.papers(x, base - 4); }
+    const n = Math.max(1, Math.round(r * 10));
+    for (let i = 0; i < n; i++) R(ctx, i % 2 ? '#e4dfd2' : '#f6f3ea', x + (i % 3 === 1 ? 1 : 0), base - i, 6, 1);
+    R(ctx, 'rgba(16,10,24,0.35)', x, base + 1, 7, 1);
+    if (r > 0.6) R(ctx, r > 0.85 ? '#e05a5a' : '#f0c850', x + 4, base - n, 2, 2); // стикер отгоре
+    void now;
+  }
+
   drawPodFront(ctx, p, img, a, now) {
     ctx.drawImage(img.front, p.x, p.y);
     // чашата: в цвета на екипа на човека на това бюро (празно бюро – без чаша)
@@ -742,6 +756,7 @@ export class Office {
       const t = this.leadOf(who)?.seat?.team;
       drawMug(ctx, p.x + DESK_MUG.x, p.y + DESK_MUG.y, t != null ? TEAM_MUGS[t] : NO_TEAM_MUG);
     }
+    if (who) this.drawPaperStack(ctx, p, who, now);
     const s = POD.screen;
     if (a) {
       const fade = clamp((now - a.vstateAt) / CFG.CROSSFADE_MS, 0, 1);

@@ -48,6 +48,10 @@ export class Particles {
       this.add({ kind: 'px', layer: 'top', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 8, g: 0, drag: 2.5, life: 0.8 + Math.random() * 0.5, color, size: Math.random() < 0.3 ? 2 : 1 });
     }
   }
+  /** Листове хартия, които се разлитат (сбит контекст – купчината от бюрото отива в коша). */
+  papers(x, y, n = 8) {
+    for (let i = 0; i < n; i++) this.add({ kind: 'px', layer: 'top', x: x + Math.random() * 5, y: y - Math.random() * 6, vx: (Math.random() - 0.5) * 40, vy: -25 - Math.random() * 30, g: 110, life: 0.9 + Math.random() * 0.4, color: i % 3 ? '#f6f3ea' : '#d8d2c4', size: 2 });
+  }
   /** Сърчица над погален любимец. */
   hearts(x, y, n = 3) {
     for (let i = 0; i < n; i++) this.add({ kind: 'heart', layer: 'top', x: x + (i - (n - 1) / 2) * 5, y: y - i, vx: (Math.random() - 0.5) * 4, vy: -10 - Math.random() * 4, g: 0, life: 1.3 + i * 0.15 });

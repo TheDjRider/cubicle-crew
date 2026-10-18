@@ -272,14 +272,24 @@ function linkFor(file, obj, agent) {
 
 /** Едно събитие към страницата и портфейла (от Claude Code, Codex или OpenCode). */
 function emitEvt(evt) {
+  const c = ctxNow.get(evt.agent);
+  if (c && ctxSent.get(evt.agent) !== c) { evt.ctx = c[0]; evt.ctxMax = c[1]; ctxSent.set(evt.agent, c); }
   if (DEBUG) console.log(evt.agent.slice(0, 14).padEnd(14), evt.type.padEnd(11), evt.tool || '', evt.detail || '', evt.parent ? `↑${evt.parent.slice(0, 8)} (${evt.link || evt.provider || ''})` : '');
   broadcast(evt);
   wallet.ingest(evt);
 }
 const usageOf = (agent, label, sub, msg) => wallet.usage(agent, label, sub, msg);
+// колко е пълен контекстът на всеки агент: праща се като незадължителни ctx/ctxMax със следващото му събитие
+const ctxNow = new Map(), ctxSent = new Map();
+function setCtx(agent, ctx, max) {
+  if (!(ctx > 0)) return;
+  // прозорецът, ако агентът не го казва: най-малкият от обичайните, в който контекстът се побира
+  max = max > 0 ? max : [200000, 272000, 400000, 1000000, 2000000].find((m) => m >= ctx) || ctx;
+  ctxNow.set(agent, [Math.round(ctx), Math.round(max)]);
+}
 
 function handleLine(file, line) {
-  if (isCodexFile(file)) { codexLine(file, line, emitEvt, usageOf); return; }
+  if (isCodexFile(file)) { codexLine(file, line, emitEvt, usageOf, setCtx); return; }
   let obj;
   try { obj = JSON.parse(line); } catch { return; }
   const agent = path.basename(file, '.jsonl');
@@ -300,7 +310,11 @@ function handleLine(file, line) {
     if (DEBUG && L.source) base.link = L.source;
   }
   // истинските токени (за личната статистика) – само числата от usage, нищо от текста
-  if (obj.type === 'assistant' && obj.message?.usage) wallet.usage(agent, base.label, subagent, obj.message);
+  if (obj.type === 'assistant' && obj.message?.usage) {
+    wallet.usage(agent, base.label, subagent, obj.message);
+    const u = obj.message.usage;
+    setCtx(agent, (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0), /[1m]/i.test(obj.message.model || '') ? 1000000 : 0);
+  }
   const content = obj.message?.content;
   const out = [];
 
@@ -437,7 +451,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   poll();
   setInterval(scanSessions, SESSIONS_MS);
   if (CODEX_ON) console.log(`Codex: следя ${CODEX_ROOT}`);
-  watchOpencode(emitEvt, usageOf, (m) => console.log(m)).catch(() => {});
+  watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx).catch(() => {});
   scanSessions();
   wallet.port = actual;
   wallet.start();

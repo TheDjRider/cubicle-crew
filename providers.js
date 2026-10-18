@@ -96,7 +96,7 @@ function codexTool(name, args) {
  * Един ред от rollout файл на Codex -> събития във формата на Claude Code (без base полетата).
  * emit(evt) получава { agent, label, subagent, parent?, provider, type, … }; usage(agent, label, sub, msg) – токени.
  */
-export function codexLine(file, line, emit, usage) {
+export function codexLine(file, line, emit, usage, setCtx = () => {}) {
   let obj;
   try { obj = JSON.parse(line); } catch { return; }
   const m = metaOf(file);
@@ -123,6 +123,7 @@ export function codexLine(file, line, emit, usage) {
     else if (p.type === 'item_completed' && p.item?.type === 'UserMessage') out({ type: 'user_prompt' });
     else if (p.type === 'token_count' && p.info?.last_token_usage) {
       const u = p.info.last_token_usage, cached = u.cached_input_tokens || 0;
+      setCtx(base.agent, u.input_tokens || 0, p.info.model_context_window || 0); // input_tokens включва кешираните = целият контекст
       usage(base.agent, base.label, base.subagent, {
         id: `${base.agent}@${obj.timestamp || ''}`,
         usage: { input_tokens: Math.max(0, (u.input_tokens || 0) - cached), output_tokens: u.output_tokens || 0, cache_read_input_tokens: cached, cache_creation_input_tokens: u.cache_write_input_tokens || 0 },
@@ -150,7 +151,7 @@ const OC_TOOLS = {
 };
 
 /** Следи базата на OpenCode. Връща { stop } или null, ако няма OpenCode / node:sqlite. */
-export async function watchOpencode(emit, usage, log = () => {}) {
+export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => {}) {
   if (process.env.OPENCODE === '0') return null;
   let file = opencodeDb(), DatabaseSync, db = null, timer = null;
   try {
@@ -226,6 +227,7 @@ export async function watchOpencode(emit, usage, log = () => {}) {
       } else if (d.type === 'step-finish' && d.tokens && !was) {
         parts.set(r.id, 'end');
         const t = d.tokens;
+        setCtx(base.agent, (t.input || 0) + (t.cache?.read || 0) + (t.cache?.write || 0), 0);
         usage(base.agent, base.label, base.subagent, { id: 'oc:' + r.id, usage: { input_tokens: t.input || 0, output_tokens: (t.output || 0) + (t.reasoning || 0), cache_read_input_tokens: t.cache?.read || 0, cache_creation_input_tokens: t.cache?.write || 0 } });
       }
     }

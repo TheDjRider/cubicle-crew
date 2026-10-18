@@ -313,6 +313,7 @@ export class UI {
     if (ag.provider) rows.push([T.agentKind, esc(PROVIDERS[ag.provider] || ag.provider)]);
     if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${priv ? '' : esc(shortDetail(tool.detail, 46))}`]);
     rows.push([T.toolCalls, String(ag.toolCalls)]);
+    if (ag.ctx > 0) { const k = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1).replace(/.0$/, '') + 'M' : Math.round(n / 1000) + 'k'); rows.push([T.context, `${k(ag.ctx)} / ${k(ag.ctxMax)} <span class="dim">(${Math.round((100 * ag.ctx) / ag.ctxMax)}%)</span>`]); }
     rows.push([T.uptime, fmtDuration(now - ag.firstSeen, T)]);
     if (ag.parent) { const p = this.model.agents.get(ag.parent); rows.push([T.childOf, esc(p ? this.displayName(p) : ag.parent.slice(0, 8))]); }
     if (ag.children.size) rows.push([T.parentOf, String(this.model.liveChildren(ag)) + ' / ' + ag.children.size]);
