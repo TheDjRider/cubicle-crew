@@ -193,7 +193,7 @@ export class UI {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
       if (!a && this.onSwitch(m)) { this.office.toggleLights(); return; }
-      if (!a && this.onBoard(m)) { this.office.nextBoard(); this.loadBoardStats(); return; }
+      if (!a && this.onBoard(m)) { this.office.boardClick(); this.loadBoardStats(); return; }
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       const pet = !a && this.office.petAt(m.x, m.y);
       if (pet) { this.office.petPet(pet); return; } // клик = погали; двоен клик = име и външен вид

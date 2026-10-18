@@ -49,6 +49,38 @@ export class Office {
     // дъската / прожекционният екран със статистиката (board.js); boardStats пълни ui.loadBoardStats()
     this.board = { page: prefs.board, prev: prefs.board, at: -1e9 };
     this.boardStats = null;
+    this.boardFlips = [];            // кога да се смени слайдът (след като водещият натисне дистанционното)
+  }
+
+  /** Клик върху дъската: някой отива до екрана и сменя слайда с дистанционното (без хора – веднага). */
+  boardClick(now = performance.now()) {
+    const a = this.presenter();
+    if (!a) { this.nextBoard(now); return; }
+    a.boardQueue = (a.boardQueue || 0) + 1;
+    if (a.loc.type !== 'board') this.route(a, { type: 'board' });
+  }
+
+  /** Кой сменя слайдовете: който вече е до екрана, иначе аватарът ти, иначе най-близкият оркестратор. */
+  presenter() {
+    const all = [...this.actors.values()].filter((a) => !a.agent.subagent && !a.agent.leaving && !a.leavingNow && a.alpha > 0.5 && a.loc.type !== 'door');
+    const at = all.find((a) => a.loc.type === 'board');
+    if (at) return at;
+    const me = all.find((a) => a.id === this.avatarId);
+    if (me) return me;
+    const b = this.room?.board;
+    return b ? all.sort((p, q) => Math.hypot(p.x - b.x, p.y - b.y) - Math.hypot(q.x - b.x, q.y - b.y))[0] || null : null;
+  }
+
+  /** Водещият е до екрана: натиска за всеки клик (през 0.75 с), после се връща. */
+  boardStay(a, now) {
+    if (a.mode !== 'idleSpot') return;
+    if (a.boardQueue > 0 && now - (a.boardPress || 0) > 750 && now - a.spotSince > 250) {
+      a.boardQueue--; a.boardPress = now;
+      this.boardFlips.push(now + 280);
+    } else if (!a.boardQueue && now - Math.max(a.spotSince, a.boardPress || 0) > 5000) {
+      a.boardPress = 0;
+      this.route(a, a.seat ? { type: 'seat' } : a.agent.state === 'idle' ? this.freeSofa(a) || this.freeLoungeSpot(a) : this.workSpot(a));
+    }
   }
 
   /** Клик върху дъската: следващата страница (живата дъска -> днес -> 7 дни -> 30 дни -> живата). */
@@ -262,6 +294,7 @@ export class Office {
       case 'coffee': return lo.spots.coffee;
       case 'cooler': return lo.spots.cooler;
       case 'darts': return lo.spots.darts;
+      case 'board': { const b = this.room?.board; return b ? { x: b.x + b.w + 10, y: CFG.WALL_H + 13 } : lo.spots.darts; }
       case 'sofa': return lo.spots.sofa[loc.i];
       case 'lounge': return lo.spots.extra[loc.i % lo.spots.extra.length];
       case 'door': return { x: L.door.cx, y: L.door.floorY };
@@ -282,6 +315,7 @@ export class Office {
       case 'visit': { const pt = this.locPoint(loc, a); return { pts: [pt], lane: 'row', y: pt.y }; }
       case 'coffee': case 'cooler': { const s = lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       case 'darts': { const s = lo.spots.darts; return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
+      case 'board': { const s = this.locPoint(loc, a); return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'sofa': { const s = lo.spots.sofa[loc.i]; const ay = lo.sofa.base + 4; return { pts: [{ x: s.x, y: ay }, { x: ln.loungeX, y: ay }], lane: 'v', x: ln.loungeX }; }
       default: return { pts: [], lane: 'row', y: a.y };
     }
@@ -444,10 +478,11 @@ export class Office {
     if (ag.leaving || a.leavingNow) return;
     if (a.mode === 'walk') {
       // ако е тръгнал към почивка, а вече има работа – връща се
-      if (a.seat && ag.state !== 'idle' && !['seat', 'pace', 'visit', 'transit', 'door'].includes(a.loc.type)) this.route(a, { type: 'seat' });
+      if (a.seat && ag.state !== 'idle' && !['seat', 'pace', 'visit', 'transit', 'door', 'board'].includes(a.loc.type)) this.route(a, { type: 'seat' });
       if (a.loc.type === 'visit' && !this.actors.has(a.loc.target)) this.route(a, { type: 'seat' });
       return;
     }
+    if (a.loc.type === 'board') { this.boardStay(a, now); return; }
     if (a.loc.type === 'visit') {
       const kid = this.actors.get(a.loc.target);
       if (!a.handed && kid) { a.handed = true; kid.receivedAt = now; }
@@ -548,6 +583,9 @@ export class Office {
   // ================================================================ кадър
   update(dt, now) {
     const L = this.L;
+    while (this.boardFlips.length && this.boardFlips[0] <= now) { this.boardFlips.shift(); this.nextBoard(now); }
+    // водещият е отклонен другаде (напр. загуби бюрото си) – кликовете не се губят
+    for (const a of this.actors.values()) if (a.boardQueue && a.loc.type !== 'board' && a.pendingLoc?.type !== 'board') { for (; a.boardQueue > 0; a.boardQueue--) this.nextBoard(now); }
     for (const a of [...this.actors.values()]) {
       this.decide(a, now);
       a.update(dt, now);

@@ -100,7 +100,7 @@ export class Actor {
     }
     if (this.loc.type === 'door' && this.loc.exit) { this.fadeTo = 0; }
     if (this.loc.type === 'visit') { this.face = 'side'; this.flip = false; } // гледа към детето
-    if (this.loc.type === 'darts') this.flip = false;
+    if (this.loc.type === 'darts' || this.loc.type === 'board') this.flip = false;
     // на дивана: работещ без бюро – с лаптоп; почиващ – най-често игра на конзолката, понякога дрямка
     // „Фокус“: почиващите само седят (без конзолка и дрямка)
     if (this.loc.type === 'sofa') this.sofaAct = !this.seat && this.agent.state !== 'idle' ? 'laptop' : prefs.focus ? 'rest' : Math.random() < 0.7 ? 'game' : 'doze';
@@ -108,7 +108,7 @@ export class Actor {
   }
 
   step(dt) {
-    let left = CFG.WALK_SPEED * dt;
+    let left = CFG.WALK_SPEED * (this.loc.type === 'board' ? 1.8 : 1) * dt; // към екрана бърза – чакат го
     while (left > 0 && this.path.length) {
       const p = this.path[0];
       const dx = p.x - this.x, dy = p.y - this.y;
@@ -185,6 +185,7 @@ export class Actor {
         return st > 5000 ? 'couchDoze' : (frameAt(st, 2600) ? 'couchSit' : 'couchSip');
       }
       if (this.loc.type === 'darts') return dartPose(st);
+      if (this.loc.type === 'board') return now - (this.boardPress || 0) < 650 ? 'standBackUse' : 'standBack'; // с дистанционното към екрана
       if (this.loc.type === 'door') return 'stand';
       if (this.loc.type === 'visit') return 'carryS1';
       // без бюро, но работи – прав с лаптоп
