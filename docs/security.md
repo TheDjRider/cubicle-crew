@@ -20,6 +20,10 @@ The text of your prompts, Claude's answers, thinking, file contents and tool out
 
 **Sub-agent metadata** – `subagents/agent-*.meta.json` next to the transcripts: `toolUseId`, `requestShape`, `description` (the task name shown on a sub-agent's label, cut to 80 characters).
 
+**Codex sessions** – `~/.codex/sessions/**/rollout-*.jsonl` (or `$CODEX_HOME/sessions`; `CODEX=0` turns it off). Same idea as the Claude Code transcripts, only these fields are used: `session_meta.cwd` (folder name only) and the parent thread id of a sub-agent; `response_item` types `function_call` / `custom_tool_call` / `local_shell_call` (tool name, call id, and the command or patched file path cut to 60 characters), their `*_output` (only the call id), `message`/`reasoning` (only that one happened); `event_msg` `user_message` (only that you wrote something) and `token_count` (numbers only). Prompts, answers, reasoning and tool output are never read into the app.
+
+**OpenCode sessions** – the OpenCode database `~/.local/share/opencode/opencode.db` (or `$XDG_DATA_HOME/opencode`, `OPENCODE_DB`; `OPENCODE=0` turns it off), opened **read-only**. Once a second it reads the parts changed since the last look: part type, tool name, call id, status, the first of `filePath`/`path`/`command`/`pattern`/`description`/`url`/`query` cut to 60 characters, and token counts; from `session` the folder name, the parent session and the title (shown on a sub-agent's label). Message text and tool output are never used.
+
 **Live sessions** – `~/.claude/sessions/<pid>.json` (or `CLAUDE_SESSIONS_DIR`): `pid`, `sessionId`, `cwd`, `status`, `waitingFor`. Used to know which sessions are open and when one waits for a permission prompt.
 
 ## What it writes

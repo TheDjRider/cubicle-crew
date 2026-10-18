@@ -4,7 +4,7 @@
 
 ### Your Claude Code agents, living in a tiny pixel-art office.
 
-Every Claude Code session becomes a coworker at a desk. Sub-agents walk in through the door, pick up the task
+Every Claude Code session becomes a coworker at a desk – and so does every **Codex** and **OpenCode** session. Sub-agents walk in through the door, pick up the task
 and sit down with their team. When someone needs you, the whole room lets you know.
 
 [**▶ Watch the trailer**](docs/media/trailer.mp4) · [**⬇ Download for Windows**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [Desktop app](#desktop-widget-windows) · [How it works](#how-it-works)
@@ -165,6 +165,8 @@ Everything stays on your machine. [docs/security.md](docs/security.md) lists exa
 ```
 ~/.claude/projects/**/*.jsonl  ──tail──▶  server.js  ──WebSocket──▶  browser / Electron
 ~/.claude/sessions/<pid>.json  ──poll──▶     │                         │
+~/.codex/sessions/**/*.jsonl   ──tail──▶     │
+opencode.db (read-only)        ──poll──▶     │
                                          wallet.js                  canvas scene
                                   (~/.pixel-office/save.json)     (vanilla ES modules)
 ```
@@ -173,6 +175,7 @@ Everything stays on your machine. [docs/security.md](docs/security.md) lists exa
   (`tool_start`, `tool_end`, `say`, `user_prompt`). It links sub-agents to their parent through
   `subagents/agent-<id>.meta.json` first, then the session id, then a timing heuristic. It also reads
   `~/.claude/sessions` every second to know which sessions are still open, which are busy and which are waiting for you. Old history isn't replayed on start.
+- **Codex and OpenCode** (`providers.js`): Codex rollout files are tailed like Claude Code transcripts; shell commands are sorted into reading (`rg`, `cat`, `Get-Content`…) and running, `apply_patch` is typing. OpenCode's SQLite database is read once a second (read-only), and its sub-sessions (the `task` tool) walk in as sub-agents. Their labels say `· Codex` / `· OpenCode`. They have no live-session file, so they don't turn red on permission prompts yet, and "Jump to the terminal" works only for Claude Code.
 - **Tool → state:** `Edit`/`Write` → typing, `Read`/`Grep`/`WebFetch` → reading, `Bash` → running,
   `Task`/`Agent` → delegating, `AskUserQuestion` → waiting. 8 seconds of silence → idle, unless Claude Code still reports the session as busy (it's thinking or writing a long reply). You can change the mapping in `public/rules.js`.
 - **Permission prompts** never reach the transcript, but Claude Code marks the session as `waiting` (`waitingFor: "permission prompt"`)
