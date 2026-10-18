@@ -12,7 +12,7 @@ import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
-import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode } from './providers.js';
+import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine } from './providers.js';
 
 const PORT = Number(process.env.PORT) || 4317;
 const ROOT = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
@@ -28,7 +28,7 @@ const DEBUG = !!process.env.DEBUG || process.argv.includes('--debug');
 const EXTRA = (process.env.CLAUDE_PROJECTS_EXTRA || '').split(';').map((s) => s.trim()).filter(Boolean);
 const WSL_MS = 60000;
 let wslRoots = [];
-const roots = () => [ROOT, ...EXTRA, ...wslRoots, ...(CODEX_ON ? [CODEX_ROOT] : [])];
+const roots = () => [ROOT, ...EXTRA, ...wslRoots, ...(CODEX_ON ? [CODEX_ROOT] : []), ...(GEMINI_ON ? [GEMINI_ROOT] : [])];
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const SPRITES = path.join(PUBLIC, 'sprites');
 const HOST = '127.0.0.1';                 // само локално – никой от мрежата (Wi-Fi в офиса/кафенето) не вижда сесиите
@@ -290,6 +290,8 @@ function setCtx(agent, ctx, max) {
 
 function handleLine(file, line) {
   if (isCodexFile(file)) { codexLine(file, line, emitEvt, usageOf, setCtx); return; }
+  if (isGeminiFile(file)) { geminiLine(file, line, emitEvt, usageOf, setCtx); return; }
+  if (file.startsWith(GEMINI_ROOT + path.sep)) return; // други .jsonl в ~/.gemini/tmp (не са разговори)
   let obj;
   try { obj = JSON.parse(line); } catch { return; }
   const agent = path.basename(file, '.jsonl');
@@ -451,6 +453,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   poll();
   setInterval(scanSessions, SESSIONS_MS);
   if (CODEX_ON) console.log(`Codex: следя ${CODEX_ROOT}`);
+  if (GEMINI_ON) console.log(`Gemini CLI: следя ${GEMINI_ROOT}`);
   watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx).catch(() => {});
   scanSessions();
   wallet.port = actual;

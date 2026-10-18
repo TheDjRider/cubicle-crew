@@ -40,7 +40,7 @@ const el = (tag, cls, parent) => { const e = document.createElement(tag); if (cl
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /** Кратко id без префикса на агента (codex:…, oc:…). */
-const shortId = (id, n) => String(id).replace(/^(codex|oc):/, '').slice(0, n);
+const shortId = (id, n) => String(id).replace(/^(codex|oc|gemini):/, '').slice(0, n);
 
 export class UI {
   constructor(office, model, canvas) {

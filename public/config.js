@@ -35,7 +35,7 @@ export const CFG = {
 
 // Цветовете на състоянията са част от визуалния език — не ги променяй без причина.
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
-export const PROVIDERS = { codex: 'Codex', opencode: 'OpenCode' };
+export const PROVIDERS = { codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot' };
 
 export const STATES = {
   idle:       { color: '#6b6b80' },

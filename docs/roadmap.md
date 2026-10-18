@@ -7,8 +7,9 @@ Ticked = done and merged.
 - [x] Codex and OpenCode sessions (2.3.0)
 - [x] **Context gauge** – a stack of paper on every desk that grows with the agent's context window, turns
       yellow/red when it fills up, and goes into the bin when the conversation is compacted; numbers in the card
-- [ ] **Gemini CLI** sessions (`~/.gemini/tmp/*/chats/*.json`)
-- [ ] **GitHub Copilot CLI** sessions (the most requested agent in Pixel Agents' issues)
+- [x] **Gemini CLI** sessions (`~/.gemini/tmp/*/chats/*.jsonl`, v0.64+ format; the old whole-file `.json` isn't read)
+- [ ] **GitHub Copilot CLI** sessions (the most requested agent in Pixel Agents' issues) – *blocked*: the on-disk
+      `~/.copilot/session-state/<id>/events.jsonl` format is undocumented; needs one real session file to build against
 - [ ] **Ended / crashed sessions** – a session that ends in the middle of a tool greys out with a small mark
       until you've seen it, instead of quietly walking out
 - [ ] Post drafts: Show HN, r/ClaudeAI, r/ChatGPTCoding (with the vertical video)

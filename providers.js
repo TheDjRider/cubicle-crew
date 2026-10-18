@@ -237,3 +237,79 @@ export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => 
   tick();
   return { stop() { clearInterval(timer); try { db?.close(); } catch { /* */ } } };
 }
+
+// ================================================================ Gemini CLI
+// ~/.gemini/tmp/<проект>/chats/session-<време>-<id>.jsonl ($GEMINI_DIR или $GEMINI_CLI_HOME/.gemini); под-агентите –
+// chats/<id на родителя>/<id>.jsonl. Редове: метаданни { sessionId, kind, directories }, съобщения
+// { id, type: 'user'|'gemini', toolCalls: [{ id, name, args, status }], thoughts, tokens }, $patch, $set.
+// Едно съобщение се записва наново (същото id) всеки път, когато инструментите му се променят.
+const GEMINI_HOME = process.env.GEMINI_DIR || path.join(process.env.GEMINI_CLI_HOME || os.homedir(), '.gemini');
+export const GEMINI_ROOT = path.join(GEMINI_HOME, 'tmp');
+export const GEMINI_ON = process.env.GEMINI !== '0' && (!process.env.CLAUDE_PROJECTS_DIR || !!process.env.GEMINI_DIR);
+export const isGeminiFile = (file) => file.startsWith(GEMINI_ROOT + path.sep) && file.includes(`${path.sep}chats${path.sep}`);
+
+const geminiState = new Map();   // файл -> { id, label, parent, calls: Map(id -> 'start'|'end'), msgs: Set }
+const GEM_TOOLS = {
+  read_file: 'Read', read_many_files: 'Read', list_directory: 'Glob', glob: 'Glob', search_file_content: 'Grep', grep: 'Grep',
+  write_file: 'Write', replace: 'Edit', edit: 'Edit', google_web_search: 'WebSearch', web_fetch: 'WebFetch',
+  save_memory: 'Write', write_todos: 'TodoWrite', ask_user: 'AskUserQuestion',
+};
+
+function geminiOf(file) {
+  let g = geminiState.get(file);
+  if (g) return g;
+  // папката на проекта: ~/.gemini/tmp/<име или хеш>; родител – ако файлът е в chats/<id на родителя>/
+  const rel = path.relative(GEMINI_ROOT, file).split(path.sep);
+  const chatsAt = rel.indexOf('chats');
+  g = { id: 'gemini:' + path.basename(file, '.jsonl'), label: rel[0] && !/^[0-9a-f]{32,}$/i.test(rel[0]) ? rel[0] : 'gemini', parent: null, calls: new Map() };
+  if (rel.length - chatsAt > 2) g.parent = 'gemini:' + rel[chatsAt + 1];
+  try {
+    const fd = fs.openSync(file, 'r'), buf = Buffer.alloc(65536);
+    const n = fs.readSync(fd, buf, 0, buf.length, 0); fs.closeSync(fd);
+    geminiMeta(g, JSON.parse(buf.subarray(0, n).toString('utf8').split('\n')[0]));
+  } catch { /* */ }
+  geminiState.set(file, g);
+  return g;
+}
+function geminiMeta(g, o) {
+  if (!o || typeof o.sessionId !== 'string' || o.type) return false;
+  g.id = 'gemini:' + o.sessionId;
+  if (Array.isArray(o.directories) && o.directories[0]) g.label = path.basename(String(o.directories[0]).replace(/[\/]+$/, '')) || g.label;
+  return true;
+}
+
+function geminiTool(name, args = {}) {
+  if (name === 'run_shell_command') return [shellTool(args.command), clip(unwrapShell(args.command))];
+  const tool = GEM_TOOLS[name] || (/agent|investigator|delegate/i.test(name) ? 'Agent' : name);
+  return [tool, clip(args.file_path || args.absolute_path || args.path || args.pattern || args.query || args.url || args.description || (Array.isArray(args.paths) ? args.paths[0] : ''))];
+}
+
+/** Един ред от Gemini CLI сесия -> събития (като codexLine). */
+export function geminiLine(file, line, emit, usage, setCtx = () => {}) {
+  let o;
+  try { o = JSON.parse(line); } catch { return; }
+  const g = geminiOf(file);
+  if (geminiMeta(g, o)) return;
+  const base = { agent: g.id, label: g.label, subagent: !!g.parent, provider: 'gemini', ts: Date.now() };
+  if (g.parent) base.parent = g.parent;
+  const out = (e) => emit({ ...base, ...e });
+  const calls = o.type === 'gemini' ? o.toolCalls || [] : o.$patch ? [...(o.$patch.toolCalls || []), ...(o.$patch.updates || []).flatMap((u) => u.toolCalls || [])] : [];
+  for (const c of calls) {
+    if (!c?.id) continue;
+    const was = g.calls.get(c.id);
+    const done = ['success', 'error', 'cancelled'].includes(c.status) || (o.$patch && c.result != null);
+    if (!was && c.name) { const [tool, detail] = geminiTool(c.name, c.args); out({ type: 'tool_start', id: c.id, tool, detail }); g.calls.set(c.id, 'start'); }
+    if (done && g.calls.get(c.id) === 'start') { out({ type: 'tool_end', tool_use_id: c.id }); g.calls.set(c.id, 'end'); }
+  }
+  if (o.type === 'user') out({ type: 'user_prompt' });
+  else if (o.type === 'gemini') {
+    if (!calls.length || o.thoughts?.length) out({ type: 'say' });
+    const t = o.tokens;
+    if (t && o.id) {
+      const cached = t.cached || 0;
+      setCtx(base.agent, t.input || 0, 1000000); // promptTokenCount = целият контекст (с кешираното)
+      usage(base.agent, base.label, base.subagent, { id: 'gem:' + o.id, usage: { input_tokens: Math.max(0, (t.input || 0) - cached), output_tokens: (t.output || 0) + (t.thoughts || 0), cache_read_input_tokens: cached, cache_creation_input_tokens: 0 } });
+    }
+  }
+  if (g.calls.size > 5000) for (const k of [...g.calls.keys()].slice(0, 2500)) g.calls.delete(k);
+}
