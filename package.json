@@ -42,6 +42,7 @@
       "weather.js",
       "stats.js",
       "focus.js",
+      "providers.js",
       "electron/**",
       "public/**",
       "!public/sprites/*.psd"

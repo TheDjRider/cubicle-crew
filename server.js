@@ -12,6 +12,7 @@ import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
+import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode } from './providers.js';
 
 const PORT = Number(process.env.PORT) || 4317;
 const ROOT = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
@@ -27,7 +28,7 @@ const DEBUG = !!process.env.DEBUG || process.argv.includes('--debug');
 const EXTRA = (process.env.CLAUDE_PROJECTS_EXTRA || '').split(';').map((s) => s.trim()).filter(Boolean);
 const WSL_MS = 60000;
 let wslRoots = [];
-const roots = () => [ROOT, ...EXTRA, ...wslRoots];
+const roots = () => [ROOT, ...EXTRA, ...wslRoots, ...(CODEX_ON ? [CODEX_ROOT] : [])];
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const SPRITES = path.join(PUBLIC, 'sprites');
 const HOST = '127.0.0.1';                 // само локално – никой от мрежата (Wi-Fi в офиса/кафенето) не вижда сесиите
@@ -269,7 +270,16 @@ function linkFor(file, obj, agent) {
   return L;
 }
 
+/** Едно събитие към страницата и портфейла (от Claude Code, Codex или OpenCode). */
+function emitEvt(evt) {
+  if (DEBUG) console.log(evt.agent.slice(0, 14).padEnd(14), evt.type.padEnd(11), evt.tool || '', evt.detail || '', evt.parent ? `↑${evt.parent.slice(0, 8)} (${evt.link || evt.provider || ''})` : '');
+  broadcast(evt);
+  wallet.ingest(evt);
+}
+const usageOf = (agent, label, sub, msg) => wallet.usage(agent, label, sub, msg);
+
 function handleLine(file, line) {
+  if (isCodexFile(file)) { codexLine(file, line, emitEvt, usageOf); return; }
   let obj;
   try { obj = JSON.parse(line); } catch { return; }
   const agent = path.basename(file, '.jsonl');
@@ -310,9 +320,7 @@ function handleLine(file, line) {
       delegations.push({ parent: agent, projectDir: projectDirOf(file), tool_use_id: e.id, ts: Date.now(), claimed: false });
       while (delegations.length > 200) delegations.shift();
     }
-    if (DEBUG) console.log(evt.agent.slice(0, 14).padEnd(14), evt.type.padEnd(11), evt.tool || '', evt.detail || '', evt.parent ? `↑${evt.parent.slice(0, 8)} (${evt.link})` : '');
-    broadcast(evt);
-    wallet.ingest(evt);
+    emitEvt(evt);
   }
 }
 
@@ -428,6 +436,8 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   setInterval(poll, POLL_MS);
   poll();
   setInterval(scanSessions, SESSIONS_MS);
+  if (CODEX_ON) console.log(`Codex: следя ${CODEX_ROOT}`);
+  watchOpencode(emitEvt, usageOf, (m) => console.log(m)).catch(() => {});
   scanSessions();
   wallet.port = actual;
   wallet.start();

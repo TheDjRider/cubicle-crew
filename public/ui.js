@@ -1,6 +1,6 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
-import { CFG, STATES, STATE_ORDER, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
+import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
 import { shortDetail, fmtDuration } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
@@ -38,6 +38,9 @@ function bellUrl(on) {
 
 const el = (tag, cls, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/** Кратко id без префикса на агента (codex:…, oc:…). */
+const shortId = (id, n) => String(id).replace(/^(codex|oc):/, '').slice(0, n);
 
 export class UI {
   constructor(office, model, canvas) {
@@ -239,7 +242,7 @@ export class UI {
       const anc = office.anchors(a);
       const hidden = a.alpha < 0.05;
       // етикет
-      const name = (ag.subagent ? '↳ ' : '★ ') + ((!prefs.private && ag.desc) || this.displayName(ag));
+      const name = (ag.subagent ? '↳ ' : '★ ') + ((!prefs.private && ag.desc) || this.displayName(ag)) + (ag.provider && !ag.subagent ? ` · ${PROVIDERS[ag.provider] || ag.provider}` : '');
       this.set(it, 'name', name, () => { it.label.children[1].textContent = name; it.lw = 0; });
       this.set(it, 'st', st, () => {
         it.label.children[0].style.background = STATES[st].color;
@@ -296,7 +299,7 @@ export class UI {
     // ако няколко сесии са в един проект – добавяме кратко id
     let dup = 0;
     for (const o of this.model.agents.values()) if (o.label === ag.label && !o.subagent) dup++;
-    return dup > 1 && !ag.subagent ? ag.sessionName || `${ag.label} #${ag.id.slice(0, 4)}` : ag.label;
+    return dup > 1 && !ag.subagent ? ag.sessionName || `${ag.label} #${shortId(ag.id, 4)}` : ag.label;
   }
 
   describe(a, now, card = false) {
@@ -304,9 +307,10 @@ export class UI {
     const tool = this.model.currentTool(ag) || ag.lastTool;
     const own = prefs.name(ag.id);
     const rows = [
-      [T.project, (own ? `<b>${esc(own)}</b> · ` : '') + esc(ag.label) + ` <span class="dim">#${esc(ag.id.slice(0, 8))}</span>`],
+      [T.project, (own ? `<b>${esc(own)}</b> · ` : '') + esc(ag.label) + ` <span class="dim">#${esc(shortId(ag.id, 8))}</span>`],
       [T.state, `<i class="dot" data-state="${st}" style="background:${STATES[st].color}"></i>${T.states[st]}`],
     ];
+    if (ag.provider) rows.push([T.agentKind, esc(PROVIDERS[ag.provider] || ag.provider)]);
     if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${priv ? '' : esc(shortDetail(tool.detail, 46))}`]);
     rows.push([T.toolCalls, String(ag.toolCalls)]);
     rows.push([T.uptime, fmtDuration(now - ag.firstSeen, T)]);

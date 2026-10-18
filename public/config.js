@@ -34,6 +34,9 @@ export const CFG = {
 };
 
 // Цветовете на състоянията са част от визуалния език — не ги променяй без причина.
+/** Други агенти освен Claude Code (имената са еднакви на двата езика). */
+export const PROVIDERS = { codex: 'Codex', opencode: 'OpenCode' };
+
 export const STATES = {
   idle:       { color: '#6b6b80' },
   thinking:   { color: '#e0c24a' },
@@ -67,6 +70,7 @@ const T_BG = {
   project: 'Проект',
   parentOf: 'Под-агенти',
   childOf: 'Под-агент на',
+  agentKind: 'Агент',
   needsYou: 'Чака теб!',
   allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
   sound: {
@@ -246,6 +250,7 @@ const T_EN = {
   project: 'Project',
   parentOf: 'Sub-agents',
   childOf: 'Sub-agent of',
+  agentKind: 'Agent',
   needsYou: 'Needs you!',
   allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
   sound: {

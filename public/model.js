@@ -29,6 +29,7 @@ export class Model {
         pending: new Map(), lastEvent: now, firstSeen: now, toolCalls: 0,
         children: new Set(), state: 'thinking', stateSince: now, busySince: now,
         done: false, doneAt: 0, leaving: false, lastTool: null,
+        provider: e.provider || null, // 'codex' | 'opencode'; Claude Code = null
       };
       if (e.type === 'presence') { // жива сесия без скорошни събития -> идва и направо почива
         a.lastEvent = now - CFG.IDLE_MS - 1; a.state = 'idle'; a.stateSince = now - CFG.WANDER_AFTER_MS; a.busySince = 0;
