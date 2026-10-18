@@ -12,7 +12,7 @@ Ticked = done and merged.
       `~/.copilot/session-state/<id>/events.jsonl` format is undocumented; needs one real session file to build against
 - [x] **Ended / crashed sessions** – a session that ends in the middle of a tool greys out with a small mark
       until you've seen it, instead of quietly walking out
-- [ ] Post drafts: Show HN, r/ClaudeAI, r/ChatGPTCoding (with the vertical video)
+- [x] Post drafts: Show HN, r/ClaudeAI, r/ChatGPTCoding (with the vertical video) – in out/posts/, not in the repo
 
 ## Needs a decision
 - [ ] **Allow / Deny from the office** (button in the card + hotkey). Needs a Claude Code hook – opt-in, with
