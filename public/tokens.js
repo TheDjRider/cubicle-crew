@@ -72,7 +72,7 @@ export class Tokens {
 
   /** Еднократни известия за новости (видяното се пази в localStorage po.news). Засега: Буено за досегашните бигъли. */
   news() {
-    if (PARAMS.demo || PARAMS.overlay || PARAMS.strip || prefs.focus || !this.save.setup) return;
+    if (PARAMS.demo || PARAMS.overlay || PARAMS.strip || PARAMS.lan || prefs.focus || !this.save.setup) return;
     let seen = [];
     try { seen = JSON.parse(localStorage.getItem('po.news') || '[]'); } catch { /* няма достъп */ }
     if (seen.includes('bueno') || !unlocked(this.save, 'dog') || resolveDecor(this.save.equipped).dog?.id !== 'dog.beagle') return;

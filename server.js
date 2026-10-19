@@ -15,6 +15,7 @@ import { External } from './external.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
 import { Permissions } from './permissions.js';
+import { Lan } from './lan.js';
 import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine } from './providers.js';
 
 const PORT = Number(process.env.PORT) || 4317;
@@ -185,6 +186,22 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(updates.msg()));
     return;
   }
+  // изгледът за телефон (lan.js): състояние, вкл./изкл., нов PIN – само от тази машина, както магазина
+  if (urlPath === '/api/lan') {
+    if (req.method === 'GET') { res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' }); res.end(JSON.stringify(lan.info())); return; }
+    const origin = req.headers.origin;
+    if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
+    let body = '';
+    req.on('data', (d) => { body += d; if (body.length > 1024) req.destroy(); });
+    req.on('end', async () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch { /* празно */ }
+      const r = await lan.set({ enabled: typeof data.enabled === 'boolean' ? data.enabled : undefined, newPin: data.newPin === true });
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(r));
+    });
+    return;
+  }
   if (urlPath === '/api/update') {
     const origin = req.headers.origin;
     if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
@@ -210,9 +227,11 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocketServer({ server, verifyClient: ({ req }) => localReq(req) });
 wss.on('error', () => { /* грешките при listen се обработват в startServer */ });
+let lan = null; // lan.js – създава се по-долу (портфейлът може да прати нещо още при създаването си)
 const broadcast = (evt) => {
   const msg = JSON.stringify(evt);
   for (const c of wss.clients) if (c.readyState === 1) c.send(msg);
+  lan?.send(evt); // телефонът в локалната мрежа (ако е включен) – без команди и пътища
 };
 const wallet = new Wallet(broadcast, (m) => console.log(m));
 // молбите за разрешение (hook-ът е по желание – вж. permissions.js)
@@ -228,6 +247,12 @@ const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
 const updates = new Updates(broadcast, (m) => { if (DEBUG) console.log(m); });
 // отвореният вход за други агенти (POST /api/event): събитията – като от транскриптите, състоянията – в живите сесии
 const external = new External({ emit: (e) => emitEvt(e), changed: () => scanSessions() });
+// изглед за телефон в локалната мрежа (по желание, с PIN, само за гледане)
+lan = new Lan({
+  home: process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office'), publicDir: PUBLIC, mime: MIME,
+  snapshot: () => [wallet.msg(0, 'sync', null, null, true), { type: 'sessions', list: live }, weather.msg()],
+  save: () => wallet.publicSave(), log: (m) => console.log(m),
+});
 // нов клиент веднага вижда портфейла и живите сесии
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify(wallet.msg(0, 'sync', null, null, true)));
@@ -540,6 +565,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   if (CODEX_ON) console.log(`Codex: watching ${CODEX_ROOT}`);
   if (GEMINI_ON) console.log(`Gemini CLI: watching ${GEMINI_ROOT}`);
   watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx).catch(() => {});
+  lan.start().catch(() => {});
   scanSessions();
   wallet.port = actual;
   perms.syncPort(actual);

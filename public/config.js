@@ -57,6 +57,7 @@ const T_BG = {
   connecting: 'свързване…',
   connected: 'свързан',
   waitingActivity: 'Чакам някой агент да започне работа…',
+  lan: { title: 'Cubicle Crew на телефона', hint: 'PIN-ът е на компютъра: Настройки → Поверителност → Изглед за телефон.', go: 'Влез', wrong: 'Грешен PIN', locked: 'Твърде много опити – опитай пак след минута.', offline: 'Компютърът не отговаря.' },
   wait: { morning: 'Добро утро!', day: 'Добър ден!', evening: 'Добър вечер!', msg: 'Чакам първия агент…', hint: 'Кликни, за да отвориш офиса' },
   reconnecting: 'връзката падна, опитвам пак…',
   demo: 'ДЕМО',
@@ -132,6 +133,9 @@ const T_BG = {
     permErr: { parse: 'settings.json не е валиден JSON – не го пипам.', write: 'Не успях да запиша settings.json.', offline: 'Сървърът не отговаря.' },
     notify: 'Известие от системата', notifyHint: 'Изскачащо известие, когато агент чака теб. Клик върху него отваря терминала на сесията.',
     privacy: 'Поверителност',
+    lan: 'Изглед за телефон', lanHint: 'Офисът на телефона в същата Wi-Fi мрежа – само за гледане, с PIN, без команди, пътища и въпроси за разрешение. Отваря порт в локалната мрежа (Windows може да попита за защитната стена).',
+    lanOpen: 'Отвори на телефона:', lanPin: 'PIN', lanNewPin: 'Нов PIN (излиза от всички телефони)', lanPhones: (n) => `Влезли телефони: ${n}`,
+    lanNoNet: 'Не намирам локална мрежа (Wi-Fi или кабел).', lanErr: 'Не мога да отворя порт за телефона.',
     private: 'Скривай команди и пътища', privateHint: 'Балончетата, картата и известията показват само инструмента и името на сесията – за споделен екран и стрийм.',
     window: 'Прозорец',
     onTop: 'Винаги отгоре', onTopHint: 'Прозорецът стои над другите, за да виждаш офиса, докато работиш.',
@@ -263,6 +267,7 @@ const T_EN = {
   connecting: 'connecting…',
   connected: 'connected',
   waitingActivity: 'Waiting for an agent to start working…',
+  lan: { title: 'Cubicle Crew on your phone', hint: 'The PIN is on the computer: Settings → Privacy → Phone view.', go: 'Sign in', wrong: 'Wrong PIN', locked: 'Too many tries – try again in a minute.', offline: 'The computer is not answering.' },
   wait: { morning: 'Good morning!', day: 'Good afternoon!', evening: 'Good evening!', msg: 'Waiting for the first agent…', hint: 'Click to open the office' },
   reconnecting: 'connection lost, retrying…',
   demo: 'DEMO',
@@ -335,6 +340,9 @@ const T_EN = {
     permErr: { parse: 'settings.json is not valid JSON – leaving it alone.', write: 'Could not write settings.json.', offline: 'The server is not answering.' },
     notify: 'System notification', notifyHint: 'A pop-up when an agent waits for you. Clicking it opens that session\'s terminal.',
     privacy: 'Privacy',
+    lan: 'Phone view', lanHint: 'The office on your phone on the same Wi-Fi – view only, with a PIN, without commands, paths or permission prompts. Opens a port on your local network (Windows may ask about the firewall).',
+    lanOpen: 'Open on your phone:', lanPin: 'PIN', lanNewPin: 'New PIN (signs out every phone)', lanPhones: (n) => `Phones signed in: ${n}`,
+    lanNoNet: 'No local network found (Wi-Fi or cable).', lanErr: 'Could not open a port for the phone.',
     private: 'Hide commands and paths', privateHint: 'Bubbles, the card and notifications show only the tool and the session name – for screen sharing and streaming.',
     window: 'Window',
     onTop: 'Always on top', onTopHint: 'The window stays above the others, so you see the office while you work.',
@@ -516,6 +524,8 @@ export const PARAMS = {
   overlay: Q.has('overlay'),   // ?overlay – за OBS/стрийм: без HUD и легенда, командите и пътищата са скрити
   focus: Q.has('focus'),       // ?focus – режим „Фокус“ (за тестове; иначе се пази в настройките)
   strip: Q.has('strip'),       // ?strip – тънка лента: по един ред на сесия вместо офиса (Electron го слага от менюто)
+  // отворено през адреса в локалната мрежа (изгледът за телефон): само за гледане, винаги без команди и пътища
+  lan: !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname),
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
 /** Име на любимец по място (save.petNames, иначе името на породата, ако има такова, иначе това на мястото – на текущия език). */

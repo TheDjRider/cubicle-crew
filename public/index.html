@@ -421,6 +421,21 @@
   #prompt kbd { font: 11px var(--mono); opacity: .7; margin-left: 4px; }
   #prompt .more { color: var(--ui-dim); font-size: 12px; }
   body.overlay #prompt { display: none; }
+  /* изгледът за телефон: само за гледане */
+  body.lan #prompt, body.lan #hud .shopbtn, body.lan #hud .help, body.lan #hud .statsbtn, body.lan #hud .snd { display: none; }
+  body.lan #hud .tok { pointer-events: none; }
+  #lanlogin { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    padding: 24px; background: #0e0c14; text-align: center; }
+  #lanlogin b { font-size: 18px; color: #ffe27a; }
+  #lanlogin span { color: var(--ui-dim); max-width: 320px; }
+  #lanlogin input { width: 9ch; font: 600 26px/1.2 var(--mono); letter-spacing: .2em; text-align: center; color: var(--ui-text);
+    background: #17121f; border: 2px solid var(--ui-border); border-radius: 4px; padding: 6px 8px; }
+  #lanlogin button { font: inherit; font-size: 15px; padding: 6px 22px; color: #1d1626; background: #e0c24a; border: 0; border-radius: 3px; cursor: pointer; }
+  #lanlogin .err { color: #ff9ab0; margin: 0; }
+  .lanbox { margin: 4px 0 10px; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: 3px; }
+  .lanbox p { margin: 0 0 6px; }
+  .lanbox code { user-select: all; }
+  .lanbox .pin { font: 600 18px var(--mono); letter-spacing: .15em; color: #ffe27a; }
   #hud .help.upd { position: relative; }
   #hud .help.upd::after { content: ''; position: absolute; top: 1px; right: 1px; width: 5px; height: 5px; background: #4ac26b; border-radius: 50%; }
 </style>

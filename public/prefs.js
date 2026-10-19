@@ -16,7 +16,7 @@ const listeners = [];
 
 export const prefs = {
   get focus() { return !!state.focus; },
-  get private() { return !!state.private; },
+  get private() { return !!state.private || PARAMS.lan; }, // телефонът: винаги (сървърът и без това не праща командите)
   get lights() { return state.lights !== false; },
   get board() { const b = state.board | 0; return b >= 0 && b < 4 ? b : 0; },
   /** Собственото име на сесия (или null). */

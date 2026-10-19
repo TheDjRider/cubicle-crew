@@ -88,6 +88,7 @@ export class Shop {
   }
 
   open(tab) {
+    if (PARAMS.lan) return; // телефонът само гледа
     if (document.body.classList.contains('setting-up')) return; // първо началната настройка
     if (prefs.focus && tab !== 'weather' && tab !== 'stats') return; // „Фокус“: без магазин (времето и статистиката остават)
     if (tab) this.tab = tab;

@@ -241,6 +241,7 @@ export class UI {
   /** Статистиката за екрана: от сървъра (последните 30 дни), в ?demo – примерна. */
   async loadBoardStats() {
     if (PARAMS.demo) { this.office.boardStats ||= demoBoardData(); return; }
+    if (PARAMS.lan) return; // статистиката остава на компютъра
     try {
       const r = await (await fetch('api/stats?days=30')).json();
       if (r?.ok) this.office.boardStats = boardData(r.days);
@@ -386,7 +387,7 @@ export class UI {
       hist = `<div class="hist"><b>${T.history}</b>` + ag.history.slice(-10).reverse().map((h) =>
         `<div><span class="t">${hm(h.at)}</span><b>${esc(h.tool)}</b><span class="d">${dangerHtml(h, priv ? '' : esc(shortDetail(h.detail, 34)))}</span><span class="t">${h.ms == null ? T.running : fmtDuration(h.ms, T)}</span></div>`).join('') + '</div>';
     }
-    const ren = card ? `<div class="ren"><button type="button" data-term title="${T.terminalHint}">↗ ${T.terminal}</button>${ag.subagent ? '' : ` <button type="button" data-ren>✎ ${T.rename}</button>`}</div>` : '';
+    const ren = card ? `<div class="ren">${PARAMS.lan ? '' : `<button type="button" data-term title="${T.terminalHint}">↗ ${T.terminal}</button>`}${ag.subagent ? '' : ` <button type="button" data-ren>✎ ${T.rename}</button>`}</div>` : '';
     return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>' + hist + ren;
   }
 
@@ -471,6 +472,7 @@ export class UI {
 
   // ------------------------------------------------------------------ към терминала (сървърът изкарва прозореца отпред)
   async goTerminal(id) {
+    if (PARAMS.lan) return; // от телефона – не
     const a = this.office.actors.get(id);
     const lead = a ? this.office.leadOf(a) : null;
     const agent = lead ? lead.id : id;
@@ -509,6 +511,7 @@ export class UI {
 
   // ------------------------------------------------------------------ помощ: цветовете + настройки
   toggleHelp(show) {
+    if (PARAMS.lan) return; // настройките са на компютъра
     if (!this.help) {
       this.help = el('div', null, document.body);
       this.help.id = 'help'; this.help.hidden = true;
@@ -522,6 +525,7 @@ export class UI {
         else if (t.closest('[data-act]')) this.bridge?.action?.(t.closest('[data-act]').dataset.act);
         else if (t.closest('[data-snap]')) this.onSnapshot?.();
         else if (t.closest('[data-clip]')) { this.toggleHelp(false); this.onClip?.(); }
+        else if (t.closest('[data-lanpin]')) this.setLan({ newPin: true });
       });
       if (!this.helpTab) { try { this.helpTab = localStorage.getItem('po.helpTab') || 'look'; } catch { this.helpTab = 'look'; } }
       // настройките на приложението се сменят и от трея – панелът ги показва актуални
@@ -547,6 +551,7 @@ export class UI {
     else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
     else if (t.name === 'lang') { if (PARAMS.desktop && this.bridge?.action) this.bridge.action('lang:' + t.value); else setLang(t.value); }
     else if (d.hook != null) this.setHook(t.checked);
+    else if (d.lan != null) this.setLan({ enabled: t.checked });
     else if (d.upd != null) fetch('api/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: t.checked }) }).catch(() => {});
     else if (d.desk) { this.bridge?.setDesktop?.(d.desk, t.checked); if (d.desk === 'strip' && t.checked) this.toggleHelp(false); }
   }
@@ -557,9 +562,16 @@ export class UI {
     if (this.help && !this.help.hidden) this.renderHelp(true);
   }
 
+  /** Изгледът за телефон (lan.js на сървъра): включен ли е, адресите и PIN-ът – за панела. */
+  async setLan(data) {
+    try { this.lan = await (await fetch('api/lan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })).json(); } catch { this.lan = null; }
+    this.renderHelp(true);
+  }
+
   /** Hook-ът за разрешения: сложен ли е (за отметката в панела). */
   async loadHook() {
     try { this.hook = await (await fetch('api/hook')).json(); } catch { this.hook = null; }
+    try { this.lan = await (await fetch('api/lan')).json(); } catch { this.lan = null; }
     if (this.help && !this.help.hidden) this.renderHelp(true);
   }
   async setHook(on) {

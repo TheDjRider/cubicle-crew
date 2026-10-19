@@ -24,7 +24,7 @@ export class Setup {
   }
 
   /** Трябва ли да се покаже (истинският портфейл казва setup: null; стар сървър -> undefined -> не). */
-  need() { return this.forced || this.tokens.save.setup === null; }
+  need() { return !PARAMS.lan && (this.forced || this.tokens.save.setup === null); } // телефонът само гледа
   get open() { return !!this.root; }
 
   maybeOpen() { if (!this.open && this.tokens.tokens != null && this.need()) this.show(); }

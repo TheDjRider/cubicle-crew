@@ -16,6 +16,7 @@ import { prefs } from './prefs.js';
 import { Strip } from './strip.js';
 import { Capture } from './capture.js';
 import { play } from './sound.js';
+import { lanGate } from './lan.js';
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d', { alpha: false });
@@ -207,6 +208,7 @@ if (PARAMS.demo) {
   startDemo((e) => { ingest(e); earn(e); }, model);
 } else {
   let retry = 1000;
+  if (PARAMS.lan) document.body.classList.add('lan');
   const connect = () => {
     const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
     ws.onopen = () => { ui.setConnection('connected'); retry = 1000; };
@@ -223,6 +225,7 @@ if (PARAMS.demo) {
     ws.onclose = () => { ui.setConnection('down'); setTimeout(connect, retry); retry = Math.min(8000, retry * 1.5); };
     ws.onerror = () => { /* onclose ще се погрижи */ };
   };
-  connect();
+  // телефонът: първо PIN-ът (lan.js), после връзката
+  if (PARAMS.lan) lanGate().then((ok) => { if (ok) connect(); }); else connect();
 }
 void T;

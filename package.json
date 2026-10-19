@@ -16,6 +16,7 @@
     "focus.js",
     "providers.js",
     "permissions.js",
+    "lan.js",
     "public/",
     "!public/sprites/*.psd"
   ],
@@ -73,6 +74,7 @@
       "focus.js",
       "providers.js",
       "permissions.js",
+      "lan.js",
       "electron/**",
       "public/**",
       "!public/sprites/*.psd"

@@ -38,6 +38,7 @@ All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
 - `save.lock` – which running copy counts coins (pid + port).
 - `weather.json` – the city you picked and the last forecast.
 - `update.json` – whether the update check is on, and the last version number GitHub returned.
+- `lan.json` – the phone view: on/off, its PIN, the preferred port and the sign-in tokens of the phones that entered the PIN.
 
 The desktop app also keeps `settings.json` and `desktop.log` (start, window size, wake/sleep) in `%APPDATA%\pixel-office\`. Page settings (language, sound, Focus mode, session names) live in the app's own browser storage.
 
@@ -56,9 +57,19 @@ There is no telemetry, no analytics, no account and no crash reporting. Removing
 
 To check it yourself: open Resource Monitor (Windows) or run `netstat -ano` while the app runs; the only listening socket is `127.0.0.1:<port>`, and with no city and no update check there are no outgoing connections.
 
+## Phone view (optional, off by default)
+
+Settings → Privacy → **Phone view** starts a second, separate server so a phone on the same Wi-Fi can watch the office. It is off until you turn it on, and turning it off closes the port.
+
+- It listens on your local network (all network adapters, port `4327`; if that is taken, `4328`–`4330`, then any free port). Windows may ask once about the firewall. Anyone who can reach your computer on that port – your Wi-Fi, a VPN or Tailscale – sees the PIN screen.
+- The page code is served to anyone; **all data needs the 6-digit PIN** shown in the settings. A right PIN gives the phone an `HttpOnly`, `SameSite=Strict` cookie (30 days). Five wrong PINs from one address lock it out for a minute. **New PIN** signs every phone out.
+- **View only, and less to see:** the server itself removes commands, file paths, task descriptions and session names from everything it sends to the phone, and never sends permission requests or update info. The phone gets the coworkers' states, tool names, project folder names, coins and the office decor – nothing else. `/api/stats` and every other API are not served; nothing can be bought, changed or answered from the phone.
+- Plain HTTP: on a network you don't trust, someone listening could see the PIN and the states. Use it at home or on a network you trust.
+- The main server (`127.0.0.1`) is unchanged and still not reachable from the network.
+
 ## The local server
 
-- Listens on `127.0.0.1` only – not reachable from other machines.
+- Listens on `127.0.0.1` only – not reachable from other machines. (The optional phone view below is a separate, much more limited server.)
 - Every request and WebSocket must come from `localhost`: the `Host` header must be local and the `Origin` (if any) must be local. This blocks other websites and DNS rebinding.
 - Buying, equipping and setting things needs a JSON `POST` from a local origin.
 - `POST /api/event` (the open API for other agents, [api.md](api.md)) also needs JSON and no foreign `Origin`. It only adds coworkers to the office (in memory; their work counts in the stats and coins like any session) – it can't read anything or change settings, and hooks always get an empty answer.

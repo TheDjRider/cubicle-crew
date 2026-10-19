@@ -33,6 +33,14 @@ const sw = (attrs, on, title, hint) => `<label class="opt"><span><b>${title}</b>
 const card = (name, value, on, title, hint) => `<label class="card"><input type="radio" name="${name}" value="${value}" id="${name}-${value}"${on ? ' checked' : ''}><b>${title}</b>${hint ? `<small>${hint}</small>` : ''}</label>`;
 const btn = (attrs, text) => `<button type="button" ${attrs}>${text}</button>`;
 
+/** Включеният изглед за телефон: адресите, PIN-ът, бутон за нов PIN. */
+function lanBox(N, H) {
+  if (N.error && !N.running) return `<p class="err">${H.lanErr}</p>`;
+  const urls = N.urls.length ? N.urls.map((u) => `<code>${esc(u)}</code>`).join(' ') : `<span class="err">${H.lanNoNet}</span>`;
+  return `<div class="lanbox"><p>${H.lanOpen} ${urls}</p><p>${H.lanPin}: <b class="pin">${esc(N.pin)}</b> · <span class="dim">${H.lanPhones(N.phones)}</span></p>` +
+    `<div class="btns">${btn('data-lanpin', H.lanNewPin)}</div></div>`;
+}
+
 /** Съдържанието на всеки раздел ('' = разделът не се показва тук). ui – за състоянието (легенда, hook, обновления…). */
 function sections(ui) {
   const H = T.help, D = ui.desk, demo = ui.conn === 'demo', U = ui.update;
@@ -48,7 +56,9 @@ function sections(ui) {
     (D ? sw('id="desk-notify" data-desk="notify"', D.notify, H.notify, H.notifyHint) + sw('id="desk-autohide" data-desk="autoHide"', D.autoHide, H.autoHide, H.autoHideHint) : '') +
     (!demo ? sw('id="opt-perm" data-hook', !!ui.hook?.installed, H.perm, H.permHint) + (ui.hookErr ? `<p class="err">${ui.hookErr}</p>` : '') : '');
   // какво вижда и какво излиза от компютъра
+  const N = ui.lan?.ok ? ui.lan : null;
   out.privacy = sw('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint) +
+    (N && !demo ? sw('id="opt-lan" data-lan', N.enabled, H.lan, H.lanHint) + (N.enabled ? lanBox(N, H) : '') : '') +
     (U && !demo ? sw('id="opt-update" data-upd', U.enabled, H.update, H.updateHint) +
       `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}</p>` : '') +
     `<h4>${H.data}</h4><p class="dim">${H.dataHint}</p><div class="btns">` +

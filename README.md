@@ -163,6 +163,7 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 
 **Privacy**
 - **Hide commands and paths** – bubbles, the card and notifications show only the tool and the session name. For screen sharing and streaming.
+- **Phone view** – off by default. Watch the office from your phone on the same Wi-Fi: the panel shows the address and a 6-digit PIN. View only – the server never sends commands, paths, task names or permission prompts to the phone. It opens a port on your local network (Windows may ask about the firewall); details in [docs/security.md](docs/security.md#phone-view-optional-off-by-default).
 
 **Window** *(app)*
 - **Show only when needed** – the window stays hidden (the tray icon stays) and comes up by itself, without taking focus, when an agent waits for you or a lead finishes; it hides again 8 s later. Ctrl+Alt+P or the tray icon show it any time.
