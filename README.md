@@ -154,6 +154,7 @@ Everything is in the **`?` panel** (the `?` button in the bottom bar, the `?` ke
 - **Hide commands and paths** – bubbles, the card and notifications show only the tool and the session name. For screen sharing and streaming.
 
 **Window** *(app)*
+- **Show only when needed** – the window stays hidden (the tray icon stays) and comes up by itself, without taking focus, when an agent waits for you or a lead finishes; it hides again 8 s later. Ctrl+Alt+P or the tray icon show it any time.
 - **Always on top** – the window stays above the others, so you see the office while you work.
 - **Click-through** – the mouse goes through the office to whatever is below. Turn it off from the tray menu.
 - **Small window when there are no sessions** – with no session open the office shrinks to a morning scene and opens by itself when a session starts.

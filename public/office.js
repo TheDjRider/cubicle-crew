@@ -311,7 +311,8 @@ export class Office {
       case 'seat': case 'pace': { const p = L.pods[a.pod]; if (!p) return { pts: [], lane: 'row', y: a.y }; return { pts: [{ x: p.cx, y: p.aisleY }], lane: 'row', y: p.aisleY }; }
       case 'transit': return { pts: [], lane: 'row', y: a.y };
       case 'lounge': { const s = lo.spots.extra[loc.i % lo.spots.extra.length]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
-      case 'door': return { pts: [{ x: L.door.cx, y: L.door.floorY }], lane: 'v', x: ln.leftX };
+      // вратата е на стената: излиза се направо на горната пътека под нея
+      case 'door': return { pts: [{ x: L.door.cx, y: L.door.floorY }, { x: L.door.cx, y: ln.topY }], lane: 'row', y: ln.topY };
       case 'visit': { const pt = this.locPoint(loc, a); return { pts: [pt], lane: 'row', y: pt.y }; }
       case 'coffee': case 'cooler': { const s = lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       case 'darts': { const s = lo.spots.darts; return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }

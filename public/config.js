@@ -4,16 +4,16 @@
 export const CFG = {
   // ---- стая / подредба ----
   POD_W: 72,             // ширина на едно работно място (бюро + стол + монитор)
-  POD_H: 76,             // височина на работно място (включва пътека отзад и етикет отпред)
+  POD_H: 66,             // височина на работно място (включва пътека отзад и етикет отпред)
   POD_H_COMPACT: 62,     // по-гъсти редове, ако иначе мащабът би паднал
   WALL_H: 60,            // височина на стената (с перваза)
   TOP_GAP: 6,            // разстояние стена -> първи ред бюра
-  MARGIN_L: 44,          // лява колона (вратата и пътеката към нея)
+  MARGIN_L: 12,          // вратата е на стената над горната пътека – отляво остава само тясна пътека
   MARGIN_R: 4,
-  MARGIN_B: 8,
+  MARGIN_B: 10,          // под етикетите на долния ред – място за лентата долу
   LOUNGE_W: 124,         // зоната за почивка вдясно
-  MIN_W: 360,            // минимален логически размер на стаята
-  MIN_H: 205,
+  MIN_W: 340,            // минимален логически размер на стаята
+  MIN_H: 200,
   MAX_SCALE: 6,          // по-едро от това изглежда като мозайка
   MAX_TEAMS: 2,          // колко оркестратора (сесии) имат бюра едновременно; останалите чакат в зоната за почивка
   SUB_PER_ROW: 3,        // бюра за под-агенти на ред под всеки оркестратор (растат с нов ред при нужда)
@@ -129,6 +129,7 @@ const T_BG = {
     window: 'Прозорец',
     onTop: 'Винаги отгоре', onTopHint: 'Прозорецът стои над другите, за да виждаш офиса, докато работиш.',
     through: 'Кликовете минават през прозореца', throughHint: 'Мишката „минава“ през офиса към това отдолу. Връща се само от менюто в трея (иконата до часовника).',
+    autoHide: 'Показвай се само когато трябва', autoHideHint: 'Прозорецът е скрит и излиза сам (без да взима фокуса), когато агент те чака или оркестратор приключи; скрива се 8 с след това. Иконата в трея и Ctrl+Alt+P го показват по всяко време.',
     wait: 'Малко прозорче, когато няма сесии', waitHint: 'Без нито една сесия офисът се свива до сутрешна сцена и се отваря сам, щом се появи сесия.',
     login: 'Стартирай с Windows', loginMac: 'Стартирай при вход', loginHint: 'Cubicle Crew тръгва сам, когато влезеш в компютъра.',
     demo: 'Демо режим', demoHint: 'Измислени агенти – да видиш как изглежда всичко без Claude Code.',
@@ -204,6 +205,10 @@ const T_BG = {
     hello: 'Добре дошъл в Cubicle Crew!',
     intro: 'Три бързи неща и офисът е готов.',
     modeQ: 'Как да изглежда?', modeHint: 'И в двата режима виждаш кой какво прави и кой чака теб. Сменя се по всяко време от „?“.',
+    sizeQ: 'Колко място да заема?', small: 'Екранът ти е малък – лентата е избрана, за да не пречи.',
+    sizeOffice: 'Целият офис', sizeOfficeHint: (p) => `Около ${p}% от екрана. Най-добре на втори монитор.`,
+    sizeStrip: 'Тънка лента', sizeStripHint: (p) => `По ред на сесия – около ${p}% от екрана. Офисът се отваря от трея.`,
+    autoHide: 'Показвай се само когато трябва', autoHideHint: 'Скрит е, докато агент не те чака или не приключи. Иконата в трея остава.',
     petQ: 'С кого започва офисът?', cat: 'Котка', dog: 'Куче', nameQ: 'Как се казва?',
     petHint: 'Другият вид може да се вземе по-късно от магазина (до 3 любимци).',
     cityQ: 'Къде се намираш?',
@@ -316,6 +321,7 @@ const T_EN = {
     window: 'Window',
     onTop: 'Always on top', onTopHint: 'The window stays above the others, so you see the office while you work.',
     through: 'Click-through', throughHint: 'The mouse goes through the office to whatever is below. Turn it off from the tray menu (the icon by the clock).',
+    autoHide: 'Show only when needed', autoHideHint: 'The window stays hidden and comes up by itself (without taking focus) when an agent waits for you or a lead finishes; it hides 8 s later. The tray icon and Ctrl+Alt+P show it any time.',
     wait: 'Small window when there are no sessions', waitHint: 'With no session open the office shrinks to a morning scene and opens by itself when a session starts.',
     login: 'Start with Windows', loginMac: 'Start at login', loginHint: 'Cubicle Crew starts by itself when you sign in.',
     demo: 'Demo mode', demoHint: 'Made-up agents – to see how everything looks without Claude Code.',
@@ -389,6 +395,10 @@ const T_EN = {
     hello: 'Welcome to Cubicle Crew!',
     intro: 'Three quick things and the office is ready.',
     modeQ: 'How should it look?', modeHint: 'Both modes show who is doing what and who is waiting for you. Change it any time from "?".',
+    sizeQ: 'How much room should it take?', small: 'Your screen is small – the strip is picked so it stays out of the way.',
+    sizeOffice: 'The whole office', sizeOfficeHint: (p) => `About ${p}% of the screen. Best on a second monitor.`,
+    sizeStrip: 'Thin strip', sizeStripHint: (p) => `One row per session – about ${p}% of the screen. Open the office from the tray.`,
+    autoHide: 'Show only when needed', autoHideHint: 'Hidden until an agent waits for you or finishes. The tray icon stays.',
     petQ: 'Who starts in the office?', cat: 'Cat', dog: 'Dog', nameQ: 'What is their name?',
     petHint: 'You can get the other kind later in the shop (up to 3 pets).',
     cityQ: 'Where are you?',

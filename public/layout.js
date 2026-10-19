@@ -114,6 +114,6 @@ export function computeLayout(devW, devH) {
     scale, W, H, cols, rows, pods, teams, rugs, rowYs, lounge, door, podH,
     need: teamNeed(), cap: pods.length,
     deskArea: { x0: ax0, x1: ax1, y0: ay0, y1: ay1 },
-    leftLaneX: door.cx,
+    leftLaneX: Math.round(ox) - 4, // лявата вертикална пътека – до първата колона бюра
   };
 }

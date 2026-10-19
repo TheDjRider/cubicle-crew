@@ -18,6 +18,7 @@ Ticked = done and merged.
       1.6 % of one core, empty office 1.3 %, demo office 0.8–1.8 %, thin strip 0.7 %; 420–540 MB RAM across the
       4–5 Electron processes (mostly Chromium's baseline). The installed 2.5.1 while in use: 1.8 %, 517 MB.
 - [x] **Check for new versions** – opt-in, once a day, GitHub `releases/latest`; dot on `?`, link in the panel and the tray
+- [x] **Smaller screens** (2.8): compact room 356×208 (was 388×226), thin strip preselected on a single small screen in first-run setup, "Show only when needed" (hidden until an agent waits or a lead finishes)
 - [x] **Approximate cost in $** – at Claude API prices per model (stats tab, project table, projector tooltip, CSV)
 - [x] **Dangerous commands in red** – `rm -rf`, `git push --force`, `prod`, `terraform apply`… in the bubble, card and prompt bar
 
