@@ -138,7 +138,7 @@ Grab `CubicleCrew-<version>-linux.AppImage` from the [latest release](https://gi
 
 ## Settings
 
-Everything is in the **`?` panel** (the `?` button in the bottom bar, the `?` key, or **Settings and help…** at the top of the tray menu). Each option has a one-line description there too.
+Everything is in the **settings panel** inside the window – the `?` button in the bottom bar, the `?` key, the ⚙ button on the app's title bar, or **Settings and help…** in the tray menu. It has six sections (Look, Alerts, Privacy & data, Window, Share, Help), and every option has a one-line description. The tray menu itself stays short: show/hide, shop, stats, weather, the thin strip, click-through (the only way back once clicks go through) and quit.
 
 **Look**
 - **Office** – the whole game: coins and the shop, pets, coffee breaks, handheld games and darts, effects and achievements.

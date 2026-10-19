@@ -31,6 +31,7 @@ ui.onShop = () => shop.open();
 ui.onWeather = () => shop.open('weather');
 ui.onPet = (slot) => shop.openPet(slot);
 ui.onStats = () => shop.open('stats');
+ui.onTab = (tab) => shop.open(tab); // от настройките: статистика / времето
 // споделяне: снимка / 10 s клип (кадрите се добавят в цикъла)
 const capture = new Capture(canvas);
 ui.onSnapshot = () => { capture.snapshot(); ui.note(T.help.saved); };
