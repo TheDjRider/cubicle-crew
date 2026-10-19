@@ -68,12 +68,12 @@ const L = {
   bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', stats: 'Статистика', weather: 'Времето навън…', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
     help: 'Настройки и помощ…', sound: 'Звук, когато агент чака или приключи', focus: 'Режим „Фокус“ (без игра и анимации)', private: 'Скривай команди и пътища', strip: 'Тънка лента вместо офиса',
     demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', lang: 'Език / Language', resetSize: 'Нулирай размера',
-    resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход',
+    resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход', update: (v) => `Нова версия ${v} – изтегли…`,
     tip: (a, s, w) => `агенти ${a} · под-агенти ${s}${w ? ` · чакат те ${w}` : ''}`, one: (n) => `${n} чака теб`, many: (k) => `${k} агента чакат теб` },
   en: { hide: 'Hide', show: 'Show', shop: 'Shop', stats: 'Stats', weather: 'Weather outside…', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
     help: 'Settings and help…', sound: 'Sound when an agent waits or finishes', focus: 'Focus mode (no game, no animations)', private: 'Hide commands and paths', strip: 'Thin strip instead of the office',
     demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', lang: 'Language / Език', resetSize: 'Reset size',
-    resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit',
+    resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit', update: (v) => `New version ${v} – download…`,
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
 };
 // macOS: „при вход“, не „с Windows“
@@ -277,6 +277,7 @@ function resetPlace() {
 function menuTemplate() {
   const li = loginItem(), t = tr();
   return [
+    ...(stats.update ? [{ label: t.update(stats.update.version), click: () => shell.openExternal(stats.update.url) }, { type: 'separator' }] : []),
     { label: t.help, click: () => openTab(() => win.webContents.send('open-help')) },
     { type: 'separator' },
     { label: win?.isVisible() ? t.hide : t.show, accelerator: SHORTCUT, click: () => toggleWindow() },
@@ -388,7 +389,9 @@ ipcMain.on('stats', (_e, s) => {
   const before = new Set(stats.waiting);
   stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [], sound: s.sound !== false, focus: !!s.focus, private: !!s.private,
     leads: Array.isArray(s.leads) ? s.leads.filter((x) => STATE_RGB[x]).slice(0, 4) : [],
-    waitingIds: Array.isArray(s.waitingIds) ? s.waitingIds.map(String).slice(0, 20) : [], prompt: typeof s.prompt === 'string' ? s.prompt.slice(0, 40) : null };
+    waitingIds: Array.isArray(s.waitingIds) ? s.waitingIds.map(String).slice(0, 20) : [], prompt: typeof s.prompt === 'string' ? s.prompt.slice(0, 40) : null,
+    // линкът се отваря навън – само към нашите рилийзи
+    update: typeof s.update?.url === 'string' && s.update.url.startsWith('https://github.com/rezored/cubicle-crew/releases') ? { version: String(s.update.version).slice(0, 20), url: s.update.url } : null };
   permKeys(stats.prompt);
   const fresh = stats.waiting.filter((n) => !before.has(n));
   if (fresh.length && settings.notify && Notification.isSupported() && !win.isFocused()) {

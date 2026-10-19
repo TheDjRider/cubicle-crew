@@ -146,6 +146,9 @@ Everything is in the **`?` panel** (the `?` button in the bottom bar, the `?` ke
 - **Sound** – a short tune when an agent waits for you or finishes a long task, only when you are not looking at the window.
 - **System notification** *(app)* – a pop-up when an agent waits for you; clicking it opens that session's terminal.
 
+**Updates**
+- **Check for new versions** – off by default. Once a day asks GitHub for the latest release number; when there is a newer one, the `?` button gets a green dot and the panel (and the tray menu in the app) shows a download link. Nothing is downloaded or installed by itself.
+
 **Privacy**
 - **Hide commands and paths** – bubbles, the card and notifications show only the tool and the session name. For screen sharing and streaming.
 

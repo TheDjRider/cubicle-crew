@@ -37,19 +37,24 @@ All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
 - `save.json` (+ `.bak`) – coins, bought decor, achievements, avatar, pet names. No session content.
 - `save.lock` – which running copy counts coins (pid + port).
 - `weather.json` – the city you picked and the last forecast.
+- `update.json` – whether the update check is on, and the last version number GitHub returned.
 
 The desktop app also keeps `settings.json` and `desktop.log` (start, window size, wake/sleep) in `%APPDATA%\pixel-office\`. Page settings (language, sound, Focus mode, session names) live in the app's own browser storage.
 
 ## What it sends over the network
 
-**Nothing**, until you pick a city for the weather. After that, and only then:
+**Nothing**, unless you turn on one of two optional things. Both are off until you do.
+
+**Weather** (after you pick a city):
 
 - while you search for a city: the text you typed and the language go to `geocoding-api.open-meteo.com`;
 - every 20 minutes: the city's latitude and longitude go to `api.open-meteo.com`.
 
-There is no telemetry, no analytics, no account, no update check and no crash reporting. Removing the city (shop → Weather → Remove city) stops all requests.
+**Check for new versions** (`?` panel → Updates): once a day, one `GET https://api.github.com/repos/rezored/cubicle-crew/releases/latest` with no parameters and no cookies (User-Agent `cubicle-crew`). GitHub sees your IP address, as with any download. Only the version number and the release link are kept. The app never downloads or installs anything by itself – it shows a link.
 
-To check it yourself: open Resource Monitor (Windows) or run `netstat -ano` while the app runs; the only listening socket is `127.0.0.1:<port>`, and with no city there are no outgoing connections.
+There is no telemetry, no analytics, no account and no crash reporting. Removing the city (shop → Weather → Remove city) and unticking the update check stops all requests.
+
+To check it yourself: open Resource Monitor (Windows) or run `netstat -ano` while the app runs; the only listening socket is `127.0.0.1:<port>`, and with no city and no update check there are no outgoing connections.
 
 ## The local server
 

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
+import { Updates } from './update.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
 import { Permissions } from './permissions.js';
@@ -160,6 +161,26 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  // проверка за нова версия (по желание)
+  if (urlPath === '/api/update' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(updates.msg()));
+    return;
+  }
+  if (urlPath === '/api/update') {
+    const origin = req.headers.origin;
+    if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
+    let body = '';
+    req.on('data', (d) => { body += d; if (body.length > 1024) req.destroy(); });
+    req.on('end', async () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch { /* празно */ }
+      const r = await updates.set(data);
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(r));
+    });
+    return;
+  }
   const file = path.normalize(path.join(PUBLIC, urlPath === '/' ? 'index.html' : urlPath));
   if (file !== PUBLIC && !file.startsWith(PUBLIC + path.sep)) { res.writeHead(403).end(); return; }
   fs.readFile(file, (err, data) => {
@@ -185,11 +206,14 @@ const perms = new Permissions({
   brief: (input) => brief(input),
   log: (m) => console.log(m),
 });
-const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });// нов клиент веднага вижда портфейла и живите сесии
+const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
+const updates = new Updates(broadcast, (m) => { if (DEBUG) console.log(m); });
+// нов клиент веднага вижда портфейла и живите сесии
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify(wallet.msg(0, 'sync', null, null, true)));
   ws.send(JSON.stringify({ type: 'sessions', list: live }));
   ws.send(JSON.stringify(weather.msg()));
+  ws.send(JSON.stringify(updates.msg()));
   for (const p of perms.list()) ws.send(JSON.stringify(p));
 });
 
@@ -497,6 +521,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   perms.syncPort(actual);
   wallet.start();
   weather.start();
+  updates.start();
   process.once('exit', () => wallet.close());
   console.log(`Cubicle Crew: http://localhost:${actual}   (демо без Claude: /?demo   витрина: /?demo=showcase)`);
   console.log(`Следя: ${[ROOT, ...EXTRA].join(', ')}`);

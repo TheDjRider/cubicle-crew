@@ -118,12 +118,13 @@ export class UI {
     // състоянията на оркестраторите по ред на идване -> точките в иконата в трея
     const leads = [...this.office.actors.values()].filter((a) => !a.agent.subagent).sort((a, b) => a.joinSeq - b.joinSeq).map((a) => a.vstate);
     const prompt = this.model.prompts.keys().next().value || null; // най-старата молба за разрешение (глобалните Ctrl+Alt+Y / N)
-    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}`;
+    const update = this.update?.newer ? this.update.latest : null; // нова версия -> ред в менюто на трея
+    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}|${update?.version}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
     // sound: приложението пуска известието без системния звук, щом страницата свири своя
     const waitingIds = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => this.office.leadOf(a)?.id || a.id);
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds, prompt });
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds, prompt, update });
   }
 
   setScale(scale, dpr, W, H) {
@@ -435,7 +436,7 @@ export class UI {
       (s.waiting ? `<span class="alert">${T.waitingYou} <b>${s.waiting}</b></span>` : '') +
       (this.conn !== 'demo' ? `<span class="snd" title="${soundOn() ? T.sound.on : T.sound.off}"><i style="background-image:url(${(this.bells ||= [bellUrl(false), bellUrl(true)])[+soundOn()]})"></i></span>` : '') +
       (this.conn !== 'demo' ? `<span class="statsbtn" title="${T.stats.open}"><i style="background-image:url(${this.barsIcon ||= barsUrl()})"></i></span>` : '') +
-      `<span class="help" title="${T.help.open}">?</span>` +
+      (this.update?.newer ? `<span class="help upd" title="${T.help.open} · ${esc(T.help.newer(this.update.latest.version))}">?</span>` : `<span class="help" title="${T.help.open}">?</span>`) +
       `<span class="lang" title="${T.lang}">${LANG === 'bg' ? 'БГ' : 'EN'}</span>`;
     if (this.hud._html !== html) { this.hud.innerHTML = html; this.hud._html = html; }
     const title = s.waiting ? `(${s.waiting}) ${T.needsYou} · ${T.title}` : T.title;
@@ -518,7 +519,14 @@ export class UI {
     else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
     else if (t.name === 'lang') { if (PARAMS.desktop && this.bridge?.action) this.bridge.action('lang:' + t.value); else setLang(t.value); }
     else if (d.hook != null) this.setHook(t.checked);
+    else if (d.upd != null) fetch('api/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: t.checked }) }).catch(() => {});
     else if (d.desk) { this.bridge?.setDesktop?.(d.desk, t.checked); if (d.desk === 'strip' && t.checked) this.toggleHelp(false); }
+  }
+
+  /** WS {type:'update'}: проверката за нова версия (точка на „?“, ред в панела, приложението – в трея). */
+  setUpdate(e) {
+    this.update = e; this.lastHud = 0; this._lastStats = '';
+    if (this.help && !this.help.hidden) this.renderHelp(true);
   }
 
   /** Hook-ът за разрешения: сложен ли е (за отметката в панела). */
@@ -565,6 +573,12 @@ export class UI {
     // сподели, цветовете, обратна връзка
     h += `<h3>${H.share}</h3><div class="share"><button type="button" data-snap>${H.snapshot}</button><button type="button" data-clip>${H.clip}</button></div><p class="dim">${H.shareHint}</p>`;
     h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p></details>`;
+    // нови версии (заявка навън – само ако е включено)
+    const U = this.update;
+    if (U && !demo) {
+      h += `<h3>${H.updates}</h3>` + box('id="opt-update" data-upd', U.enabled, H.update, H.updateHint) +
+        `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}</p>`;
+    }
     h += `<h3>${H.feedback}</h3><p class="dim">${H.feedbackHint}</p><div class="share">` +
       `<a href="https://github.com/rezored/cubicle-crew/discussions" target="_blank" rel="noopener">${H.discuss}</a>` +
       `<a href="https://github.com/rezored/cubicle-crew/issues/new" target="_blank" rel="noopener">${H.issue}</a>` +
