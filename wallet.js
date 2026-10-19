@@ -50,7 +50,7 @@ export class Wallet {
       setInterval(() => this.claim(), LOCK_STALE_MS / 3),
     ];
     for (const t of this.timers) t.unref?.();
-    this.log(`портфейл: ${FILE} (${this.owner ? 'броя' : 'само чета – брои друг Cubicle Crew'})`);
+    this.log(`save: ${FILE} (${this.owner ? 'counting' : 'read-only – another Cubicle Crew is counting'})`);
   }
 
   /** Заключване: само един процес брои и пише. */

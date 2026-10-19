@@ -317,7 +317,9 @@ function resetPlace() {
 
 // едно и също меню: в трея и от бутона ⚙ в прозореца
 function menuTemplate() {
-  const li = loginItem(), t = tr();
+  const t = tr();
+  // кратко меню: всички настройки са в прозореца („Настройки и помощ…“); тук – отварянето и „кликовете минават през“,
+  // защото докато е включено, прозорецът не приема кликове и само оттук може да се изключи
   return [
     ...(stats.update ? [{ label: t.update(stats.update.version), click: () => shell.openExternal(stats.update.url) }, { type: 'separator' }] : []),
     { label: t.help, click: () => openTab(() => win.webContents.send('open-help')) },
@@ -327,27 +329,8 @@ function menuTemplate() {
     { label: t.stats, click: () => openTab(() => win.webContents.send('open-tab', 'stats')) },
     { label: t.weather, click: () => openTab(() => win.webContents.send('open-weather')) },
     { type: 'separator' },
-    { label: t.onTop, type: 'checkbox', checked: settings.onTop, click: (m) => applyDesktop('onTop', m.checked) },
-    { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => applyDesktop('through', m.checked) },
-    { label: t.notify, type: 'checkbox', checked: settings.notify, click: (m) => applyDesktop('notify', m.checked) },
-    // звукът е настройка на страницата (localStorage) – менюто само я сменя там
-    { label: t.sound, type: 'checkbox', checked: stats.sound, click: (m) => { stats.sound = m.checked; win?.webContents.send('sound', m.checked); } },
-    // настройки на страницата (localStorage) – менюто само ги сменя там, страницата ги връща в stats
     { label: t.strip, type: 'checkbox', checked: settings.strip, click: (m) => setStrip(m.checked) },
-    { label: t.focus, type: 'checkbox', checked: stats.focus, click: (m) => { stats.focus = m.checked; win?.webContents.send('pref', 'focus', m.checked); } },
-    { label: t.private, type: 'checkbox', checked: stats.private, click: (m) => { stats.private = m.checked; win?.webContents.send('pref', 'private', m.checked); } },
-    { label: t.demo, type: 'checkbox', checked: settings.demo, click: (m) => applyDesktop('demo', m.checked) },
-    ...(CAN_LOGIN ? [{ label: t.login, type: 'checkbox', checked: li.get(), click: (m) => applyDesktop('login', m.checked) }] : []),
-    { label: t.waitWindow, type: 'checkbox', checked: settings.waitWindow, click: (m) => applyDesktop('waitWindow', m.checked) },
-    { label: t.autoHide, type: 'checkbox', checked: settings.autoHide, click: (m) => applyDesktop('autoHide', m.checked) },
-    { label: t.lang, submenu: [
-      { label: 'English', type: 'radio', checked: lang() === 'en', click: () => setLang('en') },
-      { label: 'Български', type: 'radio', checked: lang() === 'bg', click: () => setLang('bg') },
-    ] },
-    { type: 'separator' },
-    { label: t.resetSize, click: resetSize },
-    { label: t.resetPlace, click: resetPlace },
-    { label: t.browser, click: () => shell.openExternal(`http://localhost:${port}/?lang=${lang()}`) },
+    { label: t.through, type: 'checkbox', checked: settings.through, click: (m) => applyDesktop('through', m.checked) },
     { type: 'separator' },
     { label: t.quit, click: () => { quitting = true; app.quit(); } },
   ];
@@ -368,8 +351,10 @@ ipcMain.on('action', (_e, act) => {
   else if (act === 'lang:en' || act === 'lang:bg') setLang(act.slice(5));
   else if (act === 'pin') { settings.onTop = !settings.onTop; applyOnTop(); saveSettings(); refreshTray(); }
   else if (act === 'through') { settings.through = true; applyThrough(); saveSettings(); refreshTray(); }
-  else if (act === 'settings') Menu.buildFromTemplate(menuTemplate()).popup({ window: win });
+  else if (act === 'settings') win.webContents.send('open-help'); // ⚙ в лентата: настройките в прозореца
   else if (act === 'reset-size') resetSize();
+  else if (act === 'reset-place') resetPlace();
+  else if (act === 'browser') shell.openExternal(`http://localhost:${port}/?lang=${lang()}`);
   else if (act === 'wake') wake();
   else if (act === 'sleep') sleep();
   else if (act === 'strip:off') setStrip(false);

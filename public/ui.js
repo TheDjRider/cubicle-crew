@@ -6,6 +6,7 @@ import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
 import { prefs } from './prefs.js';
 import { boardData, demoBoardData, PAGE_DAYS } from './board.js';
+import { settingsHtml } from './settings.js';
 
 // торбичка за пазаруване 9x9 (иконата на бутона за магазина) – рисува се тук, без външни файлове
 const BAG = ['...aaa...', '..a...a..', '..a...a..', 'bbbbbbbbb', 'bcccccccb', 'bcccdcccb', 'bccdddccb', 'bcccdcccb', 'bbbbbbbbb'];
@@ -503,10 +504,15 @@ export class UI {
       this.help.setAttribute('role', 'dialog');
       this.help.addEventListener('change', (e) => this.onHelpChange(e.target));
       this.help.addEventListener('click', (e) => {
-        if (e.target.closest('[data-close]')) this.toggleHelp(false);
-        else if (e.target.closest('[data-snap]')) this.onSnapshot?.();
-        else if (e.target.closest('[data-clip]')) { this.toggleHelp(false); this.onClip?.(); }
+        const t = e.target;
+        if (t === this.help || t.closest('[data-close]')) this.toggleHelp(false); // клик извън панела или ✕
+        else if (t.closest('[data-tab]')) { this.helpTab = t.closest('[data-tab]').dataset.tab; try { localStorage.setItem('po.helpTab', this.helpTab); } catch { /* */ } this.renderHelp(true); }
+        else if (t.closest('[data-go]')) { this.toggleHelp(false); this.onTab?.(t.closest('[data-go]').dataset.go); }
+        else if (t.closest('[data-act]')) this.bridge?.action?.(t.closest('[data-act]').dataset.act);
+        else if (t.closest('[data-snap]')) this.onSnapshot?.();
+        else if (t.closest('[data-clip]')) { this.toggleHelp(false); this.onClip?.(); }
       });
+      if (!this.helpTab) { try { this.helpTab = localStorage.getItem('po.helpTab') || 'look'; } catch { this.helpTab = 'look'; } }
       // настройките на приложението се сменят и от трея – панелът ги показва актуални
       this.bridge?.onDesktop?.((d) => { this.desk = d; if (!this.help.hidden) this.renderHelp(); });
     }
@@ -516,6 +522,9 @@ export class UI {
       this.bridge?.getDesktop?.().then((d) => { this.desk = d; if (!this.help.hidden) this.renderHelp(); }).catch(() => {});
     }
     this.help.hidden = !open;
+    // приложението: панелът иска място – прозорецът расте като за магазина и после се връща (ако магазинът не е отворен)
+    if (open && !this.helpGrew && !document.body.classList.contains('shopping')) { this.helpGrew = true; this.bridge?.shop?.(true); }
+    else if (!open && this.helpGrew) { this.helpGrew = false; this.bridge?.shop?.(false); }
   }
 
   /** Отметка/избор в панела -> съответната настройка (страницата, звукът, езикът или приложението). */
@@ -550,49 +559,15 @@ export class UI {
     this.renderHelp(true);
   }
 
-  /** Настройки и помощ: всяка опция с по едно изречение какво прави. */
+  /** Настройки и помощ: панел с раздели (settings.js), всяка опция с по едно изречение какво прави. */
   renderHelp(fresh = false) {
     if (!fresh && this.conn !== 'demo') this.loadHook();
-    const H = T.help, D = this.desk, demo = this.conn === 'demo';
-    const box = (attrs, on, title, hint) => `<label><input type="checkbox" ${attrs}${on ? ' checked' : ''}><span><b>${title}</b><small>${hint}</small></span></label>`;
-    const radio = (name, value, on, title, hint) => `<label><input type="radio" name="${name}" value="${value}" id="${name}-${value}"${on ? ' checked' : ''}><span><b>${title}</b>${hint ? `<small>${hint}</small>` : ''}</span></label>`;
-    let h = `<div class="help-panel"><header><b>${H.title}</b><button type="button" data-close title="${H.close} (Esc)">✕</button></header>`;
-    // как изглежда
-    h += `<h3>${H.look}</h3><div class="pair">${radio('mode', 'office', !prefs.focus, H.office, H.officeHint)}${radio('mode', 'focus', prefs.focus, H.focus, H.focusHint)}</div>`;
-    if (D) h += box('id="desk-strip" data-desk="strip"', D.strip, H.strip, H.stripHint);
-    h += box('id="opt-legend" data-legend', !this.legend.hidden, H.legend, H.legendHint);
-    h += box('id="pref-lights" data-pref="lights"', prefs.lights, H.lights, H.lightsHint);
-    h += `<div class="lang"><span>${H.lang}</span>${radio('lang', 'bg', LANG === 'bg', 'Български')}${radio('lang', 'en', LANG === 'en', 'English')}</div>`;
-    // известия
-    h += `<h3>${H.alerts}</h3>`;
-    if (!demo) h += box('id="opt-sound" data-sound', soundOn(), H.sound, H.soundHint);
-    if (D) h += box('id="desk-notify" data-desk="notify"', D.notify, H.notify, H.notifyHint);
-    if (!demo) h += box('id="opt-perm" data-hook', !!this.hook?.installed, H.perm, H.permHint) + (this.hookErr ? `<p class="err">${this.hookErr}</p>` : '');
-    // поверителност
-    h += `<h3>${H.privacy}</h3>` + box('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint);
-    // прозорецът (само в приложението)
-    if (D) {
-      h += `<h3>${H.window}</h3>` + box('id="desk-ontop" data-desk="onTop"', D.onTop, H.onTop, H.onTopHint) +
-        box('id="desk-through" data-desk="through"', D.through, H.through, H.throughHint) +
-        box('id="desk-autohide" data-desk="autoHide"', D.autoHide, H.autoHide, H.autoHideHint) +
-        box('id="desk-wait" data-desk="waitWindow"', D.waitWindow, H.wait, H.waitHint) +
-        (D.canLogin ? box('id="desk-login" data-desk="login"', D.login, D.platform === 'darwin' ? H.loginMac : H.login, H.loginHint) : '') +
-        box('id="desk-demo" data-desk="demo"', D.demo, H.demo, H.demoHint);
-    }
-    // сподели, цветовете, обратна връзка
-    h += `<h3>${H.share}</h3><div class="share"><button type="button" data-snap>${H.snapshot}</button><button type="button" data-clip>${H.clip}</button></div><p class="dim">${H.shareHint}</p>`;
-    h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p><p class="dim"><span class="danger">⚠</span> ${H.danger}</p></details>`;
-    // нови версии (заявка навън – само ако е включено)
-    const U = this.update;
-    if (U && !demo) {
-      h += `<h3>${H.updates}</h3>` + box('id="opt-update" data-upd', U.enabled, H.update, H.updateHint) +
-        `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}</p>`;
-    }
-    h += `<h3>${H.feedback}</h3><p class="dim">${H.feedbackHint}</p><div class="share">` +
-      `<a href="https://github.com/rezored/cubicle-crew/discussions" target="_blank" rel="noopener">${H.discuss}</a>` +
-      `<a href="https://github.com/rezored/cubicle-crew/issues/new" target="_blank" rel="noopener">${H.issue}</a>` +
-      `<a href="https://buymeacoffee.com/rezored" target="_blank" rel="noopener">${H.coffee}</a></div></div>`;
-    this.help.innerHTML = h;
+    const scroll = this.help.querySelector('.body')?.scrollTop || 0;
+    const { html, tab } = settingsHtml(this, this.helpTab);
+    const same = tab === this.helpTab;
+    this.helpTab = tab;
+    this.help.innerHTML = html;
+    if (same) { const b = this.help.querySelector('.body'); if (b) b.scrollTop = scroll; } // превключване на отметка – без скок нагоре
   }
 
   updateDebug(now) {

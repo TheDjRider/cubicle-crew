@@ -286,28 +286,79 @@
   #hud .help { pointer-events: auto; cursor: pointer; font-weight: 700; color: var(--ui-dim); }
   #hud .help:hover { color: #fff; border-color: #6b6b80; }
   #help { position: fixed; inset: 0; z-index: 35; display: flex; align-items: center; justify-content: center; padding: 8px; box-sizing: border-box; background: rgba(8, 6, 14, 0.45); }
-  .help-panel { width: 100%; max-width: 460px; max-height: 100%; overflow-y: auto; box-sizing: border-box; padding: 12px 16px 14px; background: #17121f; border: 2px solid #3a3452; border-radius: 4px; box-shadow: 4px 4px 0 rgba(0,0,0,.45); }
-  .help-panel header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
-  .help-panel button { font: inherit; color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; border-radius: 3px; padding: 1px 8px; cursor: pointer; }
-  .help-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .help-panel li { display: flex; gap: 8px; align-items: baseline; font-size: 13px; }
-  .help-panel li i { width: 9px; height: 9px; display: inline-block; }
-  .help-panel p { margin: 10px 0 0; font-size: 12px; }
-  .help-panel h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 600; color: var(--ui-dim); text-transform: uppercase; letter-spacing: .04em; }
-  .help-panel label { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; cursor: pointer; font-size: 13px; }
-  .help-panel label small { display: block; color: var(--ui-dim); font-size: 12px; }
-  .help-panel input { margin-top: 3px; }
-  .help-panel .share { display: flex; gap: 6px; flex-wrap: wrap; }
-  .help-panel .share a { font-size: 12px; color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; border-radius: 3px; padding: 2px 8px; text-decoration: none; }
-  .help-panel .share a:hover, .help-panel button:hover { background: #3a3258; }
-  .help-panel .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .help-panel .pair label { border: 1px solid #2c2640; border-radius: 3px; padding: 6px 8px; background: #1f1a2c; }
-  .help-panel .pair label:has(input:checked) { border-color: #4ac26b; box-shadow: inset 0 0 0 1px #4ac26b; }
-  .help-panel .lang { display: flex; align-items: center; gap: 12px; font-size: 13px; padding: 4px 0; }
-  .help-panel .lang label { padding: 0; align-items: center; }
-  .help-panel details { margin-top: 12px; }
-  .help-panel details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--ui-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
-  @media (max-width: 420px) { .help-panel .pair { grid-template-columns: 1fr; } }
+  /* настройки и помощ (settings.js): колона с разделите + съдържание; --acc = цветът на раздела */
+  .set-panel { --line: #2c2640; display: flex; width: 100%; max-width: 680px; height: 100%; max-height: 480px; box-sizing: border-box; background: #17121f; color: var(--ui-text);
+    border: 2px solid #0e0c14; box-shadow: 0 0 0 2px #3a3452, 6px 6px 0 2px rgba(0,0,0,.45); font: 13px/1.35 var(--font); }
+  .set-panel aside { flex: none; width: 168px; display: flex; flex-direction: column; background: #120e19;
+    background-image: linear-gradient(45deg, rgba(255,255,255,.018) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.018) 75%), linear-gradient(45deg, rgba(255,255,255,.018) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.018) 75%);
+    background-size: 8px 8px; background-position: 0 0, 4px 4px; border-right: 2px solid #0e0c14; }
+  .set-panel .brand { padding: 12px 14px 10px; font-size: 14px; color: #fff; border-bottom: 2px solid var(--line); }
+  .set-panel nav { display: flex; flex-direction: column; gap: 2px; padding: 8px 6px; flex: 1; }
+  .set-panel nav button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 6px 8px; font: inherit; text-align: left; color: var(--ui-dim);
+    background: transparent; border: 0; border-left: 4px solid transparent; cursor: pointer; }
+  .set-panel nav button:hover { color: #fff; background: rgba(255,255,255,.05); }
+  .set-panel nav button.on { color: #fff; border-left-color: var(--acc); background: color-mix(in srgb, var(--acc) 16%, transparent); }
+  .set-panel .ico { flex: none; width: 18px; height: 18px; background-size: 100% 100%; image-rendering: pixelated; }
+  .set-panel aside .v { padding: 8px 14px 10px; color: #5a5470; font-size: 11px; }
+  .set-panel section { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .set-panel header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 9px 16px;
+    border-bottom: 2px solid var(--line); background-image: repeating-linear-gradient(90deg, var(--acc) 0 6px, transparent 6px 10px); background-size: 100% 2px; background-repeat: no-repeat; background-position: bottom; }
+  .set-panel h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 16px; color: #fff; }
+  .set-panel .x { font: inherit; width: 26px; height: 24px; color: var(--ui-text); background: #2a2440; border: 0; box-shadow: inset 0 -2px 0 rgba(0,0,0,.35); cursor: pointer; }
+  .set-panel .x:hover { background: #e04a6b; color: #fff; }
+  .set-panel .body { flex: 1; overflow-y: auto; padding: 8px 16px 16px; }
+  .set-panel h4 { margin: 14px 0 6px; font-size: 11px; font-weight: 600; color: var(--acc); text-transform: uppercase; letter-spacing: .06em; }
+  .set-panel p { margin: 8px 0 0; font-size: 12px; }
+  .set-panel .dim { color: var(--ui-dim); }
+  .set-panel .err { color: #ff8a9e; margin: 0 0 6px; }
+  .set-panel a { color: #8fc0ff; }
+  /* ред с превключвател */
+  .set-panel .opt { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 9px 4px; border-bottom: 1px dashed var(--line); cursor: pointer; }
+  .set-panel .opt:hover { background: rgba(255,255,255,.025); }
+  .set-panel .opt b { color: #fff; font-weight: 600; }
+  .set-panel .opt small, .set-panel .card small { display: block; margin-top: 2px; color: var(--ui-dim); font-size: 12px; line-height: 1.4; }
+  .set-panel input.sw { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 32px; height: 18px; margin: 1px 0 0; background: #2a2440;
+    border: 2px solid #0e0c14; box-shadow: inset 0 -3px 0 rgba(0,0,0,.35); cursor: pointer; }
+  .set-panel input.sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; background: #8a8aa0; box-shadow: inset 0 -2px 0 rgba(0,0,0,.3); transition: left .12s steps(3); }
+  .set-panel input.sw:checked { background: var(--acc); }
+  .set-panel input.sw:checked::after { left: 16px; background: #fff; }
+  .set-panel input.sw:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+  /* карти за избор (Офис / Фокус, език) */
+  .set-panel .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 4px; }
+  .set-panel .card { position: relative; display: block; padding: 9px 11px; background: #1f1a2c; border: 2px solid var(--line); cursor: pointer; }
+  .set-panel .card input { position: absolute; opacity: 0; pointer-events: none; }
+  .set-panel .card b { color: #fff; }
+  .set-panel .card:has(input:checked) { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, #1f1a2c); }
+  .set-panel .card:has(input:focus-visible) { outline: 2px solid #fff; }
+  .set-panel .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 4px; }
+  .set-panel .row > b { color: #fff; font-weight: 600; }
+  .set-panel .seg { display: flex; }
+  .set-panel .seg .card { padding: 4px 12px; border-width: 2px; }
+  .set-panel .seg .card + .card { margin-left: -2px; }
+  /* бутони и линкове */
+  .set-panel .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .set-panel .btns button, .set-panel .btns a { font: inherit; font-size: 12px; color: var(--ui-text); background: #2a2440; border: 0; padding: 5px 10px; text-decoration: none;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,.35); cursor: pointer; }
+  .set-panel .btns button:hover, .set-panel .btns a:hover { background: color-mix(in srgb, var(--acc) 35%, #2a2440); color: #fff; }
+  .set-panel .btns.big button { font-size: 13px; padding: 8px 14px; }
+  /* помощ */
+  .set-panel ul.states { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .set-panel ul.states li { display: flex; gap: 8px; align-items: baseline; }
+  .set-panel ul.states li i { flex: none; width: 9px; height: 9px; display: inline-block; }
+  .set-panel table.keys { border-collapse: collapse; font-size: 12px; }
+  .set-panel table.keys th { text-align: left; padding: 2px 12px 2px 0; font-weight: 400; white-space: nowrap; }
+  .set-panel kbd { font: 11px var(--mono); color: #fff; background: #2a2440; padding: 1px 5px; box-shadow: inset 0 -2px 0 rgba(0,0,0,.4); }
+  /* тесен прозорец: разделите стават ред с иконки горе */
+  @media (max-width: 560px) {
+    .set-panel { flex-direction: column; max-height: none; }
+    .set-panel aside { width: auto; flex-direction: row; align-items: center; border-right: 0; border-bottom: 2px solid #0e0c14; }
+    .set-panel .brand, .set-panel aside .v { display: none; }
+    .set-panel nav { flex-direction: row; padding: 4px; overflow-x: auto; }
+    .set-panel nav button { width: auto; border-left: 0; border-bottom: 3px solid transparent; padding: 6px 8px; }
+    .set-panel nav button.on { border-bottom-color: var(--acc); }
+    .set-panel nav button span { display: none; }
+    .set-panel .cards { grid-template-columns: 1fr; }
+  }
 
   /* картата при фокус: бутон „Преименувай“ */
   #card { pointer-events: auto; }
@@ -358,8 +409,6 @@
   #prompt kbd { font: 11px var(--mono); opacity: .7; margin-left: 4px; }
   #prompt .more { color: var(--ui-dim); font-size: 12px; }
   body.overlay #prompt { display: none; }
-  .help-panel .err { color: #ff8a9e; margin: 2px 0 8px 28px; font-size: 12px; }
-  .help-panel .ver a { color: #8fc0ff; }
   #hud .help.upd { position: relative; }
   #hud .help.upd::after { content: ''; position: absolute; top: 1px; right: 1px; width: 5px; height: 5px; background: #4ac26b; border-radius: 50%; }
 </style>

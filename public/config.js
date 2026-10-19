@@ -111,6 +111,12 @@ const T_BG = {
     shapes: 'Формата на точката до името също показва състоянието – за далтонисти и за малкия прозорец.',
     danger: 'В червено с ⚠ – рискова команда: трие рекурсивно, презаписва историята в git, пипа продукция (rm -rf, git push --force, terraform apply, „prod“…). Погледни, преди да разрешиш.',
     settings: 'Настройки',
+    sections: { look: 'Изглед', alerts: 'Известия', privacy: 'Поверителност и данни', window: 'Прозорец', share: 'Сподели', help: 'Помощ' },
+    data: 'Данните ти', dataHint: 'Всичко стои на този компютър (~/.pixel-office). Навън излизат само времето (ако си избрал град) и проверката за версия (ако е включена).',
+    openStats: 'Статистика', openWeather: 'Времето навън', security: 'Какво се чете и записва',
+    place: 'Размер и място', resetSize: 'Нулирай размера', resetPlace: 'Върни над трея', browser: 'Отвори в браузъра',
+    keysTitle: 'Клавиши',
+    keys: [['?', 'тези настройки'], ['B', 'магазинът'], ['L', 'легендата на цветовете'], ['Esc', 'затваря / маха фокуса'], ['Y / N', 'Разреши / Откажи'], ['Ctrl+Alt+P', 'покажи / скрий прозореца'], ['Ctrl+Alt+Y / N', 'разреши / откажи от всеки прозорец']],
     // всяка настройка с по едно изречение какво прави
     look: 'Как изглежда',
     office: 'Офис', officeHint: 'Цялата игра: монети и магазин, любимци, почивки с кафе, конзолка и дартс, ефекти и постижения.',
@@ -243,7 +249,7 @@ const T_BG = {
   },
   tokensHint: 'Монети: печелиш ги, докато агентите работят – харчиш ги в магазина (B)',
   lang: 'Език: български – смени на English',
-  winbar: { settings: 'Настройки (размер, известия, демо…)', pin: 'Винаги отгоре', through: 'Кликовете минават през прозореца (махни от менюто в трея)', hide: 'Скрий в трея', quit: 'Затвори' },
+  winbar: { settings: 'Настройки и помощ', pin: 'Винаги отгоре', through: 'Кликовете минават през прозореца (махни от менюто в трея)', hide: 'Скрий в трея', quit: 'Затвори' },
   demo2: { which: 'Кой вариант да избера?', cont: 'Да продължа ли?', whichShort: 'Кой вариант?', arch: 'Прегледай архитектурата', tests: 'Пусни тестовете', cache: 'Измисли план за кеша' },
 };
 
@@ -304,6 +310,12 @@ const T_EN = {
     shapes: 'The shape of the dot next to the name also shows the state – for colour-blind people and the small window.',
     danger: 'Red with ⚠ – a risky command: deletes recursively, rewrites git history or touches production (rm -rf, git push --force, terraform apply, “prod”…). Take a look before you allow it.',
     settings: 'Settings',
+    sections: { look: 'Look', alerts: 'Alerts', privacy: 'Privacy & data', window: 'Window', share: 'Share', help: 'Help' },
+    data: 'Your data', dataHint: 'Everything stays on this computer (~/.pixel-office). Only the weather (if you picked a city) and the update check (if it is on) go out.',
+    openStats: 'Stats', openWeather: 'Weather outside', security: 'What is read and written',
+    place: 'Size and place', resetSize: 'Reset size', resetPlace: 'Move back above the tray', browser: 'Open in browser',
+    keysTitle: 'Keys',
+    keys: [['?', 'these settings'], ['B', 'the shop'], ['L', 'the colour legend'], ['Esc', 'close / clear the focus'], ['Y / N', 'Allow / Deny'], ['Ctrl+Alt+P', 'show / hide the window'], ['Ctrl+Alt+Y / N', 'allow / deny from any window']],
     look: 'Look',
     office: 'Office', officeHint: 'The whole game: coins and the shop, pets, coffee breaks, handheld games and darts, effects and achievements.',
     focus: 'Focus', focusHint: 'A quiet status board: no coins, shop, pets, effects or games. You still see who is doing what and who is waiting for you. Coins keep adding up, just hidden.',
@@ -433,7 +445,7 @@ const T_EN = {
   },
   tokensHint: 'Coins: earned while your agents work – spend them in the shop (B)',
   lang: 'Language: English – switch to български',
-  winbar: { settings: 'Settings (size, notifications, demo…)', pin: 'Always on top', through: 'Click-through (turn it off from the tray menu)', hide: 'Hide to tray', quit: 'Quit' },
+  winbar: { settings: 'Settings and help', pin: 'Always on top', through: 'Click-through (turn it off from the tray menu)', hide: 'Hide to tray', quit: 'Quit' },
   demo2: { which: 'Which option should I pick?', cont: 'Shall I continue?', whichShort: 'Which option?', arch: 'Review the architecture', tests: 'Run the tests', cache: 'Plan the cache' },
   // имена на предметите (catalog.js пази българските; id-тата са записът и не се пипат)
   items: {

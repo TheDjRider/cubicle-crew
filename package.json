@@ -1,8 +1,23 @@
 {
   "name": "cubicle-crew",
-  "version": "2.8.0",
-  "private": true,
+  "version": "2.9.0",
   "type": "module",
+  "bin": {
+    "cubicle-crew": "bin/cubicle-crew.js"
+  },
+  "files": [
+    "bin/",
+    "server.js",
+    "wallet.js",
+    "weather.js",
+    "update.js",
+    "stats.js",
+    "focus.js",
+    "providers.js",
+    "permissions.js",
+    "public/",
+    "!public/sprites/*.psd"
+  ],
   "scripts": {
     "start": "node server.js",
     "debug": "node server.js --debug",
@@ -25,6 +40,17 @@
   },
   "main": "electron/main.js",
   "description": "Your Claude Code agents, living in a tiny pixel-art office",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "codex",
+    "gemini-cli",
+    "opencode",
+    "ai-agents",
+    "pixel-art",
+    "dashboard",
+    "monitor"
+  ],
   "author": "Kalin Dimitrov",
   "license": "MIT",
   "build": {

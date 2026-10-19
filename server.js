@@ -513,8 +513,8 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   setInterval(poll, POLL_MS);
   poll();
   setInterval(scanSessions, SESSIONS_MS);
-  if (CODEX_ON) console.log(`Codex: следя ${CODEX_ROOT}`);
-  if (GEMINI_ON) console.log(`Gemini CLI: следя ${GEMINI_ROOT}`);
+  if (CODEX_ON) console.log(`Codex: watching ${CODEX_ROOT}`);
+  if (GEMINI_ON) console.log(`Gemini CLI: watching ${GEMINI_ROOT}`);
   watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx).catch(() => {});
   scanSessions();
   wallet.port = actual;
@@ -523,8 +523,8 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   weather.start();
   updates.start();
   process.once('exit', () => wallet.close());
-  console.log(`Cubicle Crew: http://localhost:${actual}   (демо без Claude: /?demo   витрина: /?demo=showcase)`);
-  console.log(`Следя: ${[ROOT, ...EXTRA].join(', ')}`);
+  console.log(`Cubicle Crew: http://localhost:${actual}   (demo without Claude: /?demo   showcase: /?demo=showcase)`);
+  console.log(`Watching: ${[ROOT, ...EXTRA].join(', ')}`);
   detectWsl(); setInterval(detectWsl, WSL_MS).unref?.();
   return { port: actual, external: false };
 }
