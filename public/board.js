@@ -19,10 +19,10 @@ export function boardData(days) {
   const out = {};
   for (const n of [1, 7, 30]) {
     const part = days.slice(0, n);
-    const t = { activeMs: 0, waitingMs: 0, tools: 0, tokIn: 0, tokOut: 0, ms: {}, series: [] };
+    const t = { activeMs: 0, waitingMs: 0, tools: 0, tokIn: 0, tokOut: 0, usd: 0, ms: {}, series: [] };
     for (const d of part) {
       const x = d.total;
-      t.activeMs += x.activeMs; t.waitingMs += x.waitingMs; t.tools += x.tools; t.tokIn += x.tokIn; t.tokOut += x.tokOut;
+      t.activeMs += x.activeMs; t.waitingMs += x.waitingMs; t.tools += x.tools; t.tokIn += x.tokIn; t.tokOut += x.tokOut; t.usd += x.usd || 0;
       for (const [k, v] of Object.entries(x.ms || {})) t.ms[k] = (t.ms[k] || 0) + v;
     }
     // стълбчетата: най-старият ден вляво
@@ -41,7 +41,7 @@ export function demoBoardData() {
   for (let i = 0; i < 30; i++) {
     const w = i === 0 ? 0.6 : (i % 7 === 5 || i % 7 === 6) ? 0.15 + 0.2 * r() : 0.6 + 0.6 * r();
     const ms = { thinking: 1.6 * w * H, typing: 0.9 * w * H, reading: 0.8 * w * H, running: 1.3 * w * H, delegating: 0.5 * w * H, waiting: (0.2 + 0.25 * r()) * w * H };
-    days.push({ total: { activeMs: ACTIVE.reduce((a, k) => a + ms[k], 0), waitingMs: ms.waiting, tools: Math.round(700 * w), tokIn: Math.round(2000 * w), tokOut: Math.round(260000 * w), ms } });
+    days.push({ total: { activeMs: ACTIVE.reduce((a, k) => a + ms[k], 0), waitingMs: ms.waiting, tools: Math.round(700 * w), tokIn: Math.round(2000 * w), tokOut: Math.round(260000 * w), usd: 14 * w, ms } });
   }
   return boardData(days);
 }

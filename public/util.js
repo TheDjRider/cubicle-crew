@@ -92,6 +92,12 @@ export function danger(tool, detail) {
   return !!detail && SHELL_TOOLS.has(tool) && DANGER.some((re) => re.test(detail));
 }
 
+/** Приблизителна цена в $: „<$0.01“, „$3.42“, „$128“. */
+export function fmtUsd(v) {
+  if (!(v > 0)) return '$0';
+  return v < 0.01 ? '<$0.01' : v < 100 ? '$' + v.toFixed(2) : '$' + Math.round(v).toLocaleString('en-US');
+}
+
 export function fmtDuration(ms, T) {
   const s = Math.floor(ms / 1000);
   if (s < 60) return `${s} ${T.sec}`;

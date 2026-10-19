@@ -1,7 +1,7 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
 import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
-import { shortDetail, fmtDuration, danger } from './util.js';
+import { shortDetail, fmtDuration, danger, fmtUsd } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
 import { prefs } from './prefs.js';
@@ -390,7 +390,7 @@ export class UI {
         // прожекционният екран: числата от страницата с думи
         const d = this.office.boardStats?.[PAGE_DAYS[page]], tok = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n));
         html = `<div class="title">${B.pages[page]}</div>` + (d
-          ? `<table><tr><th>${B.work}</th><td>${fmtDuration(d.activeMs, T)}</td></tr><tr><th>${B.waited}</th><td>${fmtDuration(d.waitingMs, T)}</td></tr><tr><th>${B.tools}</th><td>${d.tools}</td></tr><tr><th>${B.tokens}</th><td>${tok(d.tokIn)} / ${tok(d.tokOut)}</td></tr></table>`
+          ? `<table><tr><th>${B.work}</th><td>${fmtDuration(d.activeMs, T)}</td></tr><tr><th>${B.waited}</th><td>${fmtDuration(d.waitingMs, T)}</td></tr><tr><th>${B.tools}</th><td>${d.tools}</td></tr><tr><th>${B.tokens}</th><td>${tok(d.tokIn)} / ${tok(d.tokOut)}</td></tr>${d.usd ? `<tr><th>${B.cost}</th><td>${fmtUsd(d.usd)}</td></tr>` : ''}</table>`
           : `<div>${B.none}</div>`) + `<div class="dim">${page === 3 ? B.back : B.next}</div>`;
       } else if (this.onBoard(m)) {
         const s = this.model.stats(), coins = this.tokens != null && !prefs.focus;
