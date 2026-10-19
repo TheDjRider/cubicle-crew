@@ -146,6 +146,6 @@
   "homepage": "https://github.com/rezored/cubicle-crew",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rezored/cubicle-crew.git"
+    "url": "git+https://github.com/rezored/cubicle-crew.git"
   }
 }

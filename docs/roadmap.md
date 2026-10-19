@@ -31,4 +31,6 @@ Ticked = done and merged.
 - [ ] **Phone / LAN view** – read-only, off by default, PIN-protected. Opens a port to the local network.
 - [ ] **More than two teams** – a second floor or a "command center" view when 3+ sessions work at once
       (the office is fixed by design today).
-- [ ] **Package managers** – WinGet, Homebrew cask, `npx cubicle-crew` (publishing under your accounts).
+- [x] **npm** – `npx cubicle-crew` (published 2.9.0, 2026-10-19; npm staged publishing – a new version may need *Approve* on npmjs.com)
+- [ ] **WinGet** – `rezored.CubicleCrew` PR microsoft/winget-pkgs#455788 (CLA signed, waiting for validation/review); later versions need an update PR
+- [ ] **Homebrew cask** – not started (unsigned app: own tap rather than homebrew-cask)
