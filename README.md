@@ -60,7 +60,13 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 
 ## Quick start
 
-Requires **Node.js 18+**.
+Requires **Node.js 18+**. The fastest way – no install, opens in your browser:
+
+```bash
+npx cubicle-crew     # → http://localhost:4317   (--demo, --port 4400, --no-open)
+```
+
+Or from the source:
 
 ```bash
 git clone https://github.com/rezored/cubicle-crew.git
