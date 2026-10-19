@@ -365,15 +365,18 @@ ipcMain.on('action', (_e, act) => {
 // страницата казва какъв размер дава мащаб 2. Ръчно избраният размер е минимумът:
 // прозорецът расте наляво/нагоре от долния десен ъгъл, когато трябва, и се връща към твоя размер след това.
 // магазинът не се побира в малкия прозорец: докато е отворен, прозорецът расте (от долния десен ъгъл) и после се връща
-const SHOP_SIZE = { w: 820, h: 700 }; // магазинът е лента отдолу – офисът над нея трябва да остане в мащаб ≥2
+// магазинът е панел отляво (до 480 px, --shop-w в index.html) – офисът вдясно от него трябва да остане в мащаб ≥2
+// (стаята е 356 логически px = 712 физически при мащаб 2)
+const SHOP_PANEL = 480, SHOP_H = 620;
 let shopRestore = null;
 ipcMain.on('shop', (_e, open) => {
   if (!win) return;
   if (open) wake();
   if (open && !shopRestore) {
-    const b = win.getBounds(), wa = screen.getDisplayMatching(b).workArea;
+    const b = win.getBounds(), disp = screen.getDisplayMatching(b), wa = disp.workArea;
     shopRestore = b;
-    const w = Math.min(Math.max(b.width, SHOP_SIZE.w), wa.width - 2 * MARGIN), h = Math.min(Math.max(b.height, SHOP_SIZE.h), wa.height - 2 * MARGIN);
+    const needW = SHOP_PANEL + Math.ceil(712 / (disp.scaleFactor || 1)) + 8;
+    const w = Math.min(Math.max(b.width, needW), wa.width - 2 * MARGIN), h = Math.min(Math.max(b.height, SHOP_H), wa.height - 2 * MARGIN);
     const x = Math.max(wa.x + MARGIN, Math.min(b.x + b.width, wa.x + wa.width - MARGIN) - w), y = Math.max(wa.y + MARGIN, Math.min(b.y + b.height, wa.y + wa.height - MARGIN) - h);
     programmatic = Date.now();
     if (w !== b.width || h !== b.height) win.setBounds({ x, y, width: w, height: h });

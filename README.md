@@ -240,6 +240,11 @@ Drop PNGs into `public/sprites/` and reload the page:
 Node.js, the [`ws`](https://github.com/websockets/ws) library and Electron for the desktop build. That's all.
 There are no image assets, fonts, CDNs or frameworks: every pixel, from the characters to the aquarium fish, is drawn in code.
 
+## Contributing
+
+Issues and pull requests are welcome – see [CONTRIBUTING.md](CONTRIBUTING.md). Contributors can get an office pet of their own design, free in the shop with their name on it.
+
+**Contributor pets:** Bueno, the tricolour mix – [@buensoft](https://github.com/buensoft).
 
 ## License
 

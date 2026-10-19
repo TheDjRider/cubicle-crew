@@ -94,9 +94,10 @@ function applyCanvas() {
 }
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  // отворен магазин = лента отдолу; офисът се побира над нея
-  const shopH = shop.root.hidden ? 0 : shop.root.offsetHeight;
-  office.resize(Math.round(innerWidth * dpr), Math.round(Math.max(120, innerHeight - shopH) * dpr));
+  // отворен магазин = панел отляво (офисът е вдясно от него), в тесен прозорец – лента отдолу (офисът е над нея)
+  const open = !shop.root.hidden, side = open && shop.root.offsetHeight >= innerHeight - 30;
+  const shopW = side ? shop.root.offsetWidth : 0, shopH = open && !side ? shop.root.offsetHeight : 0;
+  office.resize(Math.round(Math.max(160, innerWidth - shopW) * dpr), Math.round(Math.max(120, innerHeight - shopH) * dpr));
   applyCanvas();
 }
 addEventListener('resize', resize);

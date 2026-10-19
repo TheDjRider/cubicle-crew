@@ -1,6 +1,6 @@
 // Магазин: DOM панел (острия текст, кирилица) с раздели; посочен предмет се вижда веднага в офиса (преглед),
 // покупките минават през сървъра (или демо портфейла) – правилата са в catalog.js.
-import { T, itemName, LANG, PARAMS, petName } from './config.js';
+import { T, itemName, LANG, PARAMS, petName, petTitle } from './config.js';
 import { prefs } from './prefs.js';
 import { wxFrom } from './weather.js';
 import { ITEMS, ITEM, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, unlocked, resolveDecor, PET_SLOTS, petCount, MAX_PETS, PET_NAME_MAX, inSeason } from './catalog.js';
@@ -161,6 +161,7 @@ export class Shop {
       card.dataset.id = it.id;
       card.appendChild(this.thumb(it));
       el('div', 'nm', card, itemName(it));
+      if (it.by) el('div', 'by', card).textContent = T.shop.by(it.by);
       const price = it.price === 0 ? T.shop.free : have ? T.shop.owned : `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`;
       el('div', 'pr', card, price);
       const act = el('div', 'act', card);
@@ -252,6 +253,7 @@ export class Shop {
       c.dataset.id = it.id; c.dataset.slot = slot;
       c.appendChild(this.thumb(it));
       el('div', 'nm', c, itemName(it));
+      if (it.by) el('div', 'by', c).textContent = T.shop.by(it.by);
       return c;
     };
     const catSlots = PET_SLOTS.filter((sl) => SLOTS[sl].pet === 'cat');
@@ -277,7 +279,7 @@ export class Shop {
         continue;
       }
       const cur = decor[slot]?.id || null;
-      h.textContent = `${title} · ${petName(slot, s.petNames, cur)}${cur ? '' : ` (${P.home})`}`;
+      h.textContent = `${title} · ${petTitle(slot, s.petNames, cur)}${cur ? '' : ` (${P.home})`}`;
       // име
       const form = el('form', 'pname', sec);
       const inp = el('input', null, form);
@@ -290,9 +292,12 @@ export class Shop {
         const r = await this.tokens.backend.pet(slot, inp.value);
         if (r && !r.ok) this.flash(T.shop.errors[r.error] || r.error);
       };
+      const all = ITEMS.filter((x) => x.group === S.group), crew = all.filter((x) => x.by);
       const grid = el('div', 'grid', sec);
-      for (const it of ITEMS.filter((x) => x.group === S.group)) {
-        const c = card(grid, it, slot, cur === it.id);
+      let crewGrid = null;
+      if (crew.length) { el('h4', null, sec, P.crew); crewGrid = el('div', 'grid', sec); }
+      for (const it of [...all.filter((x) => !x.by), ...crew]) {
+        const c = card(it.by ? crewGrid : grid, it, slot, cur === it.id);
         const have = owns(s, it.id);
         el('div', 'pr', c, it.price === 0 ? T.shop.free : have ? T.shop.owned : `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
         const act = el('div', 'act', c);
@@ -409,8 +414,8 @@ export class Shop {
   thumb(it) {
     let src = this.thumbs.get(it.id);
     if (!src) { src = it.group === 'cat' || it.group === 'dog' ? petThumb(it) : it.group === 'catslot' ? petThumb(ITEM[it.gives]) : thumb(it); this.thumbs.set(it.id, src); }
-    // цяло число пъти увеличение (пиксел арт), около 84x66
-    const k = Math.max(1, Math.min(4, Math.round(Math.min(84 / src.width, 66 / src.height))));
+    // цяло число пъти увеличение (пиксел арт), около 116x88
+    const k = Math.max(1, Math.min(6, Math.round(Math.min(116 / src.width, 88 / src.height))));
     const c = makeCanvas(src.width, src.height);
     c.getContext('2d').drawImage(src, 0, 0);
     c.className = 'th';

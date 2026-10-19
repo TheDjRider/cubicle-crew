@@ -172,6 +172,7 @@ const T_BG = {
       cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', season: 'Сезонно', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
     },
     slots: { 'rug.team0': 'Екип 1', 'rug.team1': 'Екип 2', 'chair.team0': 'Под-агенти', 'chair.team1': 'Екип 2', 'chair.lead': '★ Оркестратори' },
+    by: (h) => `от @${h}`,
     buy: 'Купи', equip: 'Сложи', equipped: 'Сложено', remove: 'Махни', free: 'безплатно', owned: 'твое',
     need: (n) => `още ${n}`,
     hint: 'Посочи предмет – виждаш го в офиса. Затвори с Esc.',
@@ -183,7 +184,7 @@ const T_BG = {
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'отключено',
     pets: {
-      cats: ['Котка 1', 'Котка 2', 'Котка 3'], dog: 'Куче', away: 'Прибери у дома', back: 'Върни в офиса',
+      cats: ['Котка 1', 'Котка 2', 'Котка 3'], dog: 'Куче', away: 'Прибери у дома', back: 'Върни в офиса', crew: 'Любимци на контрибютъри',
       unlock: (p) => `Идва с шарка „${p}“; после можеш да ѝ избереш всяка купена шарка.`,
       unlockDog: (p) => `Идва като ${p.toLowerCase()}; после можеш да му избереш всяка купена порода.`,
       home: 'у дома', full: 'Няма място', name: 'Име', rename: 'Преименувай', save: 'Запази',
@@ -374,6 +375,7 @@ const T_EN = {
       cat: 'Cat', cat2: 'One more cat', dog: 'Dog', season: 'Seasonal', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
     },
     slots: { 'rug.team0': 'Team 1', 'rug.team1': 'Team 2', 'chair.team0': 'Sub-agents', 'chair.team1': 'Team 2', 'chair.lead': '★ Leads' },
+    by: (h) => `by @${h}`,
     buy: 'Buy', equip: 'Use', equipped: 'In use', remove: 'Remove', free: 'free', owned: 'owned',
     need: (n) => `${n} more`,
     hint: 'Hover an item to preview it in the office. Esc closes.',
@@ -385,7 +387,7 @@ const T_EN = {
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'unlocked',
     pets: {
-      cats: ['Cat 1', 'Cat 2', 'Cat 3'], dog: 'Dog', away: 'Send home', back: 'Bring back',
+      cats: ['Cat 1', 'Cat 2', 'Cat 3'], dog: 'Dog', away: 'Send home', back: 'Bring back', crew: 'Contributor pets',
       unlock: (p) => `Comes as a ${p.toLowerCase()}; then you can give it any pattern you own.`,
       unlockDog: (p) => `Comes as a ${p.toLowerCase()}; then you can make it any breed you own.`,
       home: 'at home', full: 'No room', name: 'Name', rename: 'Rename', save: 'Save',
@@ -518,3 +520,8 @@ export const PARAMS = {
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
 /** Име на любимец по място (save.petNames, иначе името на породата, ако има такова, иначе това на мястото – на текущия език). */
 export const petName = (slot, names, look) => names?.[slot] || T.pets.breeds[look] || T.pets.names[slot] || slot;
+/** За показване: прякорът, а ако породата има свое (фиксирано) име и то е друго – „Шаро (Буено)“. */
+export const petTitle = (slot, names, look) => {
+  const n = petName(slot, names, look), b = T.pets.breeds[look];
+  return b && n !== b ? `${n} (${b})` : n;
+};

@@ -1,6 +1,6 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
-import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
+import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petTitle } from './config.js';
 import { shortDetail, fmtDuration, danger, fmtUsd } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
@@ -420,7 +420,7 @@ export class UI {
     if (!a && !html && this.onSwitch(m)) html = `<div class="title">${T.lights.title}</div><div class="dim">${this.office.lights.on ? T.lights.off : T.lights.on}</div>`;
     // любимец: името му (може да се смени – клик отваря „Любимци“)
     const pet = !a && !html && this.office.petAt(m.x, m.y);
-    if (pet) html = `<div class="title">${esc(petName(pet.slot, this.office.petNames, pet.look?.id))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}</div><div class="dim">${T.pets.tip}</div>`;
+    if (pet) html = `<div class="title">${esc(petTitle(pet.slot, this.office.petNames, pet.look?.id))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}${pet.look?.by ? ` · ${esc(T.shop.by(pet.look.by))}` : ''}</div><div class="dim">${T.pets.tip}</div>`;
     this.canvas.style.cursor = a || pet || this.onPlaque(m) || this.onSwitch(m) || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
