@@ -3,6 +3,7 @@
 // Ако Cubicle Crew вече върви на порта (напр. приложението), само отваря браузъра към него.
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { request } from 'node:http';
 
 const args = process.argv.slice(2);
 const has = (...f) => f.some((x) => args.includes(x));
@@ -37,13 +38,21 @@ if (args[0] === 'event') {
   const body = { type: args[1], agent: val('--agent') || process.env.CUBICLE_AGENT || `${process.ppid}` };
   for (const k of ['label', 'tool', 'detail', 'provider', 'reason', 'id']) if (val('--' + k) != null) body[k] = val('--' + k);
   const ports = val('--port') || process.env.PORT ? [Number(val('--port') || process.env.PORT)] : [4317, 4318, 4319, 4320];
+  // node:http без keep-alive – fetch оставя сокета към чужд сървър отворен и process.exit() гърми на Windows
+  const post = (p) => new Promise((res) => {
+    const req = request({ host: '127.0.0.1', port: p, path: '/api/event', method: 'POST', agent: false, timeout: 2000,
+      headers: { 'Content-Type': 'application/json' } }, (r) => {
+      let t = ''; r.setEncoding('utf8'); r.on('data', (d) => { t += d; });
+      r.on('end', () => { let j = {}; try { j = JSON.parse(t); } catch { /* не е JSON */ } res({ status: r.statusCode, j }); });
+    });
+    req.on('timeout', () => req.destroy()); req.on('error', () => res(null));
+    req.end(JSON.stringify(body));
+  });
   for (const p of ports) {
-    try {
-      const r = await fetch(`http://127.0.0.1:${p}/api/event`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(2000) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) { console.error(`cubicle-crew: ${j.error || r.status}`); process.exit(1); }
-      process.exit(0);
-    } catch { /* следващият порт */ }
+    const r = await post(p);
+    if (typeof r?.j.ok !== 'boolean') continue; // никой или чужд сървър (напр. OpenTelemetry на 4317/4318) – следващият порт
+    if (r.status !== 200) { console.error(`cubicle-crew: ${r.j.error || r.status}`); process.exit(1); }
+    process.exit(0);
   }
   console.error('cubicle-crew: no running Cubicle Crew found (start it with: npx cubicle-crew)');
   process.exit(1);
