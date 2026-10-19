@@ -9,7 +9,25 @@ const WebSocket = require(path.join(__dirname, '..', 'node_modules', 'ws'));
 const [url, out, W = '1280', H = '720', DPR = '1', times = '3000', evalJs, preEval] = process.argv.slice(2);
 const port = 9300 + Math.floor(Math.random() * 500);
 const prof = path.join(require('os').tmpdir(), 'po-chrome-prof-' + port);
-const chrome = spawn(process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', [
+// пътят до Chrome по платформи (CHROME= го заобикаля)
+const CHROMES = {
+  win32: ['C:/Program Files/Google/Chrome/Application/chrome.exe',
+    'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'],
+  darwin: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'],
+  linux: ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'],
+};
+const findChrome = () => {
+  if (process.env.CHROME) return process.env.CHROME;
+  const hit = (CHROMES[process.platform] || CHROMES.linux).find((p) => fs.existsSync(p));
+  if (!hit) {
+    console.error('Chrome не е намерен – задайте CHROME=<път до chrome>');
+    process.exit(1);
+  }
+  return hit;
+};
+const chrome = spawn(findChrome(), [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${prof}`, '--no-first-run',
   '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: 'ignore' });
 
