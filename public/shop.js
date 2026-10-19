@@ -9,7 +9,7 @@ import { SKINS, HAIRS } from './palette.js';
 import { thumb } from './environment.js';
 import { Cat, Dog } from './characters.js';
 import { coinUrl } from './tokens.js';
-import { makeCanvas } from './util.js';
+import { makeCanvas, fmtUsd } from './util.js';
 
 const el = (tag, cls, parent, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; };
 const fmt = (n) => Number(n).toLocaleString(LANG === 'bg' ? 'bg-BG' : 'en-US');
@@ -335,6 +335,7 @@ export class Shop {
     card(S.waited, dur(t.waitingMs));
     card(S.tools, fmt(t.tools), S.sessions(t.sessions, t.subagents));
     card(S.tokens, `${tok(t.tokIn)} / ${tok(t.tokOut)}`, `${S.cache}: ${tok(t.tokCache)}`);
+    card(S.cost, fmtUsd(t.usd), t.tokNoPrice ? S.noPrice(tok(t.tokNoPrice)) : S.costHint);
     if (!t.sessions && !t.subagents) el('p', 'hint', sec).textContent = S.empty;
     // 7 дни: работа (зелено) и чакане за теб (червено) – обща скала
     el('h3', null, sec, S.days);
@@ -350,12 +351,12 @@ export class Shop {
     }
     if (today.projects.length) {
       const tb = el('table', 'proj', sec);
-      tb.innerHTML = `<thead><tr><th>${S.project}</th><th>${S.active}</th><th>${S.waiting}</th><th>${S.calls}</th><th>${S.tok}</th></tr></thead>`;
+      tb.innerHTML = `<thead><tr><th>${S.project}</th><th>${S.active}</th><th>${S.waiting}</th><th>${S.calls}</th><th>${S.tok}</th><th>$</th></tr></thead>`;
       const body = el('tbody', null, tb);
       for (const p of today.projects) {
         const tr = el('tr', null, body);
         el('td', null, tr).textContent = p.project; // името на папката – само като текст
-        for (const v of [dur(p.activeMs), dur(p.waitingMs), fmt(p.tools), `${tok(p.tokIn)} / ${tok(p.tokOut)}`]) el('td', 'n', tr, v);
+        for (const v of [dur(p.activeMs), dur(p.waitingMs), fmt(p.tools), `${tok(p.tokIn)} / ${tok(p.tokOut)}`, p.usd ? fmtUsd(p.usd) : '–']) el('td', 'n', tr, v);
       }
     }
     const act = el('div', 'sw', sec);
