@@ -69,6 +69,29 @@ export function shortDetail(s, max = 40) {
   return s.slice(0, max - 1) + '…';
 }
 
+// Рискови команди – само за shell инструментите: трият рекурсивно, презаписват историята, пипат продукция.
+// detail идва съкратен до 60 знака (brief() в server.js), затова шаблоните гледат само началото на командата.
+const SHELL_TOOLS = new Set(['Bash', 'PowerShell', 'Shell']);
+const DANGER = [
+  /\brm\b(?=[^|;&]*\s-\w*r)(?=[^|;&]*\s-\w*f)/i,                    // rm -rf, rm -r -f, rm -fR
+  /\bRemove-Item\b(?=[^|;]*\s-Recurse)(?=[^|;]*\s-Force)/i,        // Remove-Item -Recurse -Force
+  /\b(?:rmdir|rd|del)\s+\/s\b/i,                                    // cmd: rmdir /s, del /s
+  /\bgit\s+push\b[^|;&]*\s(?:--force|-f\b|--delete\b)/i,
+  /\bgit\s+(?:reset\s+--hard|clean\s+-\w*f|branch\s+-D\b|filter-(?:branch|repo)\b)/,
+  /\b(?:terraform|tofu|pulumi)\s+(?:apply|destroy|up)\b/i,
+  /\bkubectl\s+(?:delete|apply|drain)\b|\bhelm\s+(?:uninstall|delete)\b/i,
+  /\bdocker\s+(?:system\s+prune|volume\s+(?:rm|prune))\b/i,
+  /\b(?:drop\s+(?:table|database|schema)|truncate\s+table)\b/i,
+  /\b(?:npm|pnpm|yarn|cargo)\s+publish\b|\bgh\s+(?:repo|release)\s+delete\b/i,
+  /\b(?:curl|wget|iwr|irm|Invoke-WebRequest|Invoke-RestMethod)\b[^|]*\|\s*(?:sudo\s+)?(?:ba|z)?sh\b|\|\s*iex\b/i,
+  /\bchmod\s+-R\s+777\b|\bmkfs\b|\bdd\s+if=|\bformat\s+[a-z]:/i,
+  /\bprod(?:uction)?\b/i,                                           // всичко с „prod“ в командата
+];
+/** Рискова shell команда (⚠ в червено в балончето, картата, лентата и молбата за разрешение). */
+export function danger(tool, detail) {
+  return !!detail && SHELL_TOOLS.has(tool) && DANGER.some((re) => re.test(detail));
+}
+
 export function fmtDuration(ms, T) {
   const s = Math.floor(ms / 1000);
   if (s < 60) return `${s} ${T.sec}`;

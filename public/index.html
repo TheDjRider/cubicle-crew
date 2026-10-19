@@ -34,6 +34,13 @@
     font: 12px/15px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .25s; will-change: transform; }
   .bubble.show { opacity: 1; }
   .bubble b { font-weight: 700; margin-right: 5px; }
+  /* рискова команда (danger() в util.js) */
+  .bubble.danger { border-color: #b0182f; }
+  .bubble.danger b::before { content: '⚠ '; color: #c41e3a; }
+  .bubble.danger span { color: #c41e3a; font-weight: 700; }
+  .danger { color: #ff6b7f; font-weight: 700; }
+  #prompt code.danger { color: #ffd0d8; background: #5a1424; border: 1px solid #e04a6b; }
+  #strip .row .what.danger { color: #ff6b7f; }
   .bubble[data-state="typing"] { border-left: 5px solid #4ac26b; }
   .bubble[data-state="reading"] { border-left: 5px solid #4a8fe0; }
   .bubble[data-state="running"] { border-left: 5px solid #e07a4a; }

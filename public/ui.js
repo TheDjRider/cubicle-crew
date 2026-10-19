@@ -1,7 +1,7 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
 import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
-import { shortDetail, fmtDuration } from './util.js';
+import { shortDetail, fmtDuration, danger } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
 import { prefs } from './prefs.js';
@@ -41,6 +41,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 
 /** Кратко id без префикса на агента (codex:…, oc:…). */
 const shortId = (id, n) => String(id).replace(/^(codex|oc|gemini):/, '').slice(0, n);
+
+/** Детайлът на инструмента (вече escape-нат) – в червено с ⚠, ако командата е рискова; в private режим остава само ⚠. */
+function dangerHtml(t, html) {
+  return danger(t.tool, t.detail) ? `<span class="danger" title="${T.danger}">⚠ ${html}</span>` : html;
+}
 
 export class UI {
   constructor(office, model, canvas) {
@@ -257,7 +262,7 @@ export class UI {
     const ag = this.model.agents.get(p.session), P = T.perm;
     this.prompt.dataset.id = p.id;
     this.prompt.innerHTML = `<span class="q"><b>${esc(ag ? this.displayName(ag) : p.session.slice(0, 8))}</b> · ${esc(T.allow(p.tool))}</span>` +
-      (p.detail && !prefs.private ? `<code>${esc(shortDetail(p.detail, 60))}</code>` : '') +
+      (p.detail && !prefs.private ? `<code${danger(p.tool, p.detail) ? ` class="danger" title="${T.danger}">⚠ ` : '>'}${esc(shortDetail(p.detail, 60))}</code>` : danger(p.tool, p.detail) ? `<code class="danger">⚠ ${T.danger}</code>` : '') +
       `<button type="button" class="ok" data-perm="allow" data-id="${esc(p.id)}">${P.allow} <kbd>Y</kbd></button>` +
       `<button type="button" data-perm="deny" data-id="${esc(p.id)}">${P.deny} <kbd>N</kbd></button>` +
       (list.length > 1 ? `<span class="more">${P.more(list.length - 1)}</span>` : '') +
@@ -301,13 +306,14 @@ export class UI {
       // балонче: инструмент + детайл (само за "работни" състояния)
       const tool = this.model.currentTool(ag);
       let btxt = null;
-      if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, prefs.private ? '' : shortDetail(tool.detail, 38)];
+      if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, prefs.private ? '' : shortDetail(tool.detail, 38), danger(tool.tool, tool.detail)];
       if (ag.crashed && !ag.crashSeen) btxt = [T.crashed.title, T.crashed.hint];
       else if (st === 'waiting') btxt = [T.needsYou, ag.ask ? T.allow(ag.ask.kind === 'permission' && tool ? tool.tool : '') : tool ? tool.tool : ''];
       const bkey = btxt ? btxt.join('|') : '';
       this.set(it, 'btxt', bkey, () => {
         if (btxt) { it.bubble.children[0].textContent = btxt[0]; it.bubble.children[1].textContent = btxt[1]; it.bw = 0; }
         it.bubble.classList.toggle('show', !!btxt);
+        it.bubble.classList.toggle('danger', !!btxt?.[2]);
       });
       const by = anc.bubble.y - (st === 'waiting' ? 18 : 0);
       const bx = this.clampX(anc.bubble.x, it, 'bw', it.bubble);
@@ -352,7 +358,7 @@ export class UI {
       [T.state, `<i class="dot" data-state="${st}" style="background:${STATES[st].color}"></i>${T.states[st]}`],
     ];
     if (ag.provider) rows.push([T.agentKind, esc(PROVIDERS[ag.provider] || ag.provider)]);
-    if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${priv ? '' : esc(shortDetail(tool.detail, 46))}`]);
+    if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${dangerHtml(tool, priv ? '' : esc(shortDetail(tool.detail, 46)))}`]);
     rows.push([T.toolCalls, String(ag.toolCalls)]);
     if (ag.ctx > 0) { const k = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1).replace(/.0$/, '') + 'M' : Math.round(n / 1000) + 'k'); rows.push([T.context, `${k(ag.ctx)} / ${k(ag.ctxMax)} <span class="dim">(${Math.round((100 * ag.ctx) / ag.ctxMax)}%)</span>`]); }
     rows.push([T.uptime, fmtDuration(now - ag.firstSeen, T)]);
@@ -364,7 +370,7 @@ export class UI {
     if (card && ag.history?.length) {
       const hm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
       hist = `<div class="hist"><b>${T.history}</b>` + ag.history.slice(-10).reverse().map((h) =>
-        `<div><span class="t">${hm(h.at)}</span><b>${esc(h.tool)}</b><span class="d">${priv ? '' : esc(shortDetail(h.detail, 34))}</span><span class="t">${h.ms == null ? T.running : fmtDuration(h.ms, T)}</span></div>`).join('') + '</div>';
+        `<div><span class="t">${hm(h.at)}</span><b>${esc(h.tool)}</b><span class="d">${dangerHtml(h, priv ? '' : esc(shortDetail(h.detail, 34)))}</span><span class="t">${h.ms == null ? T.running : fmtDuration(h.ms, T)}</span></div>`).join('') + '</div>';
     }
     const ren = card ? `<div class="ren"><button type="button" data-term title="${T.terminalHint}">↗ ${T.terminal}</button>${ag.subagent ? '' : ` <button type="button" data-ren>✎ ${T.rename}</button>`}</div>` : '';
     return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>' + hist + ren;
@@ -572,7 +578,7 @@ export class UI {
     }
     // сподели, цветовете, обратна връзка
     h += `<h3>${H.share}</h3><div class="share"><button type="button" data-snap>${H.snapshot}</button><button type="button" data-clip>${H.clip}</button></div><p class="dim">${H.shareHint}</p>`;
-    h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p></details>`;
+    h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p><p class="dim"><span class="danger">⚠</span> ${H.danger}</p></details>`;
     // нови версии (заявка навън – само ако е включено)
     const U = this.update;
     if (U && !demo) {

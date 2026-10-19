@@ -75,6 +75,7 @@ const T_BG = {
   crashed: { title: 'Сесията прекъсна', hint: 'насред работа' },
   needsYou: 'Чака теб!',
   allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
+  danger: 'Рискова команда',
   perm: { allow: 'Разреши', deny: 'Откажи', more: (n) => `още ${n}`, keys: 'Y / N', global: 'или Ctrl+Alt+Y / N отвсякъде' },
   sound: {
     on: 'Звук: включен – звъни, когато агент чака теб или сесия приключи (само ако не гледаш прозореца). Клик – изключи.',
@@ -107,6 +108,7 @@ const T_BG = {
       waiting: 'Чака теб – въпрос или разрешение („Allow …?“). Звънецът звъни.',
     },
     shapes: 'Формата на точката до името също показва състоянието – за далтонисти и за малкия прозорец.',
+    danger: 'В червено с ⚠ – рискова команда: трие рекурсивно, презаписва историята в git, пипа продукция (rm -rf, git push --force, terraform apply, „prod“…). Погледни, преди да разрешиш.',
     settings: 'Настройки',
     // всяка настройка с по едно изречение какво прави
     look: 'Как изглежда',
@@ -262,6 +264,7 @@ const T_EN = {
   crashed: { title: 'Session ended', hint: 'in the middle of the work' },
   needsYou: 'Needs you!',
   allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
+  danger: 'Risky command',
   perm: { allow: 'Allow', deny: 'Deny', more: (n) => `${n} more`, keys: 'Y / N', global: 'or Ctrl+Alt+Y / N from anywhere' },
   sound: {
     on: 'Sound: on – chimes when an agent needs you or a session finishes (only while you are not looking at the window). Click to mute.',
@@ -292,6 +295,7 @@ const T_EN = {
       waiting: 'Waiting for you – a question or a permission prompt ("Allow …?"). The bell rings.',
     },
     shapes: 'The shape of the dot next to the name also shows the state – for colour-blind people and the small window.',
+    danger: 'Red with ⚠ – a risky command: deletes recursively, rewrites git history or touches production (rm -rf, git push --force, terraform apply, “prod”…). Take a look before you allow it.',
     settings: 'Settings',
     look: 'Look',
     office: 'Office', officeHint: 'The whole game: coins and the shop, pets, coffee breaks, handheld games and darts, effects and achievements.',

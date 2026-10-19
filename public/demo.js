@@ -7,7 +7,7 @@ const PROJECTS = ['cubicle-crew', 'api-gateway', 'landing-page', 'data-pipeline'
   'ml-train', 'auth-service', 'design-system', 'billing', 'search', 'analytics', 'cli-tools', 'chat-bot', 'web-shop'];
 const FILES = ['src/app.ts', 'src/components/Header.tsx', 'server/routes/users.js', 'README.md', 'package.json',
   'src/lib/parser.rs', 'tests/api.spec.ts', 'docs/architecture.md', 'src/styles/main.css', 'config/deploy.yml'];
-const CMDS = ['npm test', 'npm run build', 'git status', 'cargo check', 'pytest -q', 'docker compose up -d', 'eslint src --fix'];
+const CMDS = ['npm test', 'npm run build', 'git status', 'cargo check', 'pytest -q', 'docker compose up -d', 'eslint src --fix', 'git push --force origin main'];
 const SEARCH = ['TODO', 'useEffect', 'class .*Service', 'export default', 'fetch\\('];
 const TASKS = ['Explore auth flow', 'Write unit tests', 'Review CSS', 'Find dead code', 'Migrate API v2'];
 
