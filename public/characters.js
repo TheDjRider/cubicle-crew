@@ -296,6 +296,8 @@ class Pet {
     if (!this.placed) { this.x = area.x0 + (area.x1 - area.x0) * this.start; this.y = area.y1 - 4; this.placed = true; this.until = now + 4000; }
     this.x = clamp(this.x, area.x0, area.x1); this.y = clamp(this.y, area.y0, area.y1);
     if (this.mode === 'walk') {
+      // зоната може да се е смалила след избора на целта (магазин, размер на прозореца) – иначе ходи на място до ръба
+      this.tx = clamp(this.tx, area.x0, area.x1); this.ty = clamp(this.ty, area.y0, area.y1);
       const dx = this.tx - this.x, dy = this.ty - this.y, d = Math.hypot(dx, dy);
       if (d < 0.5) { this.mode = this.rest(); this.until = now + 6000 + Math.random() * 14000; return; }
       const m = Math.min(d, this.speed * dt);
