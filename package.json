@@ -1,6 +1,6 @@
 {
   "name": "cubicle-crew",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -40,6 +40,7 @@
       "server.js",
       "wallet.js",
       "weather.js",
+      "update.js",
       "stats.js",
       "focus.js",
       "providers.js",

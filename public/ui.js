@@ -1,7 +1,7 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
 import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petName } from './config.js';
-import { shortDetail, fmtDuration } from './util.js';
+import { shortDetail, fmtDuration, danger } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
 import { prefs } from './prefs.js';
@@ -41,6 +41,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 
 /** Кратко id без префикса на агента (codex:…, oc:…). */
 const shortId = (id, n) => String(id).replace(/^(codex|oc|gemini):/, '').slice(0, n);
+
+/** Детайлът на инструмента (вече escape-нат) – в червено с ⚠, ако командата е рискова; в private режим остава само ⚠. */
+function dangerHtml(t, html) {
+  return danger(t.tool, t.detail) ? `<span class="danger" title="${T.danger}">⚠ ${html}</span>` : html;
+}
 
 export class UI {
   constructor(office, model, canvas) {
@@ -118,12 +123,13 @@ export class UI {
     // състоянията на оркестраторите по ред на идване -> точките в иконата в трея
     const leads = [...this.office.actors.values()].filter((a) => !a.agent.subagent).sort((a, b) => a.joinSeq - b.joinSeq).map((a) => a.vstate);
     const prompt = this.model.prompts.keys().next().value || null; // най-старата молба за разрешение (глобалните Ctrl+Alt+Y / N)
-    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}`;
+    const update = this.update?.newer ? this.update.latest : null; // нова версия -> ред в менюто на трея
+    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}|${update?.version}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
     // sound: приложението пуска известието без системния звук, щом страницата свири своя
     const waitingIds = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => this.office.leadOf(a)?.id || a.id);
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds, prompt });
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds, prompt, update });
   }
 
   setScale(scale, dpr, W, H) {
@@ -256,7 +262,7 @@ export class UI {
     const ag = this.model.agents.get(p.session), P = T.perm;
     this.prompt.dataset.id = p.id;
     this.prompt.innerHTML = `<span class="q"><b>${esc(ag ? this.displayName(ag) : p.session.slice(0, 8))}</b> · ${esc(T.allow(p.tool))}</span>` +
-      (p.detail && !prefs.private ? `<code>${esc(shortDetail(p.detail, 60))}</code>` : '') +
+      (p.detail && !prefs.private ? `<code${danger(p.tool, p.detail) ? ` class="danger" title="${T.danger}">⚠ ` : '>'}${esc(shortDetail(p.detail, 60))}</code>` : danger(p.tool, p.detail) ? `<code class="danger">⚠ ${T.danger}</code>` : '') +
       `<button type="button" class="ok" data-perm="allow" data-id="${esc(p.id)}">${P.allow} <kbd>Y</kbd></button>` +
       `<button type="button" data-perm="deny" data-id="${esc(p.id)}">${P.deny} <kbd>N</kbd></button>` +
       (list.length > 1 ? `<span class="more">${P.more(list.length - 1)}</span>` : '') +
@@ -300,13 +306,14 @@ export class UI {
       // балонче: инструмент + детайл (само за "работни" състояния)
       const tool = this.model.currentTool(ag);
       let btxt = null;
-      if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, prefs.private ? '' : shortDetail(tool.detail, 38)];
+      if (tool && (st === 'typing' || st === 'reading' || st === 'running' || st === 'delegating')) btxt = [tool.tool, prefs.private ? '' : shortDetail(tool.detail, 38), danger(tool.tool, tool.detail)];
       if (ag.crashed && !ag.crashSeen) btxt = [T.crashed.title, T.crashed.hint];
       else if (st === 'waiting') btxt = [T.needsYou, ag.ask ? T.allow(ag.ask.kind === 'permission' && tool ? tool.tool : '') : tool ? tool.tool : ''];
       const bkey = btxt ? btxt.join('|') : '';
       this.set(it, 'btxt', bkey, () => {
         if (btxt) { it.bubble.children[0].textContent = btxt[0]; it.bubble.children[1].textContent = btxt[1]; it.bw = 0; }
         it.bubble.classList.toggle('show', !!btxt);
+        it.bubble.classList.toggle('danger', !!btxt?.[2]);
       });
       const by = anc.bubble.y - (st === 'waiting' ? 18 : 0);
       const bx = this.clampX(anc.bubble.x, it, 'bw', it.bubble);
@@ -351,7 +358,7 @@ export class UI {
       [T.state, `<i class="dot" data-state="${st}" style="background:${STATES[st].color}"></i>${T.states[st]}`],
     ];
     if (ag.provider) rows.push([T.agentKind, esc(PROVIDERS[ag.provider] || ag.provider)]);
-    if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${priv ? '' : esc(shortDetail(tool.detail, 46))}`]);
+    if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${dangerHtml(tool, priv ? '' : esc(shortDetail(tool.detail, 46)))}`]);
     rows.push([T.toolCalls, String(ag.toolCalls)]);
     if (ag.ctx > 0) { const k = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1).replace(/.0$/, '') + 'M' : Math.round(n / 1000) + 'k'); rows.push([T.context, `${k(ag.ctx)} / ${k(ag.ctxMax)} <span class="dim">(${Math.round((100 * ag.ctx) / ag.ctxMax)}%)</span>`]); }
     rows.push([T.uptime, fmtDuration(now - ag.firstSeen, T)]);
@@ -363,7 +370,7 @@ export class UI {
     if (card && ag.history?.length) {
       const hm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
       hist = `<div class="hist"><b>${T.history}</b>` + ag.history.slice(-10).reverse().map((h) =>
-        `<div><span class="t">${hm(h.at)}</span><b>${esc(h.tool)}</b><span class="d">${priv ? '' : esc(shortDetail(h.detail, 34))}</span><span class="t">${h.ms == null ? T.running : fmtDuration(h.ms, T)}</span></div>`).join('') + '</div>';
+        `<div><span class="t">${hm(h.at)}</span><b>${esc(h.tool)}</b><span class="d">${dangerHtml(h, priv ? '' : esc(shortDetail(h.detail, 34)))}</span><span class="t">${h.ms == null ? T.running : fmtDuration(h.ms, T)}</span></div>`).join('') + '</div>';
     }
     const ren = card ? `<div class="ren"><button type="button" data-term title="${T.terminalHint}">↗ ${T.terminal}</button>${ag.subagent ? '' : ` <button type="button" data-ren>✎ ${T.rename}</button>`}</div>` : '';
     return title + '<table>' + rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('') + '</table>' + hist + ren;
@@ -435,7 +442,7 @@ export class UI {
       (s.waiting ? `<span class="alert">${T.waitingYou} <b>${s.waiting}</b></span>` : '') +
       (this.conn !== 'demo' ? `<span class="snd" title="${soundOn() ? T.sound.on : T.sound.off}"><i style="background-image:url(${(this.bells ||= [bellUrl(false), bellUrl(true)])[+soundOn()]})"></i></span>` : '') +
       (this.conn !== 'demo' ? `<span class="statsbtn" title="${T.stats.open}"><i style="background-image:url(${this.barsIcon ||= barsUrl()})"></i></span>` : '') +
-      `<span class="help" title="${T.help.open}">?</span>` +
+      (this.update?.newer ? `<span class="help upd" title="${T.help.open} · ${esc(T.help.newer(this.update.latest.version))}">?</span>` : `<span class="help" title="${T.help.open}">?</span>`) +
       `<span class="lang" title="${T.lang}">${LANG === 'bg' ? 'БГ' : 'EN'}</span>`;
     if (this.hud._html !== html) { this.hud.innerHTML = html; this.hud._html = html; }
     const title = s.waiting ? `(${s.waiting}) ${T.needsYou} · ${T.title}` : T.title;
@@ -518,7 +525,14 @@ export class UI {
     else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
     else if (t.name === 'lang') { if (PARAMS.desktop && this.bridge?.action) this.bridge.action('lang:' + t.value); else setLang(t.value); }
     else if (d.hook != null) this.setHook(t.checked);
+    else if (d.upd != null) fetch('api/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: t.checked }) }).catch(() => {});
     else if (d.desk) { this.bridge?.setDesktop?.(d.desk, t.checked); if (d.desk === 'strip' && t.checked) this.toggleHelp(false); }
+  }
+
+  /** WS {type:'update'}: проверката за нова версия (точка на „?“, ред в панела, приложението – в трея). */
+  setUpdate(e) {
+    this.update = e; this.lastHud = 0; this._lastStats = '';
+    if (this.help && !this.help.hidden) this.renderHelp(true);
   }
 
   /** Hook-ът за разрешения: сложен ли е (за отметката в панела). */
@@ -564,7 +578,13 @@ export class UI {
     }
     // сподели, цветовете, обратна връзка
     h += `<h3>${H.share}</h3><div class="share"><button type="button" data-snap>${H.snapshot}</button><button type="button" data-clip>${H.clip}</button></div><p class="dim">${H.shareHint}</p>`;
-    h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p></details>`;
+    h += `<details><summary>${H.colours}</summary><ul>` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + `</ul><p class="dim">${H.shapes}</p><p class="dim"><span class="danger">⚠</span> ${H.danger}</p></details>`;
+    // нови версии (заявка навън – само ако е включено)
+    const U = this.update;
+    if (U && !demo) {
+      h += `<h3>${H.updates}</h3>` + box('id="opt-update" data-upd', U.enabled, H.update, H.updateHint) +
+        `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}</p>`;
+    }
     h += `<h3>${H.feedback}</h3><p class="dim">${H.feedbackHint}</p><div class="share">` +
       `<a href="https://github.com/rezored/cubicle-crew/discussions" target="_blank" rel="noopener">${H.discuss}</a>` +
       `<a href="https://github.com/rezored/cubicle-crew/issues/new" target="_blank" rel="noopener">${H.issue}</a>` +

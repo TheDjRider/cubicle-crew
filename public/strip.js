@@ -2,7 +2,7 @@
 // форма/цвят на състоянието, име, какво прави, от колко време, колко под-агента. Червено = чака теб.
 // Сцената не се рисува (по-малко процесор); моделът и офисът продължават да вървят отзад.
 import { STATES, T, PROVIDERS } from './config.js';
-import { shortDetail, fmtDuration } from './util.js';
+import { shortDetail, fmtDuration, danger } from './util.js';
 import { prefs } from './prefs.js';
 
 const el = (tag, cls, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; };
@@ -26,7 +26,7 @@ export class Strip {
       const st = ag.state, tool = this.model.currentTool(ag);
       const what = tool ? `${tool.tool}${prefs.private ? '' : ' ' + shortDetail(tool.detail, 30)}` : T.states[st];
       const subs = this.model.liveChildren(ag);
-      return { id: ag.id, st, name: this.ui.displayName(ag) + (ag.provider ? ` · ${PROVIDERS[ag.provider] || ag.provider}` : ''), what, time: fmtDuration(now - ag.stateSince, T), subs };
+      return { id: ag.id, st, risky: !!tool && danger(tool.tool, tool.detail), name: this.ui.displayName(ag) + (ag.provider ? ` · ${PROVIDERS[ag.provider] || ag.provider}` : ''), what, time: fmtDuration(now - ag.stateSince, T), subs };
     });
     const key = JSON.stringify(rows);
     if (key === this.key) return;
@@ -38,7 +38,7 @@ export class Strip {
       row.dataset.state = r.st; row.dataset.id = r.id; row.title = T.terminalHint;
       const dot = el('i', null, row); dot.style.background = STATES[r.st].color;
       el('b', null, row).textContent = r.name;
-      el('span', 'what', row).textContent = r.what;
+      el('span', r.risky ? 'what danger' : 'what', row).textContent = (r.risky ? '⚠ ' : '') + r.what;
       el('span', 'time', row).textContent = r.time + (r.subs ? ` · ↳${r.subs}` : '');
     }
     // височината на лентата -> Electron нагласява прозореца
