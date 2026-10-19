@@ -131,9 +131,17 @@ The installed app starts with Windows by default. Whenever it starts and no Clau
 
 ## Desktop widget (macOS)
 
-Grab `CubicleCrew-<version>-mac.dmg` from the [latest release](https://github.com/rezored/cubicle-crew/releases/latest) (one build for Apple Silicon and Intel), open it and drag **Cubicle Crew** to Applications.
+Needs macOS 13 Ventura or later. The easiest way is Homebrew:
 
-The app isn't signed with an Apple Developer ID yet, so the first launch needs one extra step: right-click the app → **Open** → **Open**. On macOS 15 and later: open it once, then **System Settings → Privacy & Security → Open Anyway**. If macOS says the app "is damaged", run `xattr -cr "/Applications/Cubicle Crew.app"` once.
+```bash
+brew install --cask rezored/tap/cubicle-crew
+```
+
+It opens without the extra security steps below (the cask removes the quarantine flag); `brew upgrade --cask cubicle-crew` updates it.
+
+Or grab `CubicleCrew-<version>-mac.dmg` from the [latest release](https://github.com/rezored/cubicle-crew/releases/latest) (one build for Apple Silicon and Intel), open it and drag **Cubicle Crew** to Applications.
+
+The app isn't signed with an Apple Developer ID yet, so a first launch from the `.dmg` needs one extra step: right-click the app → **Open** → **Open**. On macOS 15 and later: open it once, then **System Settings → Privacy & Security → Open Anyway**. If macOS says the app "is damaged", run `xattr -cr "/Applications/Cubicle Crew.app"` once.
 
 On a Mac the widget lives in the menu bar (no Dock icon), opens at the top right under the menu bar, follows you across desktops, and does **not** start at login unless you tick **Start at login** in its menu. `⌘⌥P` shows or hides it. Notifications, the strip, Focus mode and "jump to the terminal" (Terminal, iTerm, VS Code…) work the same as on Windows.
 
