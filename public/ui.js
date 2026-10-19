@@ -155,11 +155,22 @@ export class UI {
     (this.toasts ||= []).push([id, reward]);
     if (!this.toastBusy) this.nextToast();
   }
+  /** Известие за новост (на същата опашка, без конфети). */
+  notice(title, text) {
+    (this.toasts ||= []).push(['notice', title, text]);
+    if (!this.toastBusy) this.nextToast();
+  }
   nextToast() {
     const next = this.toasts.shift();
     const box = document.getElementById('toast');
     if (!next) { this.toastBusy = false; box.hidden = true; return; }
     this.toastBusy = true;
+    if (next[0] === 'notice') {
+      box.innerHTML = `<small>🐾 ${T.news.label}</small><b>${esc(next[1])}</b><span>${esc(next[2])}</span>`;
+      box.hidden = false;
+      setTimeout(() => this.nextToast(), 8000);
+      return;
+    }
     const [id, reward] = next;
     const [name, desc] = T.achievements[id] || [id, ''];
     box.innerHTML = `<small>🏆 ${T.shop.achievement}</small><b>${esc(name)}</b><span>${esc(desc)} · ${T.shop.reward(reward)}</span>`;
@@ -409,7 +420,7 @@ export class UI {
     if (!a && !html && this.onSwitch(m)) html = `<div class="title">${T.lights.title}</div><div class="dim">${this.office.lights.on ? T.lights.off : T.lights.on}</div>`;
     // любимец: името му (може да се смени – клик отваря „Любимци“)
     const pet = !a && !html && this.office.petAt(m.x, m.y);
-    if (pet) html = `<div class="title">${esc(petName(pet.slot, this.office.petNames))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}</div><div class="dim">${T.pets.tip}</div>`;
+    if (pet) html = `<div class="title">${esc(petName(pet.slot, this.office.petNames, pet.look?.id))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}</div><div class="dim">${T.pets.tip}</div>`;
     this.canvas.style.cursor = a || pet || this.onPlaque(m) || this.onSwitch(m) || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }

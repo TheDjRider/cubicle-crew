@@ -112,7 +112,7 @@ export class Setup {
       const lab = el('label', 'nm', p);
       el('span', null, lab, S.nameQ);
       const inp = el('input', null, lab);
-      inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(this.pet, null); inp.value = this.name;
+      inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(this.pet, null, this.pet === 'dog' ? ITEM['dog.extra'].gives : null); inp.value = this.name;
       inp.oninput = () => { this.name = inp.value; };
       inp.onkeydown = (e) => { if (e.key === 'Enter') this.step(1); };
       el('p', 'hint', p, S.petHint);

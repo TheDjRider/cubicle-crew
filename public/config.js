@@ -201,9 +201,12 @@ const T_BG = {
       hairs: ['Черна', 'Кестенява', 'Светлокестенява', 'Руса', 'Рижа', 'Сива', 'Синя', 'Розова', 'Зелена', 'Лилава'],
     },
   },
+  // еднократни известия за новости (tokens.js news())
+  news: { label: 'Ново', bueno: ['Буено е в магазина', 'Безплатна нова порода за кучето ти – Магазин → Любимци'] },
   // офисните любимци: имена по подразбиране (по място) и подсказката при посочване
   pets: {
-    names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Буено' },
+    names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Шаро' },
+    breeds: { 'dog.bueno': 'Буено' }, // порода със собствено име (вместо това на мястото)
     kinds: { cat: 'Офисна котка', dog: 'Офисно куче' },
     tip: 'Клик – погали · двоен клик – име и външен вид',
   },
@@ -400,8 +403,10 @@ const T_EN = {
       hairs: ['Black', 'Brown', 'Light brown', 'Blonde', 'Ginger', 'Grey', 'Blue', 'Pink', 'Green', 'Purple'],
     },
   },
+  news: { label: 'New', bueno: ['Bueno is in the shop', 'A free new breed for your dog – Shop → Pets'] },
   pets: {
-    names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Bueno' },
+    names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex' },
+    breeds: { 'dog.bueno': 'Bueno' },
     kinds: { cat: 'Office cat', dog: 'Office dog' },
     tip: 'Click to pet · double-click to rename or change the look',
   },
@@ -511,5 +516,5 @@ export const PARAMS = {
   strip: Q.has('strip'),       // ?strip – тънка лента: по един ред на сесия вместо офиса (Electron го слага от менюто)
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
-/** Име на любимец по място (save.petNames или името по подразбиране на текущия език). */
-export const petName = (slot, names) => names?.[slot] || T.pets.names[slot] || slot;
+/** Име на любимец по място (save.petNames, иначе името на породата, ако има такова, иначе това на мястото – на текущия език). */
+export const petName = (slot, names, look) => names?.[slot] || T.pets.breeds[look] || T.pets.names[slot] || slot;

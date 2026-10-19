@@ -364,40 +364,52 @@ export class Dog extends Pet {
     const x = Math.round(this.x), y = Math.round(this.y), lk = this.look;
     const { c: C, hi: H, m: M, e: E, eye: EY } = lk;
     const legC = lk.pat === 'saddle' || lk.pat === 'chest' ? M : C;
-    const short = lk.legs === 'short', len = lk.len || 0;
+    const short = lk.legs === 'short', len = lk.len || 0, tall = lk.tall || 0;
     ctx.save();
     if (this.flip) { ctx.translate(x * 2, 0); ctx.scale(-1, 1); }
     R(ctx, 'rgba(16,10,24,0.3)', x - 7 - Math.max(0, len), y, 15 + Math.max(0, len), 1);
     if (this.mode === 'sleep') {
       // легнал, муцуната на лапите
       const b0 = x - 6 - len;
-      R(ctx, C, b0, y - 4, 11 + len, 4); R(ctx, H, b0 + 1, y - 4, 9 + len, 1);
-      R(ctx, C, x + 4, y - 5, 5, 3); R(ctx, M, x + 9, y - 4, 2, 2); R(ctx, NOSE, x + 10, y - 4, 1, 1);
-      R(ctx, E, x + 6, y - 4, 2, 1);                                  // затворено око
+      R(ctx, C, b0, y - 4 - tall, 11 + len, 4 + tall); R(ctx, H, b0 + 1, y - 4 - tall, 9 + len, 1);
+      R(ctx, C, x + 4, y - 5 - tall, 5, 3); R(ctx, M, x + 9, y - 4 - tall, 2, 2); R(ctx, NOSE, x + 10, y - 4 - tall, 1, 1);
+      R(ctx, E, x + 6, y - 4 - tall, 2, 1);                           // затворено око
       R(ctx, legC, x + 5, y - 1, 5, 1);                               // предните лапи
-      if (lk.ears === 'up') { R(ctx, E, x + 4, y - 7, 1, 2); R(ctx, E, x + 6, y - 7, 1, 2); } else R(ctx, E, x + 4, y - 5, 2, 3);
-      if (lk.tail === 'curl') R(ctx, C, b0 - 1, y - 5, 2, 2); else if (lk.tail === 'stub') R(ctx, C, b0 - 1, y - 3, 1, 1); else R(ctx, C, b0 - 2, y - 2, 2, 1);
-      dogPattern(ctx, lk, 'sleep', x, y, b0, 11 + len, y - 4);
+      if (lk.ears === 'up') { R(ctx, E, x + 4, y - 7 - tall, 1, 2); R(ctx, E, x + 6, y - 7 - tall, 1, 2); }
+      else if (lk.ears === 'half') { R(ctx, E, x + 6, y - 7 - tall, 1, 2); R(ctx, E, x + 4, y - 6 - tall, 2, 2); }
+      else R(ctx, E, x + 4, y - 5 - tall, 2, 3);
+      if (lk.tail === 'curl') R(ctx, C, b0 - 1, y - 5, 2, 2);
+      else if (lk.tail === 'stub') R(ctx, C, b0 - 1, y - 3, 1, 1);
+      else if (lk.tail === 'plume') { R(ctx, C, b0 - 4, y - 2, 5, 1); R(ctx, C, b0 - 5, y - 4, 1, 2); R(ctx, H, b0 - 4, y - 4, 1, 1); }
+      else R(ctx, C, b0 - 2, y - 2, 2, 1);
+      dogPattern(ctx, lk, 'sleep', x, y, b0, 11 + len, y - 4 - tall);
     } else if (this.mode === 'sit') {
       // седнал изправен, гледа надясно; опашката маха по пода
       const s = short ? 2 : 0, tw = frameAt(now, now - (this.pettedAt || -1e9) < 4500 ? 90 : 220) ? 1 : 0;
-      R(ctx, C, x - 4, y - 5 + s, 5, 5 - s);                          // задница
-      R(ctx, C, x, y - 9 + s, 4, 9 - s); R(ctx, H, x + 1, y - 9 + s, 2, 1); // гърди
+      R(ctx, C, x - 4 - tall, y - 5 + s - tall, 5 + tall, 5 - s + tall); // задница
+      R(ctx, C, x, y - 9 + s - tall, 4 + tall, 9 - s + tall); R(ctx, H, x + 1, y - 9 + s - tall, 2, 1); // гърди
       R(ctx, legC, x + 2, y - 4 + s, 1, 4 - s); R(ctx, legC, x + 4, y - 3 + s, 1, 3 - s); // предни крака
       R(ctx, legC, x - 3, y - 1, 3, 1);                               // задна лапа
-      const hy = y - 13 + s;
+      const hy = y - 13 + s - tall;
       R(ctx, C, x + 1, hy, 5, 4); R(ctx, H, x + 2, hy, 3, 1);
       R(ctx, M, x + 6, hy + 2, 2, 2); R(ctx, NOSE, x + 7, hy + 2, 1, 1);
       R(ctx, frameAt(now, 3200, 14) === 0 ? C : EY, x + 4, hy + 1, 1, 1);
-      if (lk.ears === 'up') { R(ctx, E, x + 1, hy - 2, 1, 2); R(ctx, E, x + 3, hy - 2, 1, 2); } else R(ctx, E, x + 1, hy, 2, 3);
+      if (lk.ears === 'up') { R(ctx, E, x + 1, hy - 2, 1, 2); R(ctx, E, x + 3, hy - 2, 1, 2); }
+      else if (lk.ears === 'half') { R(ctx, E, x + 3, hy - 2, 1, 2); R(ctx, E, x + 1, hy - 1, 2, 2); }
+      else R(ctx, E, x + 1, hy, 2, 3);
       if (lk.tail === 'curl') R(ctx, C, x - 5, y - 7 + s, 2, 2);
       else if (lk.tail === 'stub') R(ctx, C, x - 5, y - 3, 1, 1);
+      else if (lk.tail === 'plume') {                                  // рунтава, върхът се извива нагоре
+        R(ctx, C, x - 8, y - 1 - tw, 4, 1);
+        R(ctx, C, x - 9, y - 3 - tw, 1, 3);
+        R(ctx, C, x - 8, y - 4 - tw, 2, 1); R(ctx, H, x - 7, y - 4 - tw, 1, 1);
+      }
       else { R(ctx, C, x - 6, y - 1 - tw, 2, 1); R(ctx, C, x - 7, y - 2 - tw, 1, 1); }
       dogPattern(ctx, lk, 'sit', x, y, x, 4, hy);
     } else {
       // върви: тяло, 4 крака, глава напред
-      const lg = short ? 2 : 3, bt = y - lg - 4, b0 = x - 5 - len, bw = 9 + len, f = Math.floor(this.dist / 2) % 2;
-      R(ctx, C, b0, bt, bw, 4); R(ctx, H, b0 + 1, bt, bw - 2, 1);
+      const lg = (short ? 2 : 3) + tall, bt = y - lg - 4 - tall, b0 = x - 5 - len, bw = 9 + len, f = Math.floor(this.dist / 2) % 2;
+      R(ctx, C, b0, bt, bw, 4 + tall); R(ctx, H, b0 + 1, bt, bw - 2, 1);
       // крачка: във втория кадър лапите се разтварят (задните назад, предните напред)
       [b0 + 1, b0 + 3, x + 1, x + 3].forEach((lx, i) => {
         R(ctx, legC, lx, y - lg, 1, lg - 1);
@@ -406,10 +418,17 @@ export class Dog extends Pet {
       R(ctx, C, x + 3, bt - 3, 5, 4); R(ctx, H, x + 4, bt - 3, 3, 1);
       R(ctx, M, x + 8, bt - 1, 2, 2); R(ctx, NOSE, x + 9, bt - 1, 1, 1);
       R(ctx, EY, x + 6, bt - 2, 1, 1);
-      if (lk.ears === 'up') { R(ctx, E, x + 3, bt - 5, 1, 2); R(ctx, E, x + 5, bt - 5, 1, 2); } else R(ctx, E, x + 3, bt - 3, 2, 3);
+      if (lk.ears === 'up') { R(ctx, E, x + 3, bt - 5, 1, 2); R(ctx, E, x + 5, bt - 5, 1, 2); }
+      else if (lk.ears === 'half') { R(ctx, E, x + 5, bt - 5, 1, 2); R(ctx, E, x + 3, bt - 4, 2, 2); }
+      else R(ctx, E, x + 3, bt - 3, 2, 3);
       const wag = frameAt(now, 180);
       if (lk.tail === 'curl') { R(ctx, C, b0 - 1, bt - 2, 2, 2); R(ctx, H, b0, bt - 2, 1, 1); }
       else if (lk.tail === 'stub') R(ctx, C, b0 - 1, bt, 1, 1);
+      else if (lk.tail === 'plume') {                                  // извита нагоре, рунтава
+        R(ctx, C, b0 - 2, bt + 1, 2, 1);
+        R(ctx, C, b0 - 3, bt - 1, 1, 2);
+        R(ctx, C, b0 - 2, bt - 2 - wag, 2, 1); R(ctx, H, b0, bt - 2 - wag, 1, 1);
+      }
       else { R(ctx, C, b0 - 1, bt, 1, 1); R(ctx, C, b0 - 2, bt - 1 - wag, 1, 1 + wag); }
       dogPattern(ctx, lk, 'walk', x, y, b0, bw, bt);
     }
@@ -437,7 +456,7 @@ function dogPattern(ctx, lk, mode, x, y, b0, bw, top) {
       else { R(ctx, P, x + 3, top + 2, 3, 2); R(ctx, P, x + 1, top + 5, 3, 4); }
       break;
     case 'tick': { // бордър коли: бяла основа, черни петна, кафяви бузи и лунички по бялото
-      const T = lk.p2 || P;
+      const T = lk.p2 || P, W = lk.m, TL = lk.tall || 0;
       if (mode === 'walk') {
         R(ctx, P, b0, top, 4, 3);                                             // черен задник чак до края
         R(ctx, P, b0 + 7, top, 4, 2);                                         // черно под плешките
@@ -454,13 +473,13 @@ function dogPattern(ctx, lk, mode, x, y, b0, bw, top) {
           R(ctx, P, b0 + i, top + j, 1, 1);
         for (const [i, j] of [[6, 3], [4, 1], [8, 3]]) R(ctx, T, b0 + i, top + j, 1, 1); // кафяви точки
       } else {
-        R(ctx, P, x - 4, y - 5, 4, 4);                                        // черен задник чак до края
-        R(ctx, P, x, y - 9, 2, 2);                                            // черно под плешките
+        R(ctx, P, x - 5, y - 5 - TL, 4, 4 + TL);                              // черен задник чак до края
+        R(ctx, P, x, y - 10 - TL, 2, 3);                                      // черно под плешките
         R(ctx, P, x + 1, top, 5, 1); R(ctx, P, x + 1, top + 1, 2, 1);         // черна глава (окото остава)
         R(ctx, T, x + 3, top + 1, 1, 2);                                      // кафява буза над окото
         for (const [i, j] of [[2, -6], [1, -4], [-1, -3], [3, -6], [2, -2]])
-          R(ctx, P, x + i, y + j, 1, 1);                                      // лунички по бялото
-        for (const [i, j] of [[1, -7], [3, -4], [-2, -2]]) R(ctx, T, x + i, y + j, 1, 1); // кафяви точки
+          R(ctx, P, x + i, y + j - TL, 1, 1);                                 // лунички по бялото
+        for (const [i, j] of [[1, -7], [3, -4], [-2, -2]]) R(ctx, T, x + i, y + j - TL, 1, 1); // кафяви точки
       }
       break;
     }

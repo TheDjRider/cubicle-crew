@@ -277,11 +277,11 @@ export class Shop {
         continue;
       }
       const cur = decor[slot]?.id || null;
-      h.textContent = `${title} · ${petName(slot, s.petNames)}${cur ? '' : ` (${P.home})`}`;
+      h.textContent = `${title} · ${petName(slot, s.petNames, cur)}${cur ? '' : ` (${P.home})`}`;
       // име
       const form = el('form', 'pname', sec);
       const inp = el('input', null, form);
-      inp.name = `pet-${slot}`; inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(slot, null); inp.value = s.petNames?.[slot] || '';
+      inp.name = `pet-${slot}`; inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(slot, null, cur); inp.value = s.petNames?.[slot] || '';
       inp.setAttribute('aria-label', P.name);
       el('button', null, form, P.rename).type = 'submit';
       form.onsubmit = async (e) => {

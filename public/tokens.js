@@ -1,9 +1,10 @@
 // Токени в клиента: брояч (HUD + дъската), "+N" над работещите агенти, обзавеждане, демо портфейл.
 // Истинският портфейл е на сървъра (wallet.js) – тук само показваме съобщенията { type: 'wallet', … }
 // и пращаме покупките (POST /api/buy, /api/equip). В демото същите правила работят в паметта.
-import { PARAMS } from './config.js';
+import { PARAMS, T } from './config.js';
+import { prefs } from './prefs.js';
 import { Earner, dayKey } from './rules.js';
-import { resolveDecor, buyItem, equipItem, setAvatar, avatarOf, grantAchievements, setupOffice, setPetName } from './catalog.js';
+import { resolveDecor, buyItem, equipItem, setAvatar, avatarOf, grantAchievements, setupOffice, setPetName, unlocked } from './catalog.js';
 
 const SHOW_EVERY_MS = 20000; // най-много едно "+N" на агент за толкова (натрупва се)
 
@@ -54,6 +55,7 @@ export class Tokens {
       // любимци и началната настройка (стар сървър без тези полета: setup остава undefined = не се показва)
       this.save.petNames = m.petNames || {}; this.save.starter = m.starter; this.save.setup = m.setup;
       this.office.petNames = this.save.petNames;
+      this.news();
     }
     if (m.stats) this.save.stats = m.stats;
     if (m.reason === 'work' && m.by) {
@@ -66,6 +68,16 @@ export class Tokens {
     this.ui.setTokens(this.tokens, m.delta > 0 && m.reason !== 'work' ? m.reason : null, now);
     this.applyDecor();
     for (const fn of this.listeners) fn(m);
+  }
+
+  /** Еднократни известия за новости (видяното се пази в localStorage po.news). Засега: Буено за досегашните бигъли. */
+  news() {
+    if (PARAMS.demo || PARAMS.overlay || PARAMS.strip || prefs.focus || !this.save.setup) return;
+    let seen = [];
+    try { seen = JSON.parse(localStorage.getItem('po.news') || '[]'); } catch { /* няма достъп */ }
+    if (seen.includes('bueno') || !unlocked(this.save, 'dog') || resolveDecor(this.save.equipped).dog?.id !== 'dog.beagle') return;
+    this.ui.notice(...T.news.bueno);
+    try { localStorage.setItem('po.news', JSON.stringify([...seen, 'bueno'])); } catch { /* ще се покаже пак */ }
   }
 
   /** Обзавеждането от портфейла (или прегледът в магазина) -> стаята; прерисува само при промяна. */
