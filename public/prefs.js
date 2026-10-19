@@ -4,11 +4,12 @@
 //  names   – собствени имена на сесиите { id на сесията: име }
 //  board   – коя страница е на дъската: 0 живата, 1 днес, 2 – 7 дни, 3 – 30 дни (прожекционният екран, board.js)
 //  lights  – лампите на тавана нощем (ключът до вратата); изключени = старата тъмна „пещера“
+//  lamp    – лампата и неонът в зоната за почивка (вторият ключ, под първия)
 // ?overlay включва private по подразбиране (стрийм); Electron сменя focus/private от менюто в трея (IPC 'pref').
 import { PARAMS } from './config.js';
 
 const KEY = 'po.prefs';
-const DEF = { focus: false, private: !!PARAMS.overlay, lights: true, names: {} };
+const DEF = { focus: false, private: !!PARAMS.overlay, lights: true, lamp: true, names: {} };
 let state = { ...DEF };
 try { state = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* без storage – по подразбиране */ }
 if (PARAMS.focus) state.focus = true;
@@ -18,6 +19,7 @@ export const prefs = {
   get focus() { return !!state.focus; },
   get private() { return !!state.private || PARAMS.lan; }, // телефонът: винаги (сървърът и без това не праща командите)
   get lights() { return state.lights !== false; },
+  get lamp() { return state.lamp !== false; },
   get board() { const b = state.board | 0; return b >= 0 && b < 4 ? b : 0; },
   /** Собственото име на сесия (или null). */
   name(id) { return state.names?.[id] || null; },

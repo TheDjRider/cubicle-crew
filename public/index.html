@@ -447,6 +447,8 @@
   .lanbox { margin: 4px 0 10px; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: 3px; }
   .lanbox p { margin: 0 0 6px; }
   .lanbox code { user-select: all; }
+  .lanbox .qr { float: right; width: 132px; height: 132px; margin: 0 0 6px 10px; image-rendering: pixelated; border-radius: 3px; }
+  .lanbox::after { content: ''; display: block; clear: both; }
   .lanbox .pin { font: 600 18px var(--mono); letter-spacing: .15em; color: #ffe27a; }
   #hud .help.upd { position: relative; }
   #hud .help.upd::after { content: ''; position: absolute; top: 1px; right: 1px; width: 5px; height: 5px; background: #4ac26b; border-radius: 50%; }

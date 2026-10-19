@@ -227,6 +227,7 @@ export class UI {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
       if (!a && this.onSwitch(m)) { this.office.toggleLights(); return; }
+      if (!a && this.onSwitch(m, 'lampSwitch')) { this.office.toggleLamp(); return; }
       if (!a && this.onBoard(m)) { this.office.boardClick(); this.loadBoardStats(); return; }
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       const pet = !a && this.office.petAt(m.x, m.y);
@@ -249,7 +250,7 @@ export class UI {
   }
 
   /** Мишката е върху ключа за осветлението до вратата (с малко поле около него). */
-  onSwitch(m) { const s = this.office.room?.lightSwitch; return !!s && m.x >= s.x - 2 && m.x < s.x + s.w + 2 && m.y >= s.y - 2 && m.y < s.y + s.h + 2; }
+  onSwitch(m, key = 'lightSwitch') { const s = this.office.room?.[key]; return !!s && m.x >= s.x - 2 && m.x < s.x + s.w + 2 && m.y >= s.y - 2 && m.y < s.y + s.h + 2; }
 
   /** Мишката е върху метеостанцията на стената. */
   onPlaque(m) { const p = this.office.room?.wxPlaque; return !!p && m.x >= p.x && m.x < p.x + p.w && m.y >= p.y && m.y < p.y + p.h; }
@@ -419,10 +420,11 @@ export class UI {
       html = (c ? `<div class="title">${esc(c.name)}</div>` : '') + `<div class="dim">${T.weather.tip}</div>`;
     }
     if (!a && !html && this.onSwitch(m)) html = `<div class="title">${T.lights.title}</div><div class="dim">${this.office.lights.on ? T.lights.off : T.lights.on}</div>`;
+    if (!a && !html && this.onSwitch(m, 'lampSwitch')) html = `<div class="title">${T.lamp.title}</div><div class="dim">${prefs.lamp ? T.lamp.off : T.lamp.on}</div>`;
     // любимец: името му (може да се смени – клик отваря „Любимци“)
     const pet = !a && !html && this.office.petAt(m.x, m.y);
     if (pet) html = `<div class="title">${esc(petTitle(pet.slot, this.office.petNames, pet.look?.id))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}${pet.look?.by ? ` · ${esc(T.shop.by(pet.look.by))}` : ''}</div><div class="dim">${T.pets.tip}</div>`;
-    this.canvas.style.cursor = a || pet || this.onPlaque(m) || this.onSwitch(m) || this.onBoard(m) ? 'pointer' : '';
+    this.canvas.style.cursor = a || pet || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
     this.tip.hidden = false;

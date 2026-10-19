@@ -93,6 +93,8 @@ export class Office {
 
   /** Ключът до вратата. */
   toggleLights() { prefs.set('lights', !this.lights.on); }
+  /** Вторият ключ: лампата и неонът в зоната за почивка. */
+  toggleLamp() { prefs.set('lamp', !prefs.lamp); }
 
   /** 0..1: колко светят лампите. Луминесцентните примигват няколко пъти, докато светнат; гаснат почти веднага. */
   lightLevel(now) {
@@ -707,7 +709,7 @@ export class Office {
     drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
     drawBoardScreen(ctx, room, this.board, this.boardStats, now);
     const lit = this.lightLevel(now);
-    drawLightFixtures(ctx, room, this.lights.on);
+    drawLightFixtures(ctx, room, this.lights.on, prefs.lamp);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
     drawShafts(ctx, room, tod, now);
@@ -833,12 +835,12 @@ export class Office {
       } else if (a) glow(ctx, bx, by + 6, 20, '#ffcf7a', 0.06 + 0.34 * night);
     }
     const lo = L.lounge;
-    glow(ctx, room.lampGlow.x, room.lampGlow.y, 34, '#ffd890', 0.05 + 0.38 * night);
+    if (prefs.lamp) glow(ctx, room.lampGlow.x, room.lampGlow.y, 34, '#ffd890', 0.05 + 0.38 * night);
     // сезонната украса свети нощем: лицето на тиквата, лампичките на елхата
     const se = room.season;
     if (se?.style === 'pumpkins') glow(ctx, se.x + 9, se.base - 7, 14, '#ffb040', (0.08 + 0.4 * night) * (0.85 + 0.15 * Math.sin(now / 160)));
     else if (se?.style === 'tree') glow(ctx, se.x + 15, se.base - 17, 18, Math.floor(now / 700) % 2 ? '#ffd860' : '#ff8a8a', 0.06 + 0.32 * night);
-    if (room.neon) glow(ctx, room.neon.x, room.neon.y, 18, room.neon.c, (0.25 + 0.35 * night) * (0.9 + 0.1 * Math.sin(now / 130)));
+    if (room.neon && prefs.lamp) glow(ctx, room.neon.x, room.neon.y, 18, room.neon.c, (0.25 + 0.35 * night) * (0.9 + 0.1 * Math.sin(now / 130)));
     if (room.aquarium) glow(ctx, room.aquarium.x + 14, room.aquarium.y + 12, 22, '#4ab8f0', 0.08 + 0.3 * night);
     if (room.arcade) glow(ctx, room.arcade.x + 9, room.arcade.y + 12, 16, '#a06ae0', 0.1 + 0.3 * night);
     glow(ctx, lo.counter.x + 14, lo.counter.base - 36, 6, '#6ae0ff', 0.3);

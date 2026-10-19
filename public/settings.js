@@ -5,6 +5,7 @@
 import { T, LANG, STATES, STATE_ORDER } from './config.js';
 import { prefs } from './prefs.js';
 import { soundOn } from './sound.js';
+import { qrCanvas } from './qr.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -37,7 +38,9 @@ const btn = (attrs, text) => `<button type="button" ${attrs}>${text}</button>`;
 function lanBox(N, H) {
   if (N.error && !N.running) return `<p class="err">${H.lanErr}</p>`;
   const urls = N.urls.length ? N.urls.map((u) => `<code>${esc(u)}</code>`).join(' ') : `<span class="err">${H.lanNoNet}</span>`;
-  return `<div class="lanbox"><p>${H.lanOpen} ${urls}</p><p>${H.lanPin}: <b class="pin">${esc(N.pin)}</b> · <span class="dim">${H.lanPhones(N.phones)}</span></p>` +
+  // QR кодът на първия адрес (192.168.x – домашната/офисната Wi-Fi) – камерата на телефона го отваря направо
+  const qr = N.urls.length ? qrCanvas(N.urls[0], 4) : null;
+  return `<div class="lanbox">${qr ? `<img class="qr" alt="QR" src="${qr.toDataURL()}" title="${esc(H.lanQr)}">` : ''}<p>${H.lanOpen} ${urls}</p><p>${H.lanPin}: <b class="pin">${esc(N.pin)}</b> · <span class="dim">${H.lanPhones(N.phones)}</span></p>` +
     `<div class="btns">${btn('data-lanpin', H.lanNewPin)}</div></div>`;
 }
 
@@ -50,6 +53,7 @@ function sections(ui) {
     (D ? sw('id="desk-strip" data-desk="strip"', D.strip, H.strip, H.stripHint) : '') +
     sw('id="opt-legend" data-legend', !ui.legend.hidden, H.legend, H.legendHint) +
     sw('id="pref-lights" data-pref="lights"', prefs.lights, H.lights, H.lightsHint) +
+    sw('id="pref-lamp" data-pref="lamp"', prefs.lamp, H.lamp, H.lampHint) +
     `<div class="row"><b>${H.lang}</b><div class="seg">${card('lang', 'bg', LANG === 'bg', 'Български')}${card('lang', 'en', LANG === 'en', 'English')}</div></div>`;
   // кога те вика
   out.alerts = (!demo ? sw('id="opt-sound" data-sound', soundOn(), H.sound, H.soundHint) : '') +

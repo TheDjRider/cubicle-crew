@@ -1008,9 +1008,11 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   const nCeil = Math.max(2, Math.round((W - 60) / 95) + 1), ceil = [];
   for (let i = 0; i < nCeil; i++) ceil.push(Math.round(30 + i * (W - 60) / (nCeil - 1)));
   const lightSwitch = { x: Math.max(2, L.door.x - 7), y: 32, w: 5, h: 7 };
+  // под него – ключът за лампата и неона в зоната за почивка (prefs.lamp)
+  const lampSwitch = { x: lightSwitch.x, y: lightSwitch.y + lightSwitch.h + 2, w: 5, h: 7 };
 
   return {
-    W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch,
+    W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
     lampGlow, aquarium, arcade, season, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 17, c: decor.neon.c } : null,
     doorOpen: 0,
@@ -1252,7 +1254,7 @@ export function drawTint(ctx, room, tod, lit = 0) {
 export function nightK(tod) { return Math.min(1, tod.night * 1.6); }
 
 /** Телата на лампите по тавана и ключът до вратата (преди оттенъка; светлината – в lightGlows). */
-export function drawLightFixtures(ctx, room, on) {
+export function drawLightFixtures(ctx, room, on, lampOn = true) {
   for (const x of room.ceil || []) {
     R(ctx, '#2a2436', x - 10, 0, 20, 3); R(ctx, '#4a4458', x - 9, 0, 18, 2);
     R(ctx, '#9a96a6', x - 8, 1, 16, 1); R(ctx, '#1a1420', x - 10, 3, 20, 1);
@@ -1261,6 +1263,11 @@ export function drawLightFixtures(ctx, room, on) {
   if (!s) return;
   R(ctx, '#6a6478', s.x, s.y, s.w, s.h); R(ctx, '#dcd8cc', s.x, s.y, s.w - 1, s.h - 1);
   R(ctx, '#a8a49a', s.x + 1, s.y + (on ? 1 : 3), 2, 2); R(ctx, '#f6f4ee', s.x + 1, s.y + (on ? 1 : 4), 2, 1);
+  // ключът за лампата: същата табличка, бутонът е топложълт (като крушката)
+  const k = room.lampSwitch;
+  if (!k) return;
+  R(ctx, '#6a6478', k.x, k.y, k.w, k.h); R(ctx, '#dcd8cc', k.x, k.y, k.w - 1, k.h - 1);
+  R(ctx, '#c89a4a', k.x + 1, k.y + (lampOn ? 1 : 3), 2, 2); R(ctx, '#f0d090', k.x + 1, k.y + (lampOn ? 1 : 4), 2, 1);
 }
 
 /** Светлината от лампите (режим 'lighter'): светещите тръби, конус по стената, петна по пода. */
