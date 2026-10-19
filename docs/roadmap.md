@@ -11,6 +11,7 @@ Ticked = done and merged.
 - [x] **Open API** (`POST /api/event`, docs/api.md): any agent/script; ready hook configs for Copilot CLI (http hooks) and Cursor – not yet tried with the real tools
 - [ ] **GitHub Copilot CLI** sessions (files) (the most requested agent in Pixel Agents' issues) – *blocked*: the on-disk
       `~/.copilot/session-state/<id>/events.jsonl` format is undocumented; needs one real session file to build against
+      (checked 2026-10-19: the only local session is from March, without `events.jsonl`)
 - [x] **Ended / crashed sessions** – a session that ends in the middle of a tool greys out with a small mark
       until you've seen it, instead of quietly walking out
 - [x] Post drafts: Show HN, r/ClaudeAI, r/ChatGPTCoding (with the vertical video) – in out/posts/, not in the repo
@@ -22,6 +23,10 @@ Ticked = done and merged.
 - [x] **Smaller screens** (2.8): compact room 356×208 (was 388×226), thin strip preselected on a single small screen in first-run setup, "Show only when needed" (hidden until an agent waits or a lead finishes)
 - [x] **Approximate cost in $** – at Claude API prices per model (stats tab, project table, projector tooltip, CSV)
 - [x] **Dangerous commands in red** – `rm -rf`, `git push --force`, `prod`, `terraform apply`… in the bubble, card and prompt bar
+- [x] **Bueno** (2.11) – first contributor dog, the free dog for new dog offices; beagle owners get a one-time note
+- [x] **Roomier shop** (2.12) – tall panel on the left, the office next to it (whole-room preview), bigger thumbnails, stats without scrolling
+- [x] **Contributor pets** (2.12) – `by` field, own grid in Pets, "by @user" in the shop and tooltip, fixed name; how-to in CONTRIBUTING.md
+- [x] Generic waiting text (2.12.1) – "Waiting for the first agent…" instead of naming Claude Code
 
 ## Needs a decision
 - [x] **Allow / Deny from the office** – opt-in hook (`?` panel), bar with Allow / Deny + Y / N, backup of
@@ -34,4 +39,4 @@ Ticked = done and merged.
       (the office is fixed by design today).
 - [x] **npm** – `npx cubicle-crew` (published 2.9.0, 2026-10-19; npm staged publishing – a new version may need *Approve* on npmjs.com)
 - [ ] **WinGet** – `rezored.CubicleCrew` PR microsoft/winget-pkgs#455788 (CLA signed, waiting for validation/review); later versions need an update PR
-- [ ] **Homebrew cask** – not started (unsigned app: own tap rather than homebrew-cask)
+- [x] **Homebrew cask** – own tap `rezored/homebrew-tap`: `brew install --cask rezored/tap/cubicle-crew` (removes the quarantine flag; CI on macos-14 audits and installs it). New version = bump `version` + `sha256` in `Casks/cubicle-crew.rb`

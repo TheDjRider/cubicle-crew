@@ -57,3 +57,41 @@ jobs:
         run: gh release upload "$TAG" release/*.AppImage --clobber
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Homebrew: PR в rezored/homebrew-tap с новата версия и sha256 на .dmg (CI-ят там го проверява на macOS).
+  # Нужен е secret TAP_TOKEN (fine-grained PAT: homebrew-tap, Contents + Pull requests: write); без него – нищо.
+  homebrew:
+    needs: mac
+    runs-on: ubuntu-22.04
+    env:
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+    steps:
+      - name: Open a PR in the tap
+        if: env.TAP_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          V="${TAG#v}"
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "CubicleCrew-$V-mac.dmg"
+          SHA=$(sha256sum "CubicleCrew-$V-mac.dmg" | cut -d' ' -f1)
+          git clone "https://x-access-token:$GH_TOKEN@github.com/rezored/homebrew-tap.git" tap && cd tap
+          git checkout -b "cubicle-crew-$V"
+          sed -i -E "s/^  version \".*\"/  version \"$V\"/; s/^  sha256 \".*\"/  sha256 \"$SHA\"/" Casks/cubicle-crew.rb
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -am "cubicle-crew $V"
+          git push -u origin HEAD
+          gh pr create --title "cubicle-crew $V" --body "Release $TAG" --base master
+
+  # WinGet: PR в microsoft/winget-pkgs за новата версия (след като първият PR за пакета е приет).
+  # Нужен е secret WINGET_TOKEN (classic PAT с public_repo, за fork на winget-pkgs); без него – нищо.
+  winget:
+    runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Submit the update
+        if: env.WINGET_TOKEN != ''
+        shell: pwsh
+        run: |
+          $v = $env:TAG.TrimStart('v')
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          .\wingetcreate.exe update rezored.CubicleCrew --version $v --urls "https://github.com/rezored/cubicle-crew/releases/download/$env:TAG/CubicleCrew-Setup-$v.exe" --submit --token $env:WINGET_TOKEN
