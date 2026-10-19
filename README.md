@@ -4,7 +4,7 @@
 
 ### Your Claude Code agents, living in a tiny pixel-art office.
 
-Every Claude Code session becomes a coworker at a desk – and so does every **Codex**, **Gemini CLI** and **OpenCode** session. Sub-agents walk in through the door, pick up the task
+Every Claude Code session becomes a coworker at a desk – and so does every **Codex**, **Gemini CLI** and **OpenCode** session. **Copilot CLI, Cursor or any script** can walk in too through a small local API ([docs/api.md](docs/api.md)). Sub-agents walk in through the door, pick up the task
 and sit down with their team. When someone needs you, the whole room lets you know.
 
 [**▶ Watch the trailer**](docs/media/trailer.mp4) · [**⬇ Download for Windows**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [Desktop app](#desktop-widget-windows) · [How it works](#how-it-works)
@@ -38,6 +38,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | | |
 |---|---|
 | 🧑‍💻 **Teams** | Two lead desks with a ★ nameplate share one rug, with three desks for sub-agents below. Any sub-agent takes any free desk; the ones without a desk work on a laptop on the sofa until one frees up. Each team has its own mug colour, and lines connect every lead to its sub-agents. A third session works from the lounge until a lead desk is free. |
+| 🔌 **Any agent, one endpoint** | `POST http://127.0.0.1:4317/api/event` (local only) brings anything into the office: ready-made hook configs for **GitHub Copilot CLI** and **Cursor**, any agent with Claude-Code-style hooks, or a script with `curl` / `npx cubicle-crew event tool_start --agent build --tool Bash --detail "npm test"`. They get a desk, a bubble with the current tool, turn red when they wait for you and walk out when they end. See [docs/api.md](docs/api.md). |
 | 📄 **Context on the desk** | A stack of paper on every desk grows with the agent's context window, gets a yellow and then a red sticker as it fills up, and flies off the desk when the conversation is compacted. The card shows the exact numbers. Works for Claude Code, Codex and OpenCode. |
 | ✅ **Allow / Deny from the office** *(optional)* | Turn on **Answer permission prompts here** in the `?` panel and Claude Code's "Allow …?" questions show up as a bar at the bottom of the office with **Allow** and **Deny** buttons (keys `Y` / `N`; in the desktop app also `Ctrl+Alt+Y` / `Ctrl+Alt+N` from any window). It adds one hook to `~/.claude/settings.json` (a backup is kept) and removes it when you turn it off. The terminal keeps working: if you don't answer in the office within 45 s, or you answer in the terminal, nothing changes there. |
 | ⚠️ **Risky commands in red** | Shell commands that delete recursively, rewrite git history or touch production (`rm -rf`, `Remove-Item -Recurse -Force`, force push, `git reset --hard`, `terraform apply`, `kubectl delete`, `DROP TABLE`, `curl … \| sh`, anything with "prod") get a red ⚠ in the bubble, the card, the thin strip and the Allow / Deny bar, so you look twice before you allow them. |

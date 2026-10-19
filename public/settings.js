@@ -67,6 +67,7 @@ function sections(ui) {
   out.help = `<h4>${H.colours}</h4><ul class="states">` + STATE_ORDER.map((st) => `<li data-state="${st}"><i style="background:${STATES[st].color}"></i><span><b>${T.states[st]}</b> – ${esc(H.states[st].replace(/^[^–]*–\s*/, ''))}</span></li>`).join('') + '</ul>' +
     `<p class="dim">${H.shapes}</p><p class="dim"><span class="danger">⚠</span> ${H.danger}</p>` +
     `<h4>${H.keysTitle}</h4><table class="keys">${H.keys.filter(([k]) => D || !k.includes('Ctrl+Alt')).map(([k, v]) => `<tr><th><kbd>${k}</kbd></th><td>${v}</td></tr>`).join('')}</table>` +
+    `<h4>${H.agentsTitle}</h4><p class="dim">${H.agentsHint}</p><div class="btns"><a href="https://github.com/rezored/cubicle-crew/blob/main/docs/api.md" target="_blank" rel="noopener">${H.agentsLink}</a></div>` +
     `<h4>${H.feedback}</h4><p class="dim">${H.feedbackHint}</p><div class="btns">` +
     `<a href="https://github.com/rezored/cubicle-crew/discussions" target="_blank" rel="noopener">${H.discuss}</a>` +
     `<a href="https://github.com/rezored/cubicle-crew/issues/new" target="_blank" rel="noopener">${H.issue}</a>` +
