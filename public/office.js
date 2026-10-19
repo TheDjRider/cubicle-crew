@@ -16,7 +16,8 @@ import { R, pixLine, hashStr, clamp } from './util.js';
 
 const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts']);
 // чашата на бюрото = екипът на седящия (под-агентските бюра са общи); без екип (оркестраторът чака) – бяла
-const TEAM_MUGS = ['#2fa8a8', '#d060b0'], NO_TEAM_MUG = '#e8e4dc';
+// екипи 0/1 = двете оркестраторски бюра; 2–4 = оркестратори на горещо бюро (3-та+ работеща сесия на под-агентско бюро)
+const TEAM_MUGS = ['#2fa8a8', '#d060b0', '#a8d040', '#9a5a32', '#5a5ad0'], NO_TEAM_MUG = '#e8e4dc';
 // откъде тръгва всеки любимец (част от зоната за почивка), за да не се появят един върху друг
 const PET_START = { cat: 0.5, cat2: 0.2, cat3: 0.82, dog: 0.36 };
 
@@ -195,6 +196,19 @@ export class Office {
     return -1;
   }
 
+  /** Цвят на екипа за оркестратор на горещо бюро: първият свободен след двете оркестраторски бюра. */
+  hotTeam(except) {
+    const used = new Set(this.live().filter((x) => x !== except && x.seat?.hot).map((x) => x.seat.team));
+    for (let k = CFG.MAX_TEAMS; k < CFG.MAX_TEAMS + CFG.SUB_PER_ROW; k++) if (!used.has(k)) return k;
+    return CFG.MAX_TEAMS;
+  }
+
+  /** Горещо бюро: 3-та+ работеща сесия сяда на свободно под-агентско бюро (вместо с лаптоп на дивана). */
+  hotSeat(a) {
+    const slot = this.freeSubSlot(a);
+    return slot < 0 ? null : { role: 'sub', slot, hot: true, team: this.hotTeam(a) };
+  }
+
   /** Място за работа без бюро: с лаптоп на дивана, иначе прав с лаптоп в зоната за почивка (не при кафемашината). */
   workSpot(a) {
     const sofa = this.freeSofa(a);
@@ -242,11 +256,22 @@ export class Office {
         a.seat = null; a.pod = -1; this.teams[t] = null;
       }
     }
+    // почиващ оркестратор на горещо бюро – същото правило: връща бюрото на под-агентите
+    for (const a of this.live()) {
+      if (!a.seat?.hot) continue;
+      if (a.agent.leaving || a.leavingNow || (a.agent.state === 'idle' && a.mode !== 'walk' && LOUNGE.has(a.loc.type) && this.model.liveChildren(a.agent) === 0 &&
+        !this.live().some((x) => x.seat && x.agent.parent === a.id))) { a.seat = null; a.pod = -1; }
+    }
     const queued = this.live().filter((a) => !a.seat && !a.agent.subagent && !a.agent.leaving && !a.leavingNow)
       .sort((x, y) => (x.agent.state === 'idle') - (y.agent.state === 'idle') || y.agent.lastEvent - x.agent.lastEvent);
     for (const q of queued) {
       if (q.agent.state === 'idle') continue; // почиващите не заемат бюро и не изместват никого
       let t = this.freeTeam();
+      // и двете оркестраторски бюра са заети -> свободно под-агентско бюро (горещо бюро)
+      if (t < 0) {
+        const hot = this.hotSeat(q);
+        if (hot) { this.assignSeat(q, hot); this.route(q, { type: 'seat' }); continue; }
+      }
       if (t < 0) {
         // оркестратор, който почива достатъчно дълго и няма живи под-агенти
         let best = -1, bestQuiet = 0;
@@ -263,6 +288,11 @@ export class Office {
       }
       this.assignSeat(q, { team: t, role: 'lead', slot: 0 });
       this.route(q, { type: 'seat' });
+    }
+    // освободило се оркестраторско бюро, а под-агент работи на лаптоп -> оркестраторът от горещото бюро се мести там
+    if (this.freeTeam() >= 0 && this.live().some((x) => x.agent.subagent && !x.seat && !x.agent.leaving && !x.leavingNow)) {
+      const h = this.live().filter((x) => x.seat?.hot && x.agent.state !== 'idle').sort((x, y) => x.joinSeq - y.joinSeq)[0];
+      if (h) { this.assignSeat(h, { team: this.freeTeam(), role: 'lead', slot: 0 }); this.route(h, { type: 'seat' }); }
     }
     this.manageSubs();
   }
@@ -400,13 +430,14 @@ export class Office {
       this.route(a, this.freeSofa(a) || this.freeLoungeSpot(a));
       return;
     }
-    if (t >= 0) {
-      this.assignSeat(a, { team: t, role: 'lead', slot: 0 });
+    const seat = t >= 0 ? { team: t, role: 'lead', slot: 0 } : this.hotSeat(a);
+    if (seat) {
+      this.assignSeat(a, seat);
       const p = this.L.pods[a.pod];
       a.x = p.cx; a.y = p.seatY; a.mode = 'seated'; a.loc = { type: 'seat' };
       a.seatedOnce = true;
     } else {
-      // и двете оркестраторски бюра са заети – работи с лаптоп в зоната за почивка
+      // всички бюра са заети – работи с лаптоп в зоната за почивка
       const spot = this.workSpot(a);
       const pt = this.locPoint(spot, a);
       a.loc = spot; a.mode = 'idleSpot'; a.x = pt.x; a.y = pt.y; a.spotSince = now;

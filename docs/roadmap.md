@@ -34,9 +34,10 @@ Ticked = done and merged.
       hook waits? (if not, the terminal question appears only after 45 s – then shorten `HOLD_MS`)
 - [x] Global hotkey for Allow / Deny in the desktop app – `Ctrl+Alt+Y` / `Ctrl+Alt+N` (Cmd+Alt on a Mac),
       registered only while a request is pending
-- [ ] **Phone / LAN view** – read-only, off by default, PIN-protected. Opens a port to the local network.
-- [ ] **More than two teams** – a second floor or a "command center" view when 3+ sessions work at once
-      (the office is fixed by design today).
+- [x] **Phone / LAN view** – read-only, off by default, PIN-protected (`lan.js`, port 4327 → 4328–4330 → any). The server strips commands, paths, task and session names; see docs/security.md
+- [x] **More than two teams** – hot desks: a 3rd+ working session takes a free sub-agent desk with its own mug colour
+      (up to 5 teams; moves to a lead desk when one frees up and a sub-agent needs a desk). A second floor only if
+      people really run 6+ sessions.
 - [x] **npm** – `npx cubicle-crew` (published 2.9.0, 2026-10-19; npm staged publishing – a new version may need *Approve* on npmjs.com)
 - [ ] **WinGet** – `rezored.CubicleCrew` PR microsoft/winget-pkgs#455788 (CLA signed, waiting for validation/review); later versions need an update PR
 - [x] **Homebrew cask** – own tap `rezored/homebrew-tap`: `brew install --cask rezored/tap/cubicle-crew` (removes the quarantine flag; CI on macos-14 audits and installs it). New version = bump `version` + `sha256` in `Casks/cubicle-crew.rb`
