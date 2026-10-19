@@ -1,7 +1,7 @@
 // Тънка лента (?strip, Electron: „Тънка лента вместо офиса“): вместо офиса – по един ред на сесия:
 // форма/цвят на състоянието, име, какво прави, от колко време, колко под-агента. Червено = чака теб.
 // Сцената не се рисува (по-малко процесор); моделът и офисът продължават да вървят отзад.
-import { STATES, T, PROVIDERS } from './config.js';
+import { STATES, T, PROVIDERS, waitingText } from './config.js';
 import { shortDetail, fmtDuration, danger } from './util.js';
 import { prefs } from './prefs.js';
 
@@ -32,7 +32,7 @@ export class Strip {
     if (key === this.key) return;
     this.key = key;
     this.root.textContent = '';
-    if (!rows.length) el('div', 'none', this.root).textContent = T.waitingActivity;
+    if (!rows.length) el('div', 'none', this.root).textContent = waitingText(T.waitingActivity, this.ui.office.agentsFound);
     for (const r of rows) {
       const row = el('div', `row${r.st === 'waiting' ? ' wait' : ''}`, this.root);
       row.dataset.state = r.st; row.dataset.id = r.id; row.title = T.terminalHint;

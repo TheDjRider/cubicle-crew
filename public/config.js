@@ -34,6 +34,14 @@ export const CFG = {
 };
 
 // Цветовете на състоянията са част от визуалния език — не ги променяй без причина.
+/** Текстът „чакам …“ с намерените на компютъра агенти (съобщение {type:'agents'}; null = не знаем -> само Claude Code).
+ *  fn = T.waitingActivity или T.wait.msg; празен списък = нищо не е намерено. */
+export function waitingText(fn, found) {
+  const list = found || ['claude'];
+  if (!list.length) return T.noAgents;
+  const names = list.map((k) => (k === 'claude' ? 'Claude Code' : k === 'gemini' ? 'Gemini CLI' : PROVIDERS[k] || k));
+  return fn(names.length > 1 ? `${names.slice(0, -1).join(', ')} ${T.or} ${names.at(-1)}` : names[0]);
+}
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
 export const PROVIDERS = { codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
 
@@ -56,8 +64,11 @@ const T_BG = {
   title: 'Cubicle Crew',
   connecting: 'свързване…',
   connected: 'свързан',
-  waitingActivity: 'Чакам активност от Claude Code…',
-  wait: { morning: 'Добро утро!', day: 'Добър ден!', evening: 'Добър вечер!', msg: 'Чакам първата сесия на Claude Code…', hint: 'Кликни, за да отвориш офиса' },
+  // n = намерените агенти („Claude Code, Codex или Gemini CLI“), вж. waitingText()
+  waitingActivity: (n) => `Чакам активност от ${n}…`,
+  noAgents: 'Не намирам Claude Code, Codex, Gemini CLI или OpenCode на този компютър.',
+  or: 'или',
+  wait: { morning: 'Добро утро!', day: 'Добър ден!', evening: 'Добър вечер!', msg: (n) => `Чакам първата сесия на ${n}…`, hint: 'Кликни, за да отвориш офиса' },
   reconnecting: 'връзката падна, опитвам пак…',
   demo: 'ДЕМО',
   agents: 'Агенти',
@@ -262,8 +273,10 @@ const T_EN = {
   title: 'Cubicle Crew',
   connecting: 'connecting…',
   connected: 'connected',
-  waitingActivity: 'Waiting for Claude Code activity…',
-  wait: { morning: 'Good morning!', day: 'Good afternoon!', evening: 'Good evening!', msg: 'Waiting for the first Claude Code session…', hint: 'Click to open the office' },
+  waitingActivity: (n) => `Waiting for activity from ${n}…`,
+  noAgents: 'No Claude Code, Codex, Gemini CLI or OpenCode found on this computer.',
+  or: 'or',
+  wait: { morning: 'Good morning!', day: 'Good afternoon!', evening: 'Good evening!', msg: (n) => `Waiting for the first session of ${n}…`, hint: 'Click to open the office' },
   reconnecting: 'connection lost, retrying…',
   demo: 'DEMO',
   agents: 'Agents',

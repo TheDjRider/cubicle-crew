@@ -1,6 +1,6 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
-import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petTitle } from './config.js';
+import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petTitle, waitingText } from './config.js';
 import { shortDetail, fmtDuration, danger, fmtUsd } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
@@ -462,7 +462,8 @@ export class UI {
     const title = s.waiting ? `(${s.waiting}) ${T.needsYou} · ${T.title}` : T.title;
     if (document.title !== title) document.title = title;
     this.empty.hidden = !(s.agents === 0 && this.conn !== 'demo');
-    if (this.empty.textContent !== T.waitingActivity) this.empty.textContent = T.waitingActivity;
+    const wt = waitingText(T.waitingActivity, this.office.agentsFound);
+    if (this.empty.textContent !== wt) this.empty.textContent = wt;
     if (PARAMS.debug) this.updateDebug(now);
     this.sendDesktopStats(s);
   }
