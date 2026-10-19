@@ -115,7 +115,7 @@ export class Model {
     for (const s of Array.isArray(list) ? list : []) {
       if (!s || typeof s.agent !== 'string') continue;
       ids.add(s.agent);
-      if (!this.agents.has(s.agent)) this.ingest({ agent: s.agent, label: s.label, type: 'presence' }, now);
+      if (!this.agents.has(s.agent)) this.ingest({ agent: s.agent, label: s.label, type: 'presence', provider: typeof s.provider === 'string' ? s.provider.slice(0, 20) : undefined }, now);
       const a = this.agents.get(s.agent);
       a.live = true; a.ended = false;
       if (typeof s.name === 'string' && s.name) a.sessionName = s.name;

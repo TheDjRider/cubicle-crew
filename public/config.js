@@ -35,7 +35,7 @@ export const CFG = {
 
 // Цветовете на състоянията са част от визуалния език — не ги променяй без причина.
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
-export const PROVIDERS = { codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot' };
+export const PROVIDERS = { codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
 
 export const STATES = {
   idle:       { color: '#6b6b80' },
@@ -116,6 +116,7 @@ const T_BG = {
     openStats: 'Статистика', openWeather: 'Времето навън', security: 'Какво се чете и записва',
     place: 'Размер и място', resetSize: 'Нулирай размера', resetPlace: 'Върни над трея', browser: 'Отвори в браузъра',
     keysTitle: 'Клавиши',
+    agentsTitle: 'Други агенти', agentsHint: 'Claude Code, Codex, Gemini CLI и OpenCode се виждат сами. Copilot CLI, Cursor или собствен скрипт влизат през малък локален API.', agentsLink: 'Как да ги включиш (API)',
     keys: [['?', 'тези настройки'], ['B', 'магазинът'], ['L', 'легендата на цветовете'], ['Esc', 'затваря / маха фокуса'], ['Y / N', 'Разреши / Откажи'], ['Ctrl+Alt+P', 'покажи / скрий прозореца'], ['Ctrl+Alt+Y / N', 'разреши / откажи от всеки прозорец']],
     // всяка настройка с по едно изречение какво прави
     look: 'Как изглежда',
@@ -315,6 +316,7 @@ const T_EN = {
     openStats: 'Stats', openWeather: 'Weather outside', security: 'What is read and written',
     place: 'Size and place', resetSize: 'Reset size', resetPlace: 'Move back above the tray', browser: 'Open in browser',
     keysTitle: 'Keys',
+    agentsTitle: 'Other agents', agentsHint: 'Claude Code, Codex, Gemini CLI and OpenCode show up by themselves. Copilot CLI, Cursor or your own script come in through a small local API.', agentsLink: 'How to connect them (API)',
     keys: [['?', 'these settings'], ['B', 'the shop'], ['L', 'the colour legend'], ['Esc', 'close / clear the focus'], ['Y / N', 'Allow / Deny'], ['Ctrl+Alt+P', 'show / hide the window'], ['Ctrl+Alt+Y / N', 'allow / deny from any window']],
     look: 'Look',
     office: 'Office', officeHint: 'The whole game: coins and the shop, pets, coffee breaks, handheld games and darts, effects and achievements.',

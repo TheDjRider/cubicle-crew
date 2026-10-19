@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 import { Wallet } from './wallet.js';
 import { Weather } from './weather.js';
 import { Updates } from './update.js';
+import { External } from './external.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
 import { Permissions } from './permissions.js';
@@ -161,6 +162,23 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  // отворен вход: всеки инструмент (скрипт, curl, hook на Copilot CLI / Cursor…) може да влезе в офиса – вж. docs/api.md.
+  // Само локално и без чужд Origin (като другите POST-ове); hook-овете получават празен {} – нищо не решаваме вместо тях.
+  if (urlPath === '/api/event') {
+    const origin = req.headers.origin;
+    if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
+    const chunks = []; let size = 0, big = false;
+    req.on('data', (d) => { size += d.length; if (size > 1 << 20) big = true; else chunks.push(d); }); // payload-ите на hook-ове може да носят цели файлове
+    req.on('end', () => {
+      let data = null;
+      try { if (!big) data = JSON.parse(Buffer.concat(chunks).toString('utf8') || 'null'); } catch { /* лош JSON */ }
+      const q = new URL(req.url, 'http://x').searchParams;
+      const r = external.ingest(data, q.get('from') || '', q.get('event') || '');
+      res.writeHead(r.hook || r.ok ? 200 : 400, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(r.hook ? {} : r.ok ? { ok: true } : { ok: false, error: big ? 'size' : r.error }));
+    });
+    return;
+  }
   // проверка за нова версия (по желание)
   if (urlPath === '/api/update' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
@@ -208,6 +226,8 @@ const perms = new Permissions({
 });
 const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
 const updates = new Updates(broadcast, (m) => { if (DEBUG) console.log(m); });
+// отвореният вход за други агенти (POST /api/event): събитията – като от транскриптите, състоянията – в живите сесии
+const external = new External({ emit: (e) => emitEvt(e), changed: () => scanSessions() });
 // нов клиент веднага вижда портфейла и живите сесии
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify(wallet.msg(0, 'sync', null, null, true)));
@@ -242,6 +262,7 @@ function scanSessions() {
     if (typeof s.name === 'string' && s.name) item.name = s.name.slice(0, 40);
     list.push(item);
   }
+  for (const x of external.list()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   list.sort((x, y) => (x.agent < y.agent ? -1 : 1));
   const key = JSON.stringify(list);
   if (key === liveKey) return;

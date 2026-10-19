@@ -8,7 +8,8 @@ Ticked = done and merged.
 - [x] **Context gauge** – a stack of paper on every desk that grows with the agent's context window, turns
       yellow/red when it fills up, and goes into the bin when the conversation is compacted; numbers in the card
 - [x] **Gemini CLI** sessions (`~/.gemini/tmp/*/chats/*.jsonl`, v0.64+ format; the old whole-file `.json` isn't read)
-- [ ] **GitHub Copilot CLI** sessions (the most requested agent in Pixel Agents' issues) – *blocked*: the on-disk
+- [x] **Open API** (`POST /api/event`, docs/api.md): any agent/script; ready hook configs for Copilot CLI (http hooks) and Cursor – not yet tried with the real tools
+- [ ] **GitHub Copilot CLI** sessions (files) (the most requested agent in Pixel Agents' issues) – *blocked*: the on-disk
       `~/.copilot/session-state/<id>/events.jsonl` format is undocumented; needs one real session file to build against
 - [x] **Ended / crashed sessions** – a session that ends in the middle of a tool greys out with a small mark
       until you've seen it, instead of quietly walking out
@@ -31,4 +32,6 @@ Ticked = done and merged.
 - [ ] **Phone / LAN view** – read-only, off by default, PIN-protected. Opens a port to the local network.
 - [ ] **More than two teams** – a second floor or a "command center" view when 3+ sessions work at once
       (the office is fixed by design today).
-- [ ] **Package managers** – WinGet, Homebrew cask, `npx cubicle-crew` (publishing under your accounts).
+- [x] **npm** – `npx cubicle-crew` (published 2.9.0, 2026-10-19; npm staged publishing – a new version may need *Approve* on npmjs.com)
+- [ ] **WinGet** – `rezored.CubicleCrew` PR microsoft/winget-pkgs#455788 (CLA signed, waiting for validation/review); later versions need an update PR
+- [ ] **Homebrew cask** – not started (unsigned app: own tap rather than homebrew-cask)

@@ -1,6 +1,6 @@
 {
   "name": "cubicle-crew",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "type": "module",
   "bin": {
     "cubicle-crew": "bin/cubicle-crew.js"
@@ -11,6 +11,7 @@
     "wallet.js",
     "weather.js",
     "update.js",
+    "external.js",
     "stats.js",
     "focus.js",
     "providers.js",
@@ -67,6 +68,7 @@
       "wallet.js",
       "weather.js",
       "update.js",
+      "external.js",
       "stats.js",
       "focus.js",
       "providers.js",
@@ -146,6 +148,6 @@
   "homepage": "https://github.com/rezored/cubicle-crew",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rezored/cubicle-crew.git"
+    "url": "git+https://github.com/rezored/cubicle-crew.git"
   }
 }

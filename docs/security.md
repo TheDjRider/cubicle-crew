@@ -61,6 +61,7 @@ To check it yourself: open Resource Monitor (Windows) or run `netstat -ano` whil
 - Listens on `127.0.0.1` only – not reachable from other machines.
 - Every request and WebSocket must come from `localhost`: the `Host` header must be local and the `Origin` (if any) must be local. This blocks other websites and DNS rebinding.
 - Buying, equipping and setting things needs a JSON `POST` from a local origin.
+- `POST /api/event` (the open API for other agents, [api.md](api.md)) also needs JSON and no foreign `Origin`. It only adds coworkers to the office (in memory; their work counts in the stats and coins like any session) – it can't read anything or change settings, and hooks always get an empty answer.
 - Static files are served only from the app's `public/` folder.
 
 ## On screen
