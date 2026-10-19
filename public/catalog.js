@@ -142,9 +142,10 @@ export const ITEMS = [
   I('cat3.extra', 'catslot', 900, 'Трета котка', { slot: 'cat3', gives: 'cat.tuxedo' }),
   // котка за започналите с куче и куче за започналите с котка (alt: всеки може да купи само едното)
   I('cat1.extra', 'catslot', 600, 'Котка', { slot: 'cat', gives: 'cat.grey', alt: true }),
-  I('dog.extra', 'catslot', 600, 'Куче', { slot: 'dog', gives: 'dog.beagle', alt: true }),
+  I('dog.extra', 'catslot', 600, 'Куче', { slot: 'dog', gives: 'dog.bueno', alt: true }),
   // кучета (породи) – рисуват се от Dog в characters.js. m = муцуна, e = уши, ears flop|up, tail long|curl|stub,
   // legs short = къси крака, len = по-дълго (+) / по-късо (-) тяло, pat saddle|chest|mask|spots с цвят p
+  I('dog.bueno', 'dog', 0, 'Буено микс', { c: '#eae6de', hi: '#fffdf6', m: '#f2eee6', e: '#2a2624', eye: '#2e1c10', ears: 'half', tail: 'plume', len: 2, tall: 1, pat: 'tick', p: '#282420', p2: '#a8773f' }),
   I('dog.beagle', 'dog', 0, 'Бигъл', { c: '#c08a4a', hi: '#d8a464', m: '#f0e8dc', e: '#6a4426', eye: '#2a1a12', ears: 'flop', tail: 'long', pat: 'saddle', p: '#3a2a22' }),
   I('dog.golden', 'dog', 150, 'Голдън ретривър', { c: '#d8a050', hi: '#ecbc6c', m: '#e4b468', e: '#c08840', eye: '#2a1a12', ears: 'flop', tail: 'long' }),
   I('dog.black', 'dog', 150, 'Черен лабрадор', { c: '#2a2624', hi: '#423c38', m: '#34302e', e: '#1e1a18', eye: '#a07a3a', ears: 'flop', tail: 'long' }),

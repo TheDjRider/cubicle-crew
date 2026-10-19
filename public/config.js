@@ -203,7 +203,7 @@ const T_BG = {
   },
   // офисните любимци: имена по подразбиране (по място) и подсказката при посочване
   pets: {
-    names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Шаро' },
+    names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Буено' },
     kinds: { cat: 'Офисна котка', dog: 'Офисно куче' },
     tip: 'Клик – погали · двоен клик – име и външен вид',
   },
@@ -401,7 +401,7 @@ const T_EN = {
     },
   },
   pets: {
-    names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex' },
+    names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Bueno' },
     kinds: { cat: 'Office cat', dog: 'Office dog' },
     tip: 'Click to pet · double-click to rename or change the look',
   },
@@ -467,7 +467,7 @@ const T_EN = {
     'cat.grey': 'Grey cat', 'cat.ginger': 'Ginger cat', 'cat.black': 'Black cat', 'cat.white': 'White cat', 'cat2.tabby': 'Second cat', 'cat3.extra': 'Third cat',
     'cat.tabby': 'Tabby cat', 'cat.tuxedo': 'Tuxedo cat', 'cat.calico': 'Calico cat', 'cat.siamese': 'Siamese cat', 'cat.tortie': 'Tortoiseshell cat',
     'cat1.extra': 'Cat', 'dog.extra': 'Dog',
-    'dog.beagle': 'Beagle', 'dog.golden': 'Golden retriever', 'dog.black': 'Black labrador', 'dog.dachshund': 'Dachshund', 'dog.corgi': 'Corgi',
+    'dog.bueno': 'Bueno Mixed', 'dog.beagle': 'Beagle', 'dog.golden': 'Golden retriever', 'dog.black': 'Black labrador', 'dog.dachshund': 'Dachshund', 'dog.corgi': 'Corgi',
     'dog.husky': 'Husky', 'dog.dalmatian': 'Dalmatian', 'dog.pug': 'Pug',
     'season.pumpkins': 'Pumpkins', 'season.tree': 'Christmas tree', 'season.tulips': 'Tulips', 'season.fan': 'Standing fan',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',
