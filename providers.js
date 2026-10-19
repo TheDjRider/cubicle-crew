@@ -150,9 +150,6 @@ const OC_TOOLS = {
   task: 'Task', todowrite: 'TodoWrite', todoread: 'TodoRead', question: 'AskUserQuestion',
 };
 
-/** Има ли OpenCode на този компютър (само дали базата съществува). */
-export const opencodeFound = () => process.env.OPENCODE !== '0' && !!opencodeDb();
-
 /** Следи базата на OpenCode. Връща { stop } или null, ако няма OpenCode / node:sqlite. */
 export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => {}) {
   if (process.env.OPENCODE === '0') return null;

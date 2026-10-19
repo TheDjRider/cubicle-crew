@@ -15,7 +15,7 @@ import { External } from './external.js';
 import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
 import { Permissions } from './permissions.js';
-import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, opencodeFound, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine } from './providers.js';
+import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine } from './providers.js';
 
 const PORT = Number(process.env.PORT) || 4317;
 const ROOT = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
@@ -228,26 +228,8 @@ const weather = new Weather(broadcast, (m) => { if (DEBUG) console.log(m); });
 const updates = new Updates(broadcast, (m) => { if (DEBUG) console.log(m); });
 // отвореният вход за други агенти (POST /api/event): събитията – като от транскриптите, състоянията – в живите сесии
 const external = new External({ emit: (e) => emitEvt(e), changed: () => scanSessions() });
-// кои агенти има на този компютър – само дали съществуват папките им (нищо не се чете), плюс миналите през API-то;
-// страницата ги изброява в „Чакам първата сесия на …“
-let agentsFound = [];
-const extSeen = new Set();
-function scanAgents() {
-  const has = (dir) => { try { return fs.existsSync(dir); } catch { return false; } };
-  const list = [];
-  if (has(ROOT) || has(path.dirname(ROOT)) || EXTRA.some(has)) list.push('claude');
-  if (CODEX_ON && has(path.dirname(CODEX_ROOT))) list.push('codex');
-  if (GEMINI_ON && has(path.dirname(GEMINI_ROOT))) list.push('gemini');
-  if (opencodeFound()) list.push('opencode');
-  for (const x of external.list()) if (x.provider) extSeen.add(x.provider);
-  for (const p of extSeen) if (!list.includes(p)) list.push(p);
-  if (list.join() === agentsFound.join()) return;
-  agentsFound = list;
-  broadcast({ type: 'agents', list });
-}
 // нов клиент веднага вижда портфейла и живите сесии
 wss.on('connection', (ws) => {
-  ws.send(JSON.stringify({ type: 'agents', list: agentsFound }));
   ws.send(JSON.stringify(wallet.msg(0, 'sync', null, null, true)));
   ws.send(JSON.stringify({ type: 'sessions', list: live }));
   ws.send(JSON.stringify(weather.msg()));
@@ -555,8 +537,6 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   setInterval(poll, POLL_MS);
   poll();
   setInterval(scanSessions, SESSIONS_MS);
-  scanAgents();
-  setInterval(scanAgents, 10000);
   if (CODEX_ON) console.log(`Codex: watching ${CODEX_ROOT}`);
   if (GEMINI_ON) console.log(`Gemini CLI: watching ${GEMINI_ROOT}`);
   watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx).catch(() => {});

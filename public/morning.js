@@ -1,7 +1,7 @@
 // Сутрешен екран: малкото прозорче при старт с Windows, докато няма нито една сесия.
 // Аватарът пие кафе на бюрото, любимецът спи на перваза, небето в прозореца е по истинския час.
 // Щом се появи агент (или потребителят кликне) – екранът изчезва и прозорецът става офисът.
-import { T, STATES, waitingText } from './config.js';
+import { T, STATES } from './config.js';
 import { timeOfDay } from './environment.js';
 import { applyWeather, drawWindowWeather } from './weather.js';
 import { CharacterSprites, avatarLook, FW, FH } from './sprites.js';
@@ -256,7 +256,7 @@ export class Morning {
   updateText(date) {
     const h = date.getHours();
     const hello = h >= 4 && h < 12 ? T.wait.morning : h >= 12 && h < 18 ? T.wait.day : T.wait.evening;
-    const html = `<b>${hello}</b><span>${waitingText(T.wait.msg, this.office.agentsFound)}</span>`;
+    const html = `<b>${hello}</b><span>${T.wait.msg}</span>`;
     if (this.box._html !== html) { this.box.innerHTML = html; this.box._html = html; }
   }
 }

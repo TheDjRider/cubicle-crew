@@ -218,7 +218,6 @@ if (PARAMS.demo) {
       else if (e.type === 'permission') model.permission(e);
       else if (e.type === 'weather') { onWeather(e); shop.setWeather(e); }
       else if (e.type === 'update') ui.setUpdate(e);
-      else if (e.type === 'agents') office.agentsFound = e.list; // за „Чакам първата сесия на …“
       else ingest(e);
     };
     ws.onclose = () => { ui.setConnection('down'); setTimeout(connect, retry); retry = Math.min(8000, retry * 1.5); };

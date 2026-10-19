@@ -26,8 +26,6 @@ The text of your prompts, Claude's answers, thinking, file contents and tool out
 
 **OpenCode sessions** – the OpenCode database `~/.local/share/opencode/opencode.db` (or `$XDG_DATA_HOME/opencode`, `OPENCODE_DB`; `OPENCODE=0` turns it off), opened **read-only**. Once a second it reads the parts changed since the last look: part type, tool name, call id, status, the first of `filePath`/`path`/`command`/`pattern`/`description`/`url`/`query` cut to 60 characters, and token counts; from `session` the folder name, the parent session and the title (shown on a sub-agent's label). Message text and tool output are never used.
 
-**Which agents are installed** – every 10 seconds the server checks only whether these exist: `~/.claude` (or the transcripts folder), `~/.codex`, `~/.gemini` and the OpenCode database file. Nothing inside them is opened for this. The names of the ones found (plus agents that came in through the API) go to the page, so the empty office says "Waiting for the first session of Claude Code or Codex…".
-
 **Live sessions** – `~/.claude/sessions/<pid>.json` (or `CLAUDE_SESSIONS_DIR`): `pid`, `sessionId`, `cwd`, `status`, `waitingFor`. Used to know which sessions are open and when one waits for a permission prompt.
 
 ## What it writes
