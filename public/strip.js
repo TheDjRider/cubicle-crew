@@ -8,14 +8,15 @@ import { prefs } from './prefs.js';
 const el = (tag, cls, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; };
 
 export class Strip {
-  constructor(model, ui) {
-    this.model = model; this.ui = ui;
-    this.root = el('div', null, document.body);
+  /** list = само списък под офиса (изгледът за телефон в изправено положение) – офисът си остава. */
+  constructor(model, ui, { list = false } = {}) {
+    this.model = model; this.ui = ui; this.list = list;
+    this.root = el('div', list ? 'list' : null, document.body);
     this.root.id = 'strip';
-    document.body.classList.add('strip');
+    if (!list) document.body.classList.add('strip');
     this.last = 0; this.key = ''; this.h = 0;
     // клик върху ред -> терминалът на тази сесия
-    this.root.addEventListener('click', (e) => { const id = e.target.closest('.row')?.dataset.id; if (id) this.ui.goTerminal(id); });
+    if (!list) this.root.addEventListener('click', (e) => { const id = e.target.closest('.row')?.dataset.id; if (id) this.ui.goTerminal(id); });
   }
 
   render(now) {
@@ -35,7 +36,7 @@ export class Strip {
     if (!rows.length) el('div', 'none', this.root).textContent = T.waitingActivity;
     for (const r of rows) {
       const row = el('div', `row${r.st === 'waiting' ? ' wait' : ''}`, this.root);
-      row.dataset.state = r.st; row.dataset.id = r.id; row.title = T.terminalHint;
+      row.dataset.state = r.st; row.dataset.id = r.id; if (!this.list) row.title = T.terminalHint;
       const dot = el('i', null, row); dot.style.background = STATES[r.st].color;
       el('b', null, row).textContent = r.name;
       el('span', r.risky ? 'what danger' : 'what', row).textContent = (r.risky ? '⚠ ' : '') + r.what;
@@ -43,6 +44,6 @@ export class Strip {
     }
     // височината на лентата -> Electron нагласява прозореца
     const h = Math.ceil(this.root.getBoundingClientRect().height);
-    if (h !== this.h) { this.h = h; window.pixelOffice?.stripSize?.(h); }
+    if (h !== this.h && !this.list) { this.h = h; window.pixelOffice?.stripSize?.(h); }
   }
 }

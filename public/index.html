@@ -424,6 +424,18 @@
   /* изгледът за телефон: само за гледане */
   body.lan #prompt, body.lan #hud .shopbtn, body.lan #hud .help, body.lan #hud .statsbtn, body.lan #hud .snd { display: none; }
   body.lan #hud .tok { pointer-events: none; }
+  /* изправен телефон: списък на сесиите под офиса, без легенда (редовете казват състоянието с думи) */
+  #strip.list { display: none; }
+  body.lan.portrait #strip.list { display: flex; top: calc(var(--office-h, 0px) + 6px); bottom: auto; gap: 4px; padding: 0 8px; background: none; border-top: 0;
+    -webkit-app-region: no-drag; }
+  body.lan.portrait #strip.list .row { cursor: default; padding: 7px 10px; font-size: 14px; line-height: 18px; grid-template-columns: 11px minmax(0, 1fr) auto; }
+  body.lan.portrait #strip.list .row i { width: 11px; height: 11px; }
+  body.lan.portrait #strip.list .row .what { grid-column: 2 / 4; grid-row: 2; font-size: 12px; }
+  body.lan.portrait #strip.list .row .time { grid-column: 3; grid-row: 1; }
+  body.lan.portrait #strip.list .none { font-size: 13px; }
+  body.lan.portrait #legend { display: none; }
+  body.lan.portrait #hud { max-width: calc(100vw - 16px); }
+  body.lan #legend em { display: none; } /* „L – легенда · Esc“ – на телефона няма клавиатура */
   #lanlogin { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
     padding: 24px; background: #0e0c14; text-align: center; }
   #lanlogin b { font-size: 18px; color: #ffe27a; }

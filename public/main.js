@@ -62,6 +62,8 @@ if (!PARAMS.demo) {
 
 // ?wait: сутрешен екран, докато не се появи първият агент (или клик) – после Electron връща нормалния размер
 const strip = PARAMS.strip ? new Strip(model, ui) : null;
+// телефонът в изправено положение: офисът горе в естествения си размер, под него – списък на сесиите
+const phoneList = PARAMS.lan && !strip ? new Strip(model, ui, { list: true }) : null;
 const morning = PARAMS.wait && !strip ? new Morning(office, () => { lastSpecKey = ''; window.pixelOffice?.action('wake'); resize(); }) : null;
 window.pixelOffice?.onWake?.(() => morning?.wake());
 
@@ -98,8 +100,13 @@ function resize() {
   // отворен магазин = панел отляво (офисът е вдясно от него), в тесен прозорец – лента отдолу (офисът е над нея)
   const open = !shop.root.hidden, side = open && shop.root.offsetHeight >= innerHeight - 30;
   const shopW = side ? shop.root.offsetWidth : 0, shopH = open && !side ? shop.root.offsetHeight : 0;
-  office.resize(Math.round(Math.max(160, innerWidth - shopW) * dpr), Math.round(Math.max(120, innerHeight - shopH) * dpr));
+  // изправен телефон: стаята е 356×208 – височина колкото за нея, останалото е за списъка (иначе е само под)
+  const portrait = !!phoneList && innerHeight > innerWidth * 1.15;
+  document.body.classList.toggle('portrait', portrait);
+  const h = portrait ? Math.min(innerHeight - 140, Math.round(innerWidth * 0.66)) : innerHeight - shopH;
+  office.resize(Math.round(Math.max(160, innerWidth - shopW) * dpr), Math.round(Math.max(120, h) * dpr));
   applyCanvas();
+  if (phoneList) document.documentElement.style.setProperty('--office-h', canvas.style.height);
 }
 addEventListener('resize', resize);
 resize();
@@ -160,7 +167,7 @@ function frame(now) {
     const date = nowDate();
     if (strip) strip.render(now);
     else if (morning?.active) morning.render(now, date, currentWx());
-    else { office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date); capture.frame(now); }
+    else { office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date); capture.frame(now); phoneList?.render(now); }
   }
   ui.sync(now);
   schedule();
