@@ -76,6 +76,10 @@ npm install
 npm start            # → http://localhost:4317
 ```
 
+If port `4317` is already taken by another program (it is also the default port of the
+OpenTelemetry Collector), the server falls back to `4318`–`4320` and prints the address
+it actually used — open the URL from the console, not `4317`. `PORT=` picks a fixed one.
+
 The first time you open it, a short setup asks whether the office starts with a cat or a dog (and its name) and which city you are in, for the clock and the weather. Both can be skipped and changed later in the shop.
 
 Then start a Claude Code session anywhere. Its coworker walks in through the door.

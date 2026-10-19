@@ -516,21 +516,24 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
     probe.listen(p, HOST);
   });
   const listen = (p) => new Promise((res, rej) => { server.once('error', rej); server.listen(p, HOST, () => res(server.address().port)); });
+  // фиксиран резервен порт – случаен порт сменя origin-а и трие настройките в localStorage.
+  // 4317/4318 са и портовете по подразбиране на OpenTelemetry Collector – често заети на машина за разработка.
+  const fallback = async () => {
+    for (const p of [port + 1, port + 2, port + 3]) if (await free(p)) return listen(p);
+    return listen(0);
+  };
   let actual;
   if (await free(port)) actual = await listen(port);
-  else if (!reuse) {
-    // фиксиран резервен порт – запазва настройките в localStorage между стартиранията
-    let alt = 0;
-    for (const p of [port + 1, port + 2, port + 3]) if (await free(p)) { alt = p; break; }
-    actual = await listen(alt);
-  }
+  else if (!reuse) actual = await fallback();
   else {
     try {
-      const r = await fetch(`http://127.0.0.1:${port}/api/sprites`);
+      // с таймаут – иначе чужд сървър на порта (напр. gRPC) може да увисне заявката
+      const r = await fetch(`http://127.0.0.1:${port}/api/sprites`, { signal: AbortSignal.timeout(2000) });
       if (r.ok && Array.isArray(await r.json())) return { port, external: true }; // вече върви Cubicle Crew
     } catch { /* портът е зает от друго приложение */ }
-    actual = await listen(0);
+    actual = await fallback();
   }
+  if (actual !== port) console.log(`Port ${port} is taken by another app – using ${actual} instead.`);
   setInterval(poll, POLL_MS);
   poll();
   setInterval(scanSessions, SESSIONS_MS);
@@ -555,7 +558,9 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 if (isMain) {
   // Ctrl+C не вика 'exit' сам – така портфейлът се записва преди изход
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGBREAK']) process.on(sig, () => process.exit(0));
-  startServer().catch((e) => { console.error(e.message); process.exit(1); });
+  startServer()
+    .then(({ port, external }) => { if (external) console.log(`Cubicle Crew is already running: http://localhost:${port}`); })
+    .catch((e) => { console.error(e.message); process.exit(1); });
 }
 
 /** За Electron: запис на портфейла преди изход. */
