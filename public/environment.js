@@ -908,15 +908,15 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
 
   // ---------- елементи по стената ----------
   const ax0 = L.deskArea.x0, ax1 = L.deskArea.x1;
-  let cursor = ax0 + 4;
+  let cursor = Math.max(ax0 + 4, L.door.x + L.door.w + 6); // вратата е над бюрата – дъската е вдясно от нея
   let board = null;
   if (ax1 - ax0 >= 150) {
     board = { x: cursor, y: 9, w: 68, h: 30 };
-    cursor += board.w + 12;
+    cursor += board.w + 8;
   }
   const windows = [];
   const posters = [];
-  const WW = 34, WY = 5, WHH = WH - 11, GAP = 16; // френски прозорци: от тавана до прага над первазa на пода
+  const WW = 34, WY = 5, WHH = WH - 11, GAP = 10; // френски прозорци: от тавана до прага над первазa на пода
   const span = ax1 - 6 - cursor - (lo.darts.w + 10); // място за дъската за дартс
   const nWin = Math.max(1, Math.floor((span + GAP) / (WW + GAP)));
   const free = span - nWin * WW;

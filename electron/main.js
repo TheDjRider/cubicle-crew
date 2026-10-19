@@ -9,7 +9,9 @@ import { drawIcon16 } from './icon-art.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MARGIN = 8;                  // разстояние от ръба на работния плот (над лентата със задачи)
 const MAC = process.platform === 'darwin'; // macOS: горе вдясно под менюто, без икона в Dock, без стартиране при вход по подразбиране
-const TARGET = { w: 790, h: 470 }; // физически пиксели – един екип в мащаб 2 (растe автоматично при втори)
+const TARGET = { w: 712, h: 416 }; // физически пиксели – стаята (356×208) в мащаб 2
+const OLD_TARGET = { w: 790, h: 470 }; // до 2.7: по-голямата стая – прозорците с този размер се смаляват веднъж
+const HIDE_AFTER_MS = 8000;           // „само когато трябва“: скрива се толкова след последното „трябваш“
 const SHORTCUT = 'CommandOrControl+Alt+P';
 const COMPACT = { w: 300, h: 170 }; // сутрешното прозорче (DIP), докато няма сесия
 const STRIP_W = 330;                // тънката лента (DIP): широчина; височината я казва страницата
@@ -36,13 +38,37 @@ let waiting = false; // сутрешен екран: малко прозорче
 
 // ---------------------------------------------------------------- настройки
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false, strip: false };
+let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false, strip: false, autoHide: false };
 let programmatic = 0; // setBounds от нас – да не се брои като ръчно преоразмеряване
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* първо пускане */ }
   // от по-стара версия: запазеният размер става базов
   if (!settings.baseSize && settings.bounds) settings.baseSize = { w: settings.bounds.width, h: settings.bounds.height };
 }
+// 2.8: стаята е по-малка. Ако прозорецът е още в стария размер по подразбиране (не е местен ръчно), смаляваме го
+// веднъж, закотвен в долния десен ъгъл. Ръчно избран размер не се пипа.
+function migrateSize() {
+  if (settings.size28) return;
+  settings.size28 = true;
+  const b = settings.bounds, base = settings.baseSize;
+  if (!b || !base) return;
+  const k = screen.getDisplayMatching(b).scaleFactor || 1;
+  const near = (v, t) => Math.abs(v - Math.ceil(t / k)) <= 4;
+  if (!near(base.w, OLD_TARGET.w) || !near(base.h, OLD_TARGET.h)) return;
+  const w = Math.ceil(TARGET.w / k), h = Math.ceil(TARGET.h / k);
+  settings.baseSize = { w, h };
+  if (near(b.width, OLD_TARGET.w) && near(b.height, OLD_TARGET.h)) settings.bounds = { x: b.x + b.width - w, y: b.y + b.height - h, width: w, height: h };
+  log('size migrated', JSON.stringify(settings.bounds));
+}
+
+/** Един екран и офисът би заел над 12% от него (лаптоп, 1366×768, 1080p при 125–150%) -> по подразбиране лента. */
+function screenShares() {
+  const d = screen.getPrimaryDisplay(), wa = d.workArea, k = d.scaleFactor || 1;
+  const area = wa.width * wa.height;
+  const office = Math.min(1, ((TARGET.w / k) * (TARGET.h / k)) / area), strip = Math.min(1, (STRIP_W * 64) / area);
+  return { office: Math.round(office * 100), strip: Math.max(1, Math.round(strip * 100)), small: screen.getAllDisplays().length === 1 && office > 0.12 };
+}
+
 let saveTimer = null;
 function saveSettings() {
   clearTimeout(saveTimer);
@@ -67,12 +93,12 @@ const lang = () => settings.lang || (/^bg/i.test(app.getLocale() || '') ? 'bg' :
 const L = {
   bg: { hide: 'Скрий', show: 'Покажи', shop: 'Магазин', stats: 'Статистика', weather: 'Времето навън…', onTop: 'Винаги отгоре', through: 'Кликовете минават през прозореца', notify: 'Известие, когато агент чака',
     help: 'Настройки и помощ…', sound: 'Звук, когато агент чака или приключи', focus: 'Режим „Фокус“ (без игра и анимации)', private: 'Скривай команди и пътища', strip: 'Тънка лента вместо офиса',
-    demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', lang: 'Език / Language', resetSize: 'Нулирай размера',
+    demo: 'Демо режим', login: 'Стартирай с Windows', waitWindow: 'Малко прозорче до първата сесия', autoHide: 'Показвай се само когато трябва', lang: 'Език / Language', resetSize: 'Нулирай размера',
     resetPlace: 'Върни на мястото над трея', browser: 'Отвори в браузъра', quit: 'Изход', update: (v) => `Нова версия ${v} – изтегли…`,
     tip: (a, s, w) => `агенти ${a} · под-агенти ${s}${w ? ` · чакат те ${w}` : ''}`, one: (n) => `${n} чака теб`, many: (k) => `${k} агента чакат теб` },
   en: { hide: 'Hide', show: 'Show', shop: 'Shop', stats: 'Stats', weather: 'Weather outside…', onTop: 'Always on top', through: 'Click-through', notify: 'Notify when an agent is waiting',
     help: 'Settings and help…', sound: 'Sound when an agent waits or finishes', focus: 'Focus mode (no game, no animations)', private: 'Hide commands and paths', strip: 'Thin strip instead of the office',
-    demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', lang: 'Language / Език', resetSize: 'Reset size',
+    demo: 'Demo mode', login: 'Start with Windows', waitWindow: 'Small window until the first session', autoHide: 'Show only when needed', lang: 'Language / Език', resetSize: 'Reset size',
     resetPlace: 'Move back above the tray', browser: 'Open in browser', quit: 'Quit', update: (v) => `New version ${v} – download…`,
     tip: (a, s, w) => `agents ${a} · sub-agents ${s}${w ? ` · waiting for you ${w}` : ''}`, one: (n) => `${n} is waiting for you`, many: (k) => `${k} agents are waiting for you` },
 };
@@ -165,7 +191,7 @@ function createWindow() {
   applyThrough();
   if (MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); // следва те по всички работни плотове (Spaces)
   win.loadURL(pageUrl());
-  win.once('ready-to-show', () => win.showInactive());
+  win.once('ready-to-show', () => { win.showInactive(); peek(6000); }); // „само когато трябва“: виждаш, че е тръгнало, после се скрива
   // временният размер на магазина не се помни
   const remember = () => { if (!win.isMinimized() && !shopRestore && !waiting && !settings.strip) { settings.bounds = win.getBounds(); saveSettings(); } };
   win.on('moved', remember);
@@ -189,7 +215,8 @@ function sendState() { win?.webContents.send('state', { onTop: settings.onTop, t
 const CAN_LOGIN = process.platform !== 'linux'; // Electron не поддържа стартиране при вход в Linux
 function desktopSettings() {
   return { onTop: settings.onTop, through: settings.through, notify: settings.notify, strip: settings.strip, waitWindow: settings.waitWindow,
-    demo: settings.demo, login: CAN_LOGIN ? loginItem().get() : false, canLogin: CAN_LOGIN, platform: process.platform };
+    demo: settings.demo, login: CAN_LOGIN ? loginItem().get() : false, canLogin: CAN_LOGIN, platform: process.platform,
+    autoHide: settings.autoHide, screen: screenShares() };
 }
 function applyDesktop(key, v) {
   if (key === 'onTop') { settings.onTop = v; applyOnTop(); }
@@ -198,6 +225,7 @@ function applyDesktop(key, v) {
   else if (key === 'strip') { setStrip(v); return; }
   else if (key === 'login') { if (CAN_LOGIN) loginItem().set(v); }
   else if (key === 'waitWindow') { settings.waitWindow = v; if (!v) wake(); }
+  else if (key === 'autoHide') { settings.autoHide = v; if (v) peek(HIDE_AFTER_MS); else toggleWindow(true); }
   else if (key === 'demo') { settings.demo = v; saveSettings(); win.loadURL(pageUrl()); }
   else return;
   saveSettings();
@@ -207,8 +235,22 @@ function applyDesktop(key, v) {
 
 function toggleWindow(force) {
   const show = force ?? !win.isVisible();
-  if (show) { win.showInactive(); win.moveTop(); } else win.hide();
+  if (show) { win.showInactive(); win.moveTop(); peek(15000); } else { win.hide(); peekUntil = 0; }
   refreshTray();
+}
+
+// „Само когато трябва“: прозорецът е скрит (иконата в трея остава) и излиза, без да взима фокуса, когато агент
+// те чака или чака разрешение, когато оркестратор приключи (peek от страницата) или когато го отвориш сам.
+// Скрива се HIDE_AFTER_MS след последното от тези, ако мишката не е над него и няма отворен магазин/панел.
+let peekUntil = 0, needAt = 0;
+function peek(ms) { peekUntil = Math.max(peekUntil, Date.now() + ms); }
+function autoHideTick() {
+  if (!win || !settings.autoHide || quitting) return;
+  const now = Date.now();
+  const asks = stats.waiting.length > 0 || !!stats.prompt;
+  if (asks || stats.hold || shopRestore) needAt = now;
+  if ((asks || now < peekUntil) && !win.isVisible()) { win.showInactive(); win.moveTop(); refreshTray(); }
+  else if (win.isVisible() && now >= peekUntil && now - needAt > HIDE_AFTER_MS) { win.hide(); refreshTray(); }
 }
 
 // ---------------------------------------------------------------- икона в трея: рисунката 16x16 от icon-art.js (x2 за остър HiDPI)
@@ -297,6 +339,7 @@ function menuTemplate() {
     { label: t.demo, type: 'checkbox', checked: settings.demo, click: (m) => applyDesktop('demo', m.checked) },
     ...(CAN_LOGIN ? [{ label: t.login, type: 'checkbox', checked: li.get(), click: (m) => applyDesktop('login', m.checked) }] : []),
     { label: t.waitWindow, type: 'checkbox', checked: settings.waitWindow, click: (m) => applyDesktop('waitWindow', m.checked) },
+    { label: t.autoHide, type: 'checkbox', checked: settings.autoHide, click: (m) => applyDesktop('autoHide', m.checked) },
     { label: t.lang, submenu: [
       { label: 'English', type: 'radio', checked: lang() === 'en', click: () => setLang('en') },
       { label: 'Български', type: 'radio', checked: lang() === 'bg', click: () => setLang('bg') },
@@ -331,6 +374,7 @@ ipcMain.on('action', (_e, act) => {
   else if (act === 'sleep') sleep();
   else if (act === 'strip:off') setStrip(false);
   else if (act === 'strip:on') setStrip(true);
+  else if (act === 'peek') peek(HIDE_AFTER_MS);
 });
 
 // страницата казва какъв размер дава мащаб 2. Ръчно избраният размер е минимумът:
@@ -389,7 +433,7 @@ ipcMain.on('stats', (_e, s) => {
   const before = new Set(stats.waiting);
   stats = { agents: s.agents | 0, subs: s.subs | 0, tools: s.tools | 0, waiting: Array.isArray(s.waiting) ? s.waiting.map(String).slice(0, 20) : [], sound: s.sound !== false, focus: !!s.focus, private: !!s.private,
     leads: Array.isArray(s.leads) ? s.leads.filter((x) => STATE_RGB[x]).slice(0, 4) : [],
-    waitingIds: Array.isArray(s.waitingIds) ? s.waitingIds.map(String).slice(0, 20) : [], prompt: typeof s.prompt === 'string' ? s.prompt.slice(0, 40) : null,
+    waitingIds: Array.isArray(s.waitingIds) ? s.waitingIds.map(String).slice(0, 20) : [], prompt: typeof s.prompt === 'string' ? s.prompt.slice(0, 40) : null, hold: !!s.hold,
     // линкът се отваря навън – само към нашите рилийзи
     update: typeof s.update?.url === 'string' && s.update.url.startsWith('https://github.com/rezored/cubicle-crew/releases') ? { version: String(s.update.version).slice(0, 20), url: s.update.url } : null };
   permKeys(stats.prompt);
@@ -437,6 +481,7 @@ function permKeys(id) {
 app.whenReady().then(async () => {
   if (MAC) app.dock?.hide(); // уиджет: живее в лентата с менюто, не в Dock
   loadSettings();
+  migrateSize();
   initLoginItem();
   migrateLoginItem();
   // при всяко пускане (от Windows, от инсталатора, ръчно): малко прозорче със сутрешна сцена, докато не се появи сесия.
@@ -451,5 +496,6 @@ app.whenReady().then(async () => {
   createTray();
   log('window', JSON.stringify(win.getBounds()));
   globalShortcut.register(SHORTCUT, () => toggleWindow());
+  setInterval(autoHideTick, 1000);
   screen.on('display-metrics-changed', () => { if (!visible(win.getBounds())) win.setBounds(defaultBounds()); });
 });

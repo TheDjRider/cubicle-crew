@@ -50,6 +50,8 @@ model.on('join', (a) => office.join(a, performance.now()));
 model.on('leave', (a) => office.leave(a));
 model.on('link', (p, c) => office.link(p, c));
 model.on('celebrate', (a) => office.celebrate(a));
+// приложението: оркестратор приключи -> „само когато трябва“ показва прозореца за малко
+model.on('celebrate', (a) => { if (!a.subagent) window.pixelOffice?.action?.('peek'); });
 // звуци (само с истински сесии – демото би звъняло постоянно)
 if (!PARAMS.demo) {
   model.on('state', (a, old, s) => { if (s === 'waiting' && old !== 'waiting') play('ask', a.id); });

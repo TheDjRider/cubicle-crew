@@ -124,12 +124,14 @@ export class UI {
     const leads = [...this.office.actors.values()].filter((a) => !a.agent.subagent).sort((a, b) => a.joinSeq - b.joinSeq).map((a) => a.vstate);
     const prompt = this.model.prompts.keys().next().value || null; // най-старата молба за разрешение (глобалните Ctrl+Alt+Y / N)
     const update = this.update?.newer ? this.update.latest : null; // нова версия -> ред в менюто на трея
-    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}|${update?.version}`;
+    // „само когато трябва“: докато мишката е над прозореца или е отворен панел/магазин/настройка, приложението не го скрива
+    const hold = !!document.querySelector('body:hover') || (this.help && !this.help.hidden) || document.body.classList.contains('shopping') || document.body.classList.contains('setting-up') || !!this.office.focusId;
+    const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}|${update?.version}|${hold}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
     // sound: приложението пуска известието без системния звук, щом страницата свири своя
     const waitingIds = [...this.office.actors.values()].filter((a) => a.vstate === 'waiting').map((a) => this.office.leadOf(a)?.id || a.id);
-    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds, prompt, update });
+    this.bridge.stats({ agents: s.agents - s.subs, subs: s.subs, tools: s.tools, waiting, sound, focus: prefs.focus, private: prefs.private, leads, waitingIds, prompt, update, hold });
   }
 
   setScale(scale, dpr, W, H) {
@@ -572,6 +574,7 @@ export class UI {
     if (D) {
       h += `<h3>${H.window}</h3>` + box('id="desk-ontop" data-desk="onTop"', D.onTop, H.onTop, H.onTopHint) +
         box('id="desk-through" data-desk="through"', D.through, H.through, H.throughHint) +
+        box('id="desk-autohide" data-desk="autoHide"', D.autoHide, H.autoHide, H.autoHideHint) +
         box('id="desk-wait" data-desk="waitWindow"', D.waitWindow, H.wait, H.waitHint) +
         (D.canLogin ? box('id="desk-login" data-desk="login"', D.login, D.platform === 'darwin' ? H.loginMac : H.login, H.loginHint) : '') +
         box('id="desk-demo" data-desk="demo"', D.demo, H.demo, H.demoHint);

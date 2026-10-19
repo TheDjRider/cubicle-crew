@@ -37,6 +37,11 @@ export class Setup {
     this.panel.setAttribute('role', 'dialog');
     document.body.classList.add('setting-up');
     window.pixelOffice?.shop?.(true); // Electron: прозорецът временно расте (като за магазина)
+    // приложението: колко място да заема – на малък единствен екран лентата е избрана предварително
+    window.pixelOffice?.getDesktop?.().then((d) => {
+      this.desk = d; this.size = d.strip || d.screen?.small ? 'strip' : 'office'; this.autoHide = !!d.autoHide;
+      if (this.at === -1 && this.root) this.step(-1);
+    }).catch(() => {});
     this.step(-1);
   }
 
@@ -73,6 +78,22 @@ export class Setup {
         b.onclick = () => { this.mode = m; prefs.set('focus', m === 'focus'); this.step(-1); };
       }
       el('p', 'hint', p, S.modeHint);
+      const D = this.desk;
+      if (D) {
+        el('h3', null, p, S.sizeQ);
+        const sz = el('div', 'modes', p);
+        for (const [m, title, hint] of [['office', S.sizeOffice, S.sizeOfficeHint(D.screen?.office ?? 20)], ['strip', S.sizeStrip, S.sizeStripHint(D.screen?.strip ?? 2)]]) {
+          const b = el('button', m === this.size ? 'on' : '', sz);
+          b.type = 'button';
+          el('b', null, b, title);
+          el('span', null, b, hint);
+          b.onclick = () => { this.size = m; this.step(-1); };
+        }
+        const lab = el('label', 'check', p);
+        const cb = el('input', null, lab); cb.type = 'checkbox'; cb.checked = this.autoHide; cb.onchange = () => { this.autoHide = cb.checked; };
+        const tx = el('span', null, lab); el('b', null, tx, S.autoHide); el('small', null, tx, S.autoHideHint);
+        if (D.screen?.small) el('p', 'hint', p, S.small);
+      }
       this.nav(S.skip, () => this.finish(true), S.next, () => this.step(0));
     } else if (i === 0) {
       el('h3', null, p, S.petQ);
@@ -163,5 +184,11 @@ export class Setup {
         .catch(() => { /* градът може да се избере и после от магазина */ });
     }
     this.close();
+    // приложението: размерът (лентата презарежда страницата – затова последна)
+    const bridge = window.pixelOffice;
+    if (this.desk && bridge?.setDesktop) {
+      if (this.autoHide !== !!this.desk.autoHide) bridge.setDesktop('autoHide', this.autoHide);
+      if ((this.size === 'strip') !== !!this.desk.strip) bridge.setDesktop('strip', this.size === 'strip');
+    }
   }
 }
