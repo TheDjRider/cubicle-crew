@@ -9,6 +9,8 @@ and sit down with their team. When someone needs you, the whole room lets you kn
 
 [**▶ Watch the trailer**](docs/media/trailer.mp4) · [**⬇ Download for Windows**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [Desktop app](#desktop-widget-windows) · [How it works](#how-it-works)
 
+[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
+
 <a href="docs/media/trailer.mp4"><img src="docs/media/demo.gif" alt="Cubicle Crew in action" width="860"></a>
 
 </div>
