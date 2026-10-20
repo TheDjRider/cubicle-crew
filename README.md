@@ -157,7 +157,7 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 - **Office** – the whole game: coins and the shop, pets, coffee breaks, handheld games and darts, effects and achievements.
 - **Focus** – a quiet status board: no coins, shop, pets, effects or games. You still see who is doing what and who is waiting for you. Coins keep adding up, just hidden.
 - **Thin strip instead of the office** *(app)* – one row per session: state, what it is doing, for how long. Takes the least space; click a row to jump to its terminal.
-- **Colour legend** – the bar at the bottom right with the state names (key `L`).
+- **Colour legend** – the list at the bottom right with the state names (key `L`).
 - **Office lights** – the ceiling lights come on in the evening. There is also a switch by the door – for colleagues who like working in a cave.
 - **Language** – English or Bulgarian.
 

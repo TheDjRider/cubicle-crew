@@ -147,7 +147,7 @@ function opencodeDb() {
 const OC_TOOLS = {
   bash: 'Bash', read: 'Read', edit: 'Edit', multiedit: 'MultiEdit', write: 'Write', patch: 'Edit', apply_patch: 'Edit',
   glob: 'Glob', grep: 'Grep', list: 'Glob', ls: 'Glob', webfetch: 'WebFetch', websearch: 'WebSearch', codesearch: 'Grep',
-  task: 'Task', todowrite: 'TodoWrite', todoread: 'TodoRead', question: 'AskUserQuestion',
+  task: 'Task', todowrite: 'TodoWrite', todoread: 'TodoRead', question: 'AskUserQuestion', plan_exit: 'ExitPlanMode',
 };
 
 /** Следи базата на OpenCode. Връща { stop } или null, ако няма OpenCode / node:sqlite. */
