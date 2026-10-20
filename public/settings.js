@@ -34,6 +34,14 @@ const sw = (attrs, on, title, hint) => `<label class="opt"><span><b>${title}</b>
 const card = (name, value, on, title, hint) => `<label class="card"><input type="radio" name="${name}" value="${value}" id="${name}-${value}"${on ? ' checked' : ''}><b>${title}</b>${hint ? `<small>${hint}</small>` : ''}</label>`;
 const btn = (attrs, text) => `<button type="button" ${attrs}>${text}</button>`;
 
+/** Приложението в Windows: бутон „Изтегли и инсталирай“ и докъде е стигнало (D.upd от electron/main.js). */
+function updInstall(u = {}, H) {
+  if (u.state === 'download') return `<p class="dim">${H.updDownloading(u.pct || 0)}</p>`;
+  if (u.state === 'install') return `<p class="dim">${H.updInstalling}</p>`;
+  return `<div class="btns">${btn('data-act="update-install"', H.updInstall)}</div><p class="dim">${H.updInstallHint}</p>` +
+    (u.state === 'error' ? `<p class="err">${H.updError(esc(u.err || ''))}</p>` : '');
+}
+
 /** Включеният изглед за телефон: адресите, PIN-ът, бутон за нов PIN. */
 function lanBox(N, H) {
   if (N.error && !N.running) return `<p class="err">${H.lanErr}</p>`;
@@ -64,7 +72,8 @@ function sections(ui) {
   out.privacy = sw('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint) +
     (N && !demo ? sw('id="opt-lan" data-lan', N.enabled, H.lan, H.lanHint) + (N.enabled ? lanBox(N, H) : '') : '') +
     (U && !demo ? sw('id="opt-update" data-upd', U.enabled, H.update, H.updateHint) +
-      `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}${U.enabled && !U.newer ? ` · <a href="#" data-updcheck>${H.checkNow}</a>` : ''}</p>` : '') +
+      `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}${U.enabled && !U.newer ? ` · <a href="#" data-updcheck>${H.checkNow}</a>` : ''}</p>` +
+      (U.newer && D?.selfUpdate ? updInstall(D.upd, H) : '') : '') +
     `<h4>${H.data}</h4><p class="dim">${H.dataHint}</p><div class="btns">` +
     (!demo ? btn('data-go="stats"', H.openStats) : '') + btn('data-go="weather"', H.openWeather) +
     `<a href="https://github.com/rezored/cubicle-crew/blob/main/docs/security.md" target="_blank" rel="noopener">${H.security}</a></div>`;
