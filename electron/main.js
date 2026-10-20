@@ -39,7 +39,7 @@ let waiting = false; // сутрешен екран: малко прозорче
 
 // ---------------------------------------------------------------- настройки
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false, strip: false, autoHide: false };
+let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false, strip: false, autoHide: false, taskbar: false };
 let programmatic = 0; // setBounds от нас – да не се брои като ръчно преоразмеряване
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* първо пускане */ }
@@ -183,7 +183,7 @@ function createWindow() {
     ...b,
     minWidth: waiting || settings.strip ? 200 : 320, minHeight: waiting ? 120 : settings.strip ? 30 : 190,
     // maximizable: false – двоен клик върху лентата за местене иначе разпъва прозореца на цял екран
-    frame: false, resizable: !waiting && !settings.strip, maximizable: false, fullscreenable: false, skipTaskbar: true, show: false,
+    frame: false, resizable: !waiting && !settings.strip, maximizable: false, fullscreenable: false, skipTaskbar: !settings.taskbar, show: false,
     alwaysOnTop: settings.onTop, backgroundColor: '#0e0c14', title: 'Cubicle Crew',
     // autoplayPolicy: звукът "чака те" трябва да свири и преди първия клик в прозореца
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' },
@@ -217,7 +217,7 @@ const CAN_LOGIN = process.platform !== 'linux'; // Electron не поддърж�
 function desktopSettings() {
   return { onTop: settings.onTop, through: settings.through, notify: settings.notify, strip: settings.strip, waitWindow: settings.waitWindow,
     demo: settings.demo, login: CAN_LOGIN ? loginItem().get() : false, canLogin: CAN_LOGIN, platform: process.platform,
-    autoHide: settings.autoHide, screen: screenShares(), selfUpdate: SELF_UPDATE, upd };
+    autoHide: settings.autoHide, taskbar: settings.taskbar, screen: screenShares(), selfUpdate: SELF_UPDATE, upd };
 }
 
 // ---------------------------------------------------------------- „Изтегли и инсталирай“ (updater.js): само инсталираното приложение в Windows
@@ -248,6 +248,7 @@ function applyDesktop(key, v) {
   if (key === 'onTop') { settings.onTop = v; applyOnTop(); }
   else if (key === 'through') { settings.through = v; applyThrough(); }
   else if (key === 'notify') settings.notify = v;
+  else if (key === 'taskbar') { settings.taskbar = v; win.setSkipTaskbar(!v); }
   else if (key === 'strip') { setStrip(v); return; }
   else if (key === 'login') { if (CAN_LOGIN) loginItem().set(v); }
   else if (key === 'waitWindow') { settings.waitWindow = v; if (!v) wake(); }

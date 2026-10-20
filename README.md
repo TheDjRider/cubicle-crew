@@ -179,6 +179,7 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 - **Show only when needed** – the window stays hidden (the tray icon stays) and comes up by itself, without taking focus, when an agent waits for you or a lead finishes; it hides again 8 s later. Ctrl+Alt+P or the tray icon show it any time.
 - **Always on top** – the window stays above the others, so you see the office while you work.
 - **Click-through** – the mouse goes through the office to whatever is below. Turn it off from the tray menu.
+- **Taskbar button** – off by default; the app also shows up on the taskbar, not only by the clock (Windows and Linux).
 - **Small window when there are no sessions** – with no session open the office shrinks to a morning scene and opens by itself when a session starts.
 - **Start with Windows / Start at login** – Cubicle Crew starts by itself when you sign in.
 - **Demo mode** – made-up agents, to see how everything looks without Claude Code.
