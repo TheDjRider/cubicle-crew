@@ -36,7 +36,7 @@ export class Setup {
     this.panel = el('div', 'setup-panel', this.root);
     this.panel.setAttribute('role', 'dialog');
     document.body.classList.add('setting-up');
-    window.pixelOffice?.shop?.(true); // Electron: прозорецът временно расте (като за магазина)
+    window.pixelOffice?.shop?.(true); // Electron: като за магазина (фокус, без click-through)
     // приложението: колко място да заема – на малък единствен екран лентата е избрана предварително
     window.pixelOffice?.getDesktop?.().then((d) => {
       this.desk = d; this.size = d.strip || d.screen?.small ? 'strip' : 'office'; this.autoHide = !!d.autoHide;

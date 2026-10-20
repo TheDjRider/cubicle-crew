@@ -539,7 +539,7 @@ export class UI {
       this.bridge?.getDesktop?.().then((d) => { this.desk = d; if (!this.help.hidden) this.renderHelp(); }).catch(() => {});
     }
     this.help.hidden = !open;
-    // приложението: панелът иска място – прозорецът расте като за магазина и после се връща (ако магазинът не е отворен)
+    // приложението: казва, че панелът е отворен (фокус, без click-through) – прозорецът не расте, панелът се побира в него
     if (open && !this.helpGrew && !document.body.classList.contains('shopping')) { this.helpGrew = true; this.bridge?.shop?.(true); }
     else if (!open && this.helpGrew) { this.helpGrew = false; this.bridge?.shop?.(false); }
   }

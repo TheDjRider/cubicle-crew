@@ -163,7 +163,7 @@ function openTab(send) { wake(); setStrip(false, () => { toggleWindow(true); win
 
 // никой не работи (страницата брои минута): обратно към малкото прозорче в същия долен десен ъгъл
 function sleep() {
-  if (waiting || !win || !settings.waitWindow || shopRestore || !win.isVisible() || settings.strip) return;
+  if (waiting || !win || !settings.waitWindow || shopOpen || !win.isVisible() || settings.strip) return;
   settings.bounds = win.getBounds(); saveSettings();
   waiting = true;
   programmatic = Date.now();
@@ -193,7 +193,7 @@ function createWindow() {
   win.loadURL(pageUrl());
   win.once('ready-to-show', () => { win.showInactive(); peek(6000); }); // „само когато трябва“: виждаш, че е тръгнало, после се скрива
   // временният размер на магазина не се помни
-  const remember = () => { if (!win.isMinimized() && !shopRestore && !waiting && !settings.strip) { settings.bounds = win.getBounds(); saveSettings(); } };
+  const remember = () => { if (!win.isMinimized() && !waiting && !settings.strip) { settings.bounds = win.getBounds(); saveSettings(); } };
   win.on('moved', remember);
   // ръчно преоразмеряване = нов базов размер (автоматичното само го увеличава временно)
   win.on('resized', () => { if (Date.now() - programmatic > 600 && !waiting && !settings.strip) { const nb = win.getBounds(); settings.baseSize = { w: nb.width, h: nb.height }; } remember(); });
@@ -248,7 +248,7 @@ function autoHideTick() {
   if (!win || !settings.autoHide || quitting) return;
   const now = Date.now();
   const asks = stats.waiting.length > 0 || !!stats.prompt;
-  if (asks || stats.hold || shopRestore) needAt = now;
+  if (asks || stats.hold || shopOpen) needAt = now;
   if ((asks || now < peekUntil) && !win.isVisible()) { win.showInactive(); win.moveTop(); refreshTray(); }
   else if (win.isVisible() && now >= peekUntil && now - needAt > HIDE_AFTER_MS) { win.hide(); refreshTray(); }
 }
@@ -364,28 +364,18 @@ ipcMain.on('action', (_e, act) => {
 
 // страницата казва какъв размер дава мащаб 2. Ръчно избраният размер е минимумът:
 // прозорецът расте наляво/нагоре от долния десен ъгъл, когато трябва, и се връща към твоя размер след това.
-// магазинът не се побира в малкия прозорец: докато е отворен, прозорецът расте (от долния десен ъгъл) и после се връща
-// магазинът е панел отляво (до 480 px, --shop-w в index.html) – офисът вдясно от него трябва да остане в мащаб ≥2
-// (стаята е 356 логически px = 712 физически при мащаб 2)
-const SHOP_PANEL = 480, SHOP_H = 620;
-let shopRestore = null;
+// магазинът / настройките / началната настройка са отворени: прозорецът НЕ расте (молба от потребители) – страницата
+// ги побира в него (по-плътно и със скрол, index.html); тук само го събуждаме, даваме фокус и спираме click-through
+let shopOpen = false;
 ipcMain.on('shop', (_e, open) => {
   if (!win) return;
   if (open) wake();
-  if (open && !shopRestore) {
-    const b = win.getBounds(), disp = screen.getDisplayMatching(b), wa = disp.workArea;
-    shopRestore = b;
-    const needW = SHOP_PANEL + Math.ceil(712 / (disp.scaleFactor || 1)) + 8;
-    const w = Math.min(Math.max(b.width, needW), wa.width - 2 * MARGIN), h = Math.min(Math.max(b.height, SHOP_H), wa.height - 2 * MARGIN);
-    const x = Math.max(wa.x + MARGIN, Math.min(b.x + b.width, wa.x + wa.width - MARGIN) - w), y = Math.max(wa.y + MARGIN, Math.min(b.y + b.height, wa.y + wa.height - MARGIN) - h);
-    programmatic = Date.now();
-    if (w !== b.width || h !== b.height) win.setBounds({ x, y, width: w, height: h });
+  if (open && !shopOpen) {
+    shopOpen = true;
     if (settings.through) win.setIgnoreMouseEvents(false); // иначе в магазина не може да се кликне
     win.focus();
-  } else if (!open && shopRestore) {
-    programmatic = Date.now();
-    win.setBounds(shopRestore);
-    shopRestore = null;
+  } else if (!open && shopOpen) {
+    shopOpen = false;
     applyThrough();
   }
 });
@@ -403,7 +393,7 @@ ipcMain.on('strip-size', (_e, h) => {
 });
 
 ipcMain.on('prefer-size', (_e, sz) => {
-  if (!win || shopRestore || waiting || settings.strip) return;
+  if (!win || shopOpen || waiting || settings.strip) return;
   const b = win.getBounds();
   const wa = screen.getDisplayMatching(b).workArea;
   const base = settings.baseSize || { w: b.width, h: b.height };
