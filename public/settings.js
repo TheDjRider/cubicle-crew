@@ -69,12 +69,12 @@ function sections(ui) {
     (!demo ? btn('data-go="stats"', H.openStats) : '') + btn('data-go="weather"', H.openWeather) +
     `<a href="https://github.com/rezored/cubicle-crew/blob/main/docs/security.md" target="_blank" rel="noopener">${H.security}</a></div>`;
   // прозорецът (само в приложението)
-  out.window = D ? sw('id="desk-ontop" data-desk="onTop"', D.onTop, H.onTop, H.onTopHint) +
+  out.window = D ? `<h4>${H.place}</h4><div class="btns">${btn('data-act="reset-size"', H.resetSize)}${btn('data-act="reset-place"', H.resetPlace)}${btn('data-act="browser"', H.browser)}</div>` +
+    sw('id="desk-ontop" data-desk="onTop"', D.onTop, H.onTop, H.onTopHint) +
     sw('id="desk-through" data-desk="through"', D.through, H.through, H.throughHint) +
     sw('id="desk-wait" data-desk="waitWindow"', D.waitWindow, H.wait, H.waitHint) +
     (D.canLogin ? sw('id="desk-login" data-desk="login"', D.login, D.platform === 'darwin' ? H.loginMac : H.login, H.loginHint) : '') +
-    sw('id="desk-demo" data-desk="demo"', D.demo, H.demo, H.demoHint) +
-    `<h4>${H.place}</h4><div class="btns">${btn('data-act="reset-size"', H.resetSize)}${btn('data-act="reset-place"', H.resetPlace)}${btn('data-act="browser"', H.browser)}</div>` : '';
+    sw('id="desk-demo" data-desk="demo"', D.demo, H.demo, H.demoHint) : '';
   // сподели
   out.share = `<div class="btns big">${btn('data-snap', H.snapshot)}${btn('data-clip', H.clip)}</div><p class="dim">${H.shareHint}</p>`;
   // помощ: цветовете, клавишите, обратна връзка

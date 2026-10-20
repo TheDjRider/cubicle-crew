@@ -7,7 +7,7 @@ export const TOOL_STATE = {
   Read: 'reading', Grep: 'reading', Glob: 'reading', WebSearch: 'reading', WebFetch: 'reading',
   Bash: 'running', BashOutput: 'running',
   Task: 'delegating', Agent: 'delegating',
-  AskUserQuestion: 'waiting',
+  AskUserQuestion: 'waiting', ExitPlanMode: 'waiting', // чакат теб (въпрос / одобряване на плана)
 };
 export const DELEGATE_TOOLS = new Set(['Task', 'Agent']);
 

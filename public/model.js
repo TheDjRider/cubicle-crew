@@ -4,6 +4,7 @@
 import { CFG, TOOL_STATE, DELEGATE_TOOLS } from './config.js';
 
 const CRASH_STAY_MS = 15 * 60e3; // прекъсната сесия стои посивяла най-много толкова
+const QUESTION_STAY_MS = 30 * 60e3; // неотговорен въпрос (OpenCode question…) държи „чака те“ най-много толкова
 
 export class Model {
   constructor() {
@@ -178,6 +179,7 @@ export class Model {
 
   stateOf(a, now) {
     if (a.ask) return 'waiting'; // чака разрешение – без 8-секундното правило (докато чака, редове няма)
+    if (this.asking(a, now)) return 'waiting'; // висящ въпрос към теб – докато не отговориш, редове няма
     const tools = [...a.pending.values()];
     const delegatingPending = tools.some((p) => DELEGATE_TOOLS.has(p.tool));
     if (now - a.lastEvent > CFG.IDLE_MS && !a.busy) {
@@ -188,6 +190,14 @@ export class Model {
     const last = tools[tools.length - 1];
     if (last) return TOOL_STATE[last.tool] || 'running';
     return 'thinking';
+  }
+
+  /** Висящ инструмент „чака теб“ (AskUserQuestion, question на OpenCode) у агент без статус на живата сесия
+   *  (OpenCode/Codex/Gemini – при Claude Code статусът "waiting" вече дава a.ask). */
+  asking(a, now) {
+    if (a.statusWaiting != null || a.ended || now - a.lastEvent > QUESTION_STAY_MS) return false;
+    for (const p of a.pending.values()) if (TOOL_STATE[p.tool] === 'waiting') return true;
+    return false;
   }
 
   /** Текущият инструмент (за балончето). */
@@ -211,7 +221,7 @@ export class Model {
       // кой си тръгва
       const quiet = now - a.lastEvent;
       let leave = false;
-      if (a.ask) { /* чака разрешение – остава, колкото и да е тихо */ }
+      if (a.ask || this.asking(a, now)) { /* чака теб – остава, колкото и да е тихо */ }
       else if (a.crashed && !a.crashSeen && now - a.crashed < CRASH_STAY_MS) { /* прекъсната – чака да я видиш */ }
       else if (a.subagent) {
         if (a.done && now - a.doneAt > CFG.CHILD_EXIT_DELAY_MS && quiet > CFG.CHILD_EXIT_DELAY_MS) leave = true;
