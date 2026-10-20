@@ -31,8 +31,8 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 - **Nothing to set up.** No API keys and no hooks to install. It runs offline and only reads local files.
 
 <p align="center">
-  <img src="docs/media/states.png" alt="Two teams at work" width="49%">
-  <img src="docs/media/night.png" alt="A decorated office at night" width="49%">
+  <img src="docs/media/states.png" alt="Two teams at work, sub-agents at the shared desks and on laptops in the lounge" width="49%">
+  <img src="docs/media/night.png" alt="A decorated office at night with the arcade, aquarium and pets" width="49%">
 </p>
 
 ## Features
