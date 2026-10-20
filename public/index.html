@@ -144,8 +144,10 @@
   body.shopping #stage { left: var(--shop-w); }
   .shop-panel { width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;
     background: #17121f; border-right: 2px solid #3a3452; box-shadow: 4px 0 0 rgba(0,0,0,.35); }
-  @media (max-width: 719px) {
-    #shop, body.desktop #shop { top: auto; right: 0; width: auto; height: clamp(240px, 55vh, 460px); }
+  /* малък прозорец (и приложението – то вече не расте): по-тесен панел, офисът до него е в мащаб 1 */
+  @media (max-width: 899px), (max-height: 539px) { :root { --shop-w: clamp(220px, 46vw, 340px); } }
+  @media (max-width: 479px) {
+    #shop, body.desktop #shop { top: auto; right: 0; width: auto; height: clamp(160px, 62vh, 460px); }
     .shop-panel { border-right: 0; border-top: 2px solid #3a3452; box-shadow: 0 -4px 0 rgba(0,0,0,.35); }
     body.shopping #stage { left: 0; }
   }
@@ -198,6 +200,22 @@
   .shop-panel .act button.on { background: #2e5a3a; border-color: #4ac26b; }
   .shop-panel footer { padding: 6px 10px; border-top: 1px solid #2c2640; color: var(--ui-dim); font-size: 11px; }
   .shop-panel footer.err { color: #ff9ab0; }
+  /* малък прозорец: всичко по-плътно и по-дребно, останалото е със скрол (миниатюрите – shop.js thumb()) */
+  @media (max-width: 899px), (max-height: 539px) {
+    .shop-panel { font-size: 12px; }
+    .shop-panel header { gap: 6px; padding: 4px 6px 4px 8px; }
+    .shop-panel .ttl { font-size: 13px; }
+    .shop-panel .bal { padding: 0 6px; }
+    .shop-panel nav { gap: 3px; padding: 4px 6px; }
+    .shop-panel nav button { font-size: 11px; padding: 1px 6px; }
+    .shop-panel .body { padding: 2px 6px 8px; }
+    .shop-panel h3 { margin: 6px 0 4px; font-size: 11px; }
+    .shop-panel .card { padding: 4px 3px; font-size: 11px; gap: 2px; }
+    .shop-panel .card button { font-size: 11px; padding: 0 6px; }
+    .shop-panel .avatar { gap: 8px; padding-top: 4px; }
+    .shop-panel .avatar .opts { min-width: 0; }
+    .shop-panel footer:not(.err) { display: none; }
+  }
   .trophies { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
   .trophy { display: flex; align-items: center; gap: 10px; padding: 5px 8px; background: #1f1a2c; border: 1px solid #2c2640; border-radius: 3px; }
   .trophy.got { border-color: #7a5410; }
@@ -217,6 +235,7 @@
   #toast span { font-size: 12px; color: #e8d8a8; }
   @keyframes pop { from { transform: translateX(-50%) scale(.8); opacity: 0; } }
   body.desktop .shop-panel .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  @media (max-width: 899px), (max-height: 539px) { .shop-panel .grid, body.desktop .shop-panel .grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 5px; } }
   /* статистика */
   .shop-panel .stats { padding-top: 4px; max-width: 760px; }
   .shop-panel .stats .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; }
@@ -279,6 +298,20 @@
   .setup-panel .list button.on { background: #e0c24a; color: #1d1626; border-color: #e0c24a; }
   .setup-panel .chosen { margin-top: 8px; min-height: 17px; }
   .setup-panel .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  /* малък прозорец (приложението не расте): по-плътно, останалото е със скрол */
+  @media (max-width: 899px), (max-height: 539px) {
+    #setup { padding: 4px; }
+    .setup-panel { max-width: 520px; padding: 8px 12px; font-size: 12px; }
+    .setup-panel h2 { font-size: 15px; }
+    .setup-panel h3 { margin: 8px 0 4px; font-size: 11px; }
+    .setup-panel .hint, .setup-panel .modes button span, .setup-panel label.check small { font-size: 11px; line-height: 1.35; }
+    .setup-panel .modes { gap: 6px; }
+    .setup-panel .modes button { padding: 6px 9px; gap: 2px; }
+    .setup-panel .modes button b { font-size: 13px; }
+    .setup-panel .pick button { padding: 4px; }
+    .setup-panel label.check, .setup-panel .nm { margin-top: 6px; }
+    .setup-panel .nav { margin-top: 8px; }
+  }
   .setup-panel .nav .go { background: #e0c24a; color: #1d1626; border-color: #e0c24a; font-weight: 600; }
   .setup-panel .err { margin-top: 6px; color: #ff9ab0; font-size: 12px; }
   .setup-panel .err:empty { display: none; }
@@ -360,6 +393,29 @@
   .set-panel table.keys { border-collapse: collapse; font-size: 12px; }
   .set-panel table.keys th { text-align: left; padding: 2px 12px 2px 0; font-weight: 400; white-space: nowrap; }
   .set-panel kbd { font: 11px var(--mono); color: #fff; background: #2a2440; padding: 1px 5px; box-shadow: inset 0 -2px 0 rgba(0,0,0,.4); }
+  /* малък прозорец (и приложението – то вече не расте): панелът заема прозореца, по-дребен текст, съдържанието е със скрол */
+  @media (max-width: 899px), (max-height: 539px) {
+    #help { padding: 4px; }
+    .set-panel { max-width: none; max-height: none; font-size: 12px; }
+    .set-panel aside { width: 136px; }
+    .set-panel .brand { padding: 8px 10px 6px; font-size: 12px; }
+    .set-panel nav { padding: 4px; }
+    .set-panel nav button { gap: 7px; padding: 4px 6px; }
+    .set-panel .ico { width: 14px; height: 14px; }
+    .set-panel aside .v { padding: 4px 10px 6px; font-size: 10px; }
+    .set-panel header { padding: 5px 6px 5px 10px; }
+    .set-panel h2 { gap: 7px; font-size: 14px; }
+    .set-panel .x { width: 22px; height: 20px; }
+    .set-panel .body { padding: 2px 10px 10px; }
+    .set-panel h4 { margin: 10px 0 4px; }
+    .set-panel p, .set-panel table.keys { font-size: 11px; }
+    .set-panel .opt { gap: 10px; padding: 6px 2px; }
+    .set-panel .opt small, .set-panel .card small { font-size: 11px; line-height: 1.35; }
+    .set-panel .cards { gap: 6px; margin: 4px 0 2px; }
+    .set-panel .card { padding: 6px 8px; }
+    .set-panel .row { padding: 6px 2px; }
+    .set-panel .btns.big button { font-size: 12px; padding: 6px 10px; }
+  }
   /* тесен прозорец: разделите стават ред с иконки горе */
   @media (max-width: 560px) {
     .set-panel { flex-direction: column; max-height: none; }

@@ -11,6 +11,9 @@ import { Cat, Dog } from './characters.js';
 import { coinUrl } from './tokens.js';
 import { makeCanvas, fmtUsd } from './util.js';
 
+// малък прозорец (същото като в index.html): по-дребни миниатюри, за да се побират повече
+const SMALL = matchMedia('(max-width: 899px), (max-height: 539px)');
+
 const el = (tag, cls, parent, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; };
 const fmt = (n) => Number(n).toLocaleString(LANG === 'bg' ? 'bg-BG' : 'en-US');
 // 1 ч 05 мин / 42 мин – за статистиката
@@ -47,6 +50,7 @@ export class Shop {
     this.thumbs = new Map();
     this.key = '';
     this.build();
+    SMALL.addEventListener?.('change', () => { this.key = ''; if (!this.root.hidden) this.render(); });
     tokens.onChange(() => { if (!this.root.hidden) this.render(); });
     addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
@@ -415,8 +419,9 @@ export class Shop {
   thumb(it) {
     let src = this.thumbs.get(it.id);
     if (!src) { src = it.group === 'cat' || it.group === 'dog' ? petThumb(it) : it.group === 'catslot' ? petThumb(ITEM[it.gives]) : thumb(it); this.thumbs.set(it.id, src); }
-    // цяло число пъти увеличение (пиксел арт), около 116x88
-    const k = Math.max(1, Math.min(6, Math.round(Math.min(116 / src.width, 88 / src.height))));
+    // цяло число пъти увеличение (пиксел арт), около 116x88 (в малък прозорец ~76x58)
+    const [tw, th] = SMALL.matches ? [76, 58] : [116, 88];
+    const k = Math.max(1, Math.min(6, Math.round(Math.min(tw / src.width, th / src.height))));
     const c = makeCanvas(src.width, src.height);
     c.getContext('2d').drawImage(src, 0, 0);
     c.className = 'th';
