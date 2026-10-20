@@ -64,7 +64,7 @@ function sections(ui) {
   out.privacy = sw('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint) +
     (N && !demo ? sw('id="opt-lan" data-lan', N.enabled, H.lan, H.lanHint) + (N.enabled ? lanBox(N, H) : '') : '') +
     (U && !demo ? sw('id="opt-update" data-upd', U.enabled, H.update, H.updateHint) +
-      `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}</p>` : '') +
+      `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}${U.enabled && !U.newer ? ` · <a href="#" data-updcheck>${H.checkNow}</a>` : ''}</p>` : '') +
     `<h4>${H.data}</h4><p class="dim">${H.dataHint}</p><div class="btns">` +
     (!demo ? btn('data-go="stats"', H.openStats) : '') + btn('data-go="weather"', H.openWeather) +
     `<a href="https://github.com/rezored/cubicle-crew/blob/main/docs/security.md" target="_blank" rel="noopener">${H.security}</a></div>`;
