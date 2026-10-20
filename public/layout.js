@@ -89,12 +89,16 @@ export function computeLayout(devW, devH) {
     table: { x: sofaX + 15, base: sofaBase + 15, w: 28, h: 9 },
     floorLamp: { x: sofaX - 12, base: sofaBase - 2 },
     cornerPlant: { x: lx + lw - 20, base: H - 6 },
+    arcade: { x: lx + lw - 14, base },                       // под неоновия надпис, вдясно от диспенсъра (центърът)
+    aquarium: { x: sofaX + sofaW + 15, base: sofaBase },     // вдясно от дивана (центърът)
     rug: { x: sofaX - 10, y: sofaBase - 10, w: sofaW + 20, h: 30 },
     darts: { x: ax1 - 22, y: 16, w: 15, h: 15 },   // дъската за дартс – в десния край на стената с прозорците
     spots: {
       coffee: { x: lx + 55, y: base + 11, face: 'back' },
       cooler: { x: lx + 85, y: base + 11, face: 'back' },
       darts: { x: ax1 - 15, y: CFG.WALL_H + 13, face: 'back' },
+      arcade: { x: lx + lw - 14, y: base + 11, face: 'back' },
+      aquarium: { x: sofaX + sofaW + 7, y: sofaBase + 4, face: 'back' },   // в левия край – рибките се виждат
       sofa: [{ x: sofaX + 16, y: sofaBase - 5 }, { x: sofaX + 42, y: sofaBase - 5 }],
       // места за чакащи сесии (опашка) – прави около масичката и до библиотеката
       extra: [

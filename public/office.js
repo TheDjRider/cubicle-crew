@@ -14,7 +14,7 @@ import { drawBoardScreen, boardGlow, boardMoving, BOARD_PAGES } from './board.js
 import { rgba } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
 
-const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts']);
+const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts', 'arcade', 'aquarium']);
 // чашата на бюрото = екипът на седящия (под-агентските бюра са общи); без екип (оркестраторът чака) – бяла
 // екипи 0/1 = двете оркестраторски бюра; 2–4 = оркестратори на горещо бюро (3-та+ работеща сесия на под-агентско бюро)
 const TEAM_MUGS = ['#2fa8a8', '#d060b0', '#a8d040', '#9a5a32', '#5a5ad0'], NO_TEAM_MUG = '#e8e4dc';
@@ -326,6 +326,8 @@ export class Office {
       case 'coffee': return lo.spots.coffee;
       case 'cooler': return lo.spots.cooler;
       case 'darts': return lo.spots.darts;
+      case 'arcade': return lo.spots.arcade;
+      case 'aquarium': return lo.spots.aquarium;
       case 'board': { const b = this.room?.board; return b ? { x: b.x + b.w + 10, y: CFG.WALL_H + 13 } : lo.spots.darts; }
       case 'sofa': return lo.spots.sofa[loc.i];
       case 'lounge': return lo.spots.extra[loc.i % lo.spots.extra.length];
@@ -346,7 +348,7 @@ export class Office {
       // вратата е на стената: излиза се направо на горната пътека под нея
       case 'door': return { pts: [{ x: L.door.cx, y: L.door.floorY }, { x: L.door.cx, y: ln.topY }], lane: 'row', y: ln.topY };
       case 'visit': { const pt = this.locPoint(loc, a); return { pts: [pt], lane: 'row', y: pt.y }; }
-      case 'coffee': case 'cooler': { const s = lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
+      case 'coffee': case 'cooler': case 'arcade': case 'aquarium': { const s = lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       case 'darts': { const s = lo.spots.darts; return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'board': { const s = this.locPoint(loc, a); return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'sofa': { const s = lo.spots.sofa[loc.i]; const ay = lo.sofa.base + 4; return { pts: [{ x: s.x, y: ay }, { x: ln.loungeX, y: ay }], lane: 'v', x: ln.loungeX }; }
@@ -553,20 +555,24 @@ export class Office {
     this.leisure(a, now);
   }
 
-  /** Почивка: кафе/вода -> диван (конзолка или дрямка) -> от време на време дартс -> обратно на дивана. */
+  /** Почивка: кафе/вода -> диван (конзолка или дрямка) -> от време на време дартс, аркадата или храни рибките -> обратно на дивана. */
   leisure(a, now) {
     const here = now - a.spotSince, t = a.loc.type;
     if (t === 'coffee' || t === 'cooler') {
       if (here > 7000) { const sofa = this.freeSofa(a); if (sofa) this.route(a, sofa); }
     } else if (t === 'sofa') {
-      if (prefs.focus) return; // „Фокус“: само сяда, без дартс
+      if (prefs.focus) return; // „Фокус“: само сяда, без забавления
       a.sofaFor ||= 20000 + Math.random() * 25000;
-      if (here > a.sofaFor && !this.live().some((x) => x !== a && x.loc.type === 'darts')) {
-        a.sofaFor = 0; a.dartsFor = 12000 + Math.random() * 12000;
-        this.route(a, { type: 'darts' });
-      }
-    } else if (t === 'darts') {
-      if (here > a.dartsFor) this.route(a, this.freeSofa(a) || this.freeLoungeSpot(a));
+      if (here <= a.sofaFor) return;
+      // свободните забавления (аркадата и аквариумът – само ако са купени)
+      const fun = ['darts', this.room?.arcade && 'arcade', this.room?.aquarium && 'aquarium']
+        .filter((f) => f && !this.live().some((x) => x !== a && x.loc.type === f));
+      if (!fun.length) return;
+      const f = fun[Math.floor(Math.random() * fun.length)];
+      a.sofaFor = 0; a.funFor = f === 'aquarium' ? 6000 + Math.random() * 3000 : 12000 + Math.random() * 12000;
+      this.route(a, { type: f });
+    } else if (t === 'darts' || t === 'arcade' || t === 'aquarium') {
+      if (here > a.funFor) this.route(a, this.freeSofa(a) || this.freeLoungeSpot(a));
     }
   }
 
@@ -667,6 +673,10 @@ export class Office {
       if (fx.glyph <= 0) { fx.glyph = 0.9 + Math.random() * 0.8; this.fx.glyph(p.x + POD.screen.x + 4 + Math.random() * 10, p.y + POD.screen.y - 4, col); }
     }
     if (a.loc.type === 'darts' && a.mode === 'idleSpot') this.throwDart(a, now);
+    // храни рибките: люспичките тръгват, щом ръката се протегне (позата в characters.js)
+    if (a.loc.type === 'aquarium' && a.mode === 'idleSpot' && a.fx.fedSpot !== a.spotSince && this.room.aquarium) {
+      a.fx.fedSpot = a.spotSince; this.room.aquarium.fedAt = now + 900;
+    }
     const raw = a.pose(now);
     const pose = raw.startsWith('couch') ? raw[5].toLowerCase() + raw.slice(6) : raw; // couchSip -> sip (ефектите са същите)
     if (pose === 'doze') {
