@@ -185,6 +185,8 @@ export class Actor {
         return st > 5000 ? 'couchDoze' : (frameAt(st, 2600) ? 'couchSit' : 'couchSip');
       }
       if (this.loc.type === 'darts') return dartPose(st);
+      if (this.loc.type === 'arcade') return st > 700 && frameAt(st + this.phase, 260) ? 'standBackUse' : 'standBack'; // джойстикът
+      if (this.loc.type === 'aquarium') return st > 700 && st < 2200 ? 'standBackUse' : 'standBack';                   // сипва храна
       if (this.loc.type === 'board') return now - (this.boardPress || 0) < 650 ? 'standBackUse' : 'standBack'; // с дистанционното към екрана
       if (this.loc.type === 'door') return 'stand';
       if (this.loc.type === 'visit') return 'carryS1';

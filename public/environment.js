@@ -778,12 +778,23 @@ function drawAquarium(ctx) {
   ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(t.x + 1, t.y + 2, 1, t.h - 6);
 }
 /** Рибките (динамично, над картинката на аквариума). */
+/** Колко време след хранене рибките са горе при храната (aq.fedAt от office.js). */
+export const FEED_MS = 5000;
 export function drawAquariumFish(ctx, aq, t) {
   const tk = AQUA.tank, x0 = aq.x + tk.x, y0 = aq.y + tk.y;
+  // хранене: люспички падат отгоре, рибките се качват към тях
+  const fed = aq.fedAt ? t - aq.fedAt : Infinity, feeding = fed >= 0 && fed < FEED_MS;
+  if (feeding) {
+    for (let i = 0; i < 5; i++) {
+      const fy = Math.min(tk.h - 3, Math.floor((fed - i * 180) / 260));
+      if (fy >= 0) R(ctx, i % 2 ? '#e0a040' : '#c86a30', x0 + 8 + ((i * 5) % 11), y0 + 1 + fy, 1, 1);
+    }
+  }
+  const lift = feeding ? Math.sin(Math.min(1, fed / 800, (FEED_MS - fed) / 800) * Math.PI / 2) : 0;
   const fish = [['#f07a30', 0.9, 6, 0], ['#f0d040', 1.3, 10, 2.1], ['#e05a8a', 0.7, 13, 4.2]];
   for (const [c, v, fy, ph] of fish) {
     const k = (Math.sin(t / 1000 * v + ph) + 1) / 2, dir = Math.cos(t / 1000 * v + ph) > 0 ? 1 : -1;
-    const x = Math.round(x0 + 3 + k * (tk.w - 9)), y = Math.round(y0 + fy + Math.sin(t / 400 + ph) * 1);
+    const x = Math.round(x0 + 3 + k * (tk.w - 9)), y = Math.round(y0 + fy - lift * (fy - 3) + Math.sin(t / 400 + ph) * 1);
     R(ctx, c, x, y, 3, 2); R(ctx, shade(c, 0.75), dir > 0 ? x - 1 : x + 3, y, 1, 2); R(ctx, '#1d1626', dir > 0 ? x + 2 : x, y, 1, 1);
   }
   // мехурчета
@@ -952,18 +963,19 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   add(prop('cooler', cl.w, cl.h, (c) => drawCooler(c, cl.w, cl.h)), cl.x, cl.base);
   const pl = decor.plants, pv = variant('plants', pl);
   const bigPlant = () => prop('plant_big', 28, 36, (c) => drawPlant(c, 28, 36, true, pl.style), pv);
-  // аквариумът заема мястото на голямото растение до диспенсъра, аркадата – на това в ъгъла
+  // аркадата заема мястото на голямото растение до диспенсъра (под неоновия надпис), аквариумът стои вдясно от дивана
   let aquarium = null, arcade = null;
-  if (decor.aquarium) {
-    const img = prop('aquarium', AQUA.w, AQUA.h, drawAquarium);
-    aquarium = { x: Math.round(lo.tallPlant.x - AQUA.w / 2), y: lo.tallPlant.base - AQUA.h, key: lo.tallPlant.base };
-    add(img, aquarium.x, lo.tallPlant.base);
-  } else add(bigPlant(), lo.tallPlant.x - 14, lo.tallPlant.base);
   if (decor.arcade) {
-    const img = prop('arcade', ARCADE.w, ARCADE.h, drawArcade);
-    arcade = { x: Math.round(lo.cornerPlant.x - ARCADE.w / 2), y: lo.cornerPlant.base - ARCADE.h, key: lo.cornerPlant.base };
-    add(img, arcade.x, lo.cornerPlant.base);
-  } else add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base);
+    const ar = lo.arcade, img = prop('arcade', ARCADE.w, ARCADE.h, drawArcade);
+    arcade = { x: Math.round(ar.x - ARCADE.w / 2), y: ar.base - ARCADE.h, key: ar.base };
+    add(img, arcade.x, ar.base);
+  } else add(bigPlant(), lo.tallPlant.x - 14, lo.tallPlant.base);
+  if (decor.aquarium) {
+    const aq = lo.aquarium, img = prop('aquarium', AQUA.w, AQUA.h, drawAquarium);
+    aquarium = { x: Math.round(aq.x - AQUA.w / 2), y: aq.base - AQUA.h, key: aq.base };
+    add(img, aquarium.x, aq.base);
+  }
+  add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base);
   const sf = lo.sofa, so = decor.sofa, sv = variant('sofa', so);
   add(prop('sofa_back', sf.w, 18, (c) => drawSofaBack(c, sf.w, 18, so), sv), sf.x, sf.base - 14, sf.base - 14);
   add(prop('sofa_front', sf.w, 20, (c) => drawSofaFront(c, sf.w, 20, so), sv), sf.x, sf.base, sf.base + 1);
