@@ -169,7 +169,7 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 - **System notification** *(app)* – a pop-up when an agent waits for you; clicking it opens that session's terminal.
 
 **Updates**
-- **Check for new versions** – off by default. Once a day asks GitHub for the latest release number; when there is a newer one, the `?` button gets a green dot and the panel (and the tray menu in the app) shows a download link. Nothing is downloaded or installed by itself.
+- **Check for new versions** – off by default. Every 6 hours (or with "Check now" in the panel) asks GitHub for the latest release number; when there is a newer one, the `?` button gets a green dot and the panel (and the tray menu in the app) shows a download link. Nothing is downloaded or installed by itself.
 
 **Privacy**
 - **Hide commands and paths** – bubbles, the card and notifications show only the tool and the session name. For screen sharing and streaming.

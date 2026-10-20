@@ -8,7 +8,7 @@ import os from 'node:os';
 
 const DIR = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office');
 const FILE = path.join(DIR, 'update.json');
-const EVERY_MS = 24 * 60 * 60 * 1000; // веднъж на ден
+const EVERY_MS = 6 * 60 * 60 * 1000;  // на 6 часа (+ „Провери сега“ в панела)
 const RETRY_MS = 60 * 60 * 1000;      // без интернет – пак след час
 const API = process.env.UPDATE_API || 'https://api.github.com/repos/rezored/cubicle-crew/releases/latest';
 const RELEASES = 'https://github.com/rezored/cubicle-crew/releases';
@@ -78,7 +78,7 @@ export class Updates {
     } finally { this.busy = false; }
   }
 
-  /** POST /api/update {enabled}. Включване = проверка веднага. */
+  /** POST /api/update {enabled} – включване = проверка веднага; {} = „Провери сега“. */
   async set(data) {
     if (data && 'enabled' in data) {
       this.s.enabled = !!data.enabled;

@@ -526,6 +526,7 @@ export class UI {
         else if (t.closest('[data-go]')) { this.toggleHelp(false); this.onTab?.(t.closest('[data-go]').dataset.go); }
         else if (t.closest('[data-act]')) this.bridge?.action?.(t.closest('[data-act]').dataset.act);
         else if (t.closest('[data-snap]')) this.onSnapshot?.();
+        else if (t.closest('[data-updcheck]')) { e.preventDefault(); fetch('api/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {}); }
         else if (t.closest('[data-clip]')) { this.toggleHelp(false); this.onClip?.(); }
         else if (t.closest('[data-lanpin]')) this.setLan({ newPin: true });
       });

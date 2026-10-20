@@ -51,7 +51,7 @@ The desktop app also keeps `settings.json` and `desktop.log` (start, window size
 - while you search for a city: the text you typed and the language go to `geocoding-api.open-meteo.com`;
 - every 20 minutes: the city's latitude and longitude go to `api.open-meteo.com`.
 
-**Check for new versions** (`?` panel → Updates): once a day, one `GET https://api.github.com/repos/rezored/cubicle-crew/releases/latest` with no parameters and no cookies (User-Agent `cubicle-crew`). GitHub sees your IP address, as with any download. Only the version number and the release link are kept. The app never downloads or installs anything by itself – it shows a link.
+**Check for new versions** (`?` panel → Updates): every 6 hours (and on "Check now"), one `GET https://api.github.com/repos/rezored/cubicle-crew/releases/latest` with no parameters and no cookies (User-Agent `cubicle-crew`). GitHub sees your IP address, as with any download. Only the version number and the release link are kept. The app never downloads or installs anything by itself – it shows a link.
 
 There is no telemetry, no analytics, no account and no crash reporting. Removing the city (shop → Weather → Remove city) and unticking the update check stops all requests.
 
