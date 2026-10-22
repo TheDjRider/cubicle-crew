@@ -822,8 +822,61 @@ export function drawArcadeScreen(ctx, ar, t) {
   R(ctx, '#ffffff', px, y0 + s.h - 2, 3, 1);
   R(ctx, '#f0d040', x0 + ((k * 3) % (s.w - 1)), y0 + 2 + (k % (s.h - 4)), 1, 1);
 }
-function drawNeon(g, x, y, c) {
-  R(g, '#1a1420', x, y, 22, 11); R(g, '#241c2c', x + 1, y + 1, 20, 9);
+// две наклонени една към друга халби бира с искри между ръбовете (лявата половина; дясната е огледална)
+// ръбът и дъното също са наклонени. a = контур, b/B = бира/мехурчета, f = пяна, w = искра
+const CHEERS = [
+  '.......w..',
+  '...f.f...w',
+  '...fffff..',
+  '...afffff.',
+  '.aaabfffa.',
+  '.a.abbBba.',
+  '.a.aBbbba.',
+  '.a.abbbBa.',
+  '.aabbBba..',
+  '..abbbba..',
+  '..abBbba..',
+  '..aaabba..',
+  '.....aaa..',
+];
+const CHEERS_COL = { a: '#ffd84a', b: '#e8780e', B: '#ffc040', f: '#fffbe8', w: '#ffffff' };
+// неон от тръби (само контури): { халба } – c = скоби, a = халба, B = мехурчета, f = пяна
+const METAL = [
+  '....................',
+  '..cc.............cc.',
+  '..c...............c.',
+  '..c.....ff........c.',
+  '..c...ffffffff....c.',
+  '..c...a......a....c.',
+  '.c....a.B....aa....c',
+  '..c...a....B.a.a..c.',
+  '..c...a.B....a.a..c.',
+  '..c...a......aa...c.',
+  '..c...a...B..a....c.',
+  '..cc..aaaaaaaa...cc.',
+  '....................',
+];
+const METAL_COL = { c: '#4ae0ff', a: '#ffb02e', B: '#b8701c', f: '#fff4d8' };
+/** Пиксели от карта; mirror = картата е лявата половина, halo = ореол около тръбите (неон). */
+function drawPixMap(g, x, y, rows, col, mirror, halo) {
+  const W = mirror ? rows[0].length * 2 : rows[0].length;
+  const at = (i, j) => { const r = rows[j]; if (!r) return '.'; const k = mirror && i >= r.length ? W - 1 - i : i; return r[k] || '.'; };
+  if (halo) {
+    for (let j = 0; j < rows.length; j++) for (let i = 0; i < W; i++) {
+      if (at(i, j) !== '.') continue;
+      const n = [at(i - 1, j), at(i + 1, j), at(i, j - 1), at(i, j + 1)].find((ch) => ch !== '.' && ch !== 'B');
+      if (n) { g.globalAlpha = 0.16; R(g, col[n], x + i, y + j, 1, 1); g.globalAlpha = 1; }
+    }
+  }
+  for (let j = 0; j < rows.length; j++) for (let i = 0; i < W; i++) { const ch = at(i, j); if (ch !== '.') R(g, col[ch], x + i, y + j, 1, 1); }
+}
+/** Височина на табелата: картинните варианти са по-високи (в 9 реда не се четат). */
+const neonH = (style) => (style ? 15 : 11);
+function drawNeon(g, x, y, c, style) {
+  const h = neonH(style);
+  R(g, '#1a1420', x, y, 22, h); R(g, '#241c2c', x + 1, y + 1, 20, h - 2);
+  if (style === 'cheers') return drawPixMap(g, x + 1, y + 1, CHEERS, CHEERS_COL, true, false);
+  if (style === 'metal') { R(g, '#120e18', x + 1, y + 1, 20, h - 2); return drawPixMap(g, x + 1, y + 1, METAL, METAL_COL, false, true); }
   drawText(g, '</>', x + 6, y + 3, c);
   R(g, shade(c, 0.6), x + 2, y + 9, 18, 1);
 }
@@ -950,7 +1003,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   R(g, '#1a1420', digital.x, digital.y, digital.w, digital.h); R(g, '#0e1a16', digital.x + 1, digital.y + 1, digital.w - 2, digital.h - 2);
   R(g, '#3a3248', digital.x, digital.y + digital.h, digital.w, 1);
   drawPoster(g, lo.cooler.x - 1, 10, decor.posters.kinds[1 + (posters.length % 2)]);
-  if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c);
+  if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c, decor.neon.style);
 
   // ---------- мебели като отделни обекти (сортират се по дълбочина) ----------
   const objects = [];
@@ -1026,7 +1079,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, season, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 17, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, season, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0,
   };
 }
@@ -1341,7 +1394,7 @@ export function thumb(it) {
       drawSky(g, { windows: [w], sky: { x0: 2, x1: 36, stars: [], clouds: [{ x: 8, y: 6, w: 10, v: 0 }], skyline: skylineFor(it.style, 34, k), view: it.style, k } }, NOON, 0);
       const f = makeCanvas(38, 48); drawWindowFrame(f.getContext('2d'), w.x, w.y, w.w, w.h); g.drawImage(f, 0, 0); // стъклото в рамката е прозрачно
     });
-    case 'neon': return mk(24, 13, (g) => drawNeon(g, 1, 1, it.c));
+    case 'neon': return mk(24, neonH(it.style) + 2, (g) => drawNeon(g, 1, 1, it.c, it.style));
     case 'espresso': return mk(30, 42, (g) => drawCounter(g, 30, 42, true));
     case 'aquarium': return mk(AQUA.w, AQUA.h, (g) => { drawAquarium(g); drawAquariumFish(g, { x: 0, y: 0 }, 1200); });
     case 'arcade': return mk(ARCADE.w, ARCADE.h, (g) => { drawArcade(g); drawArcadeScreen(g, { x: 0, y: 0 }, 900); });

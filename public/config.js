@@ -186,7 +186,7 @@ const T_BG = {
       cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', season: 'Сезонно', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
     },
     slots: { 'rug.team0': 'Екип 1', 'rug.team1': 'Екип 2', 'chair.team0': 'Под-агенти', 'chair.team1': 'Екип 2', 'chair.lead': '★ Оркестратори' },
-    by: (h) => `от @${h}`,
+    by: (h) => `от ${h.includes(' ') ? h : '@' + h}`, // GitHub акаунт с @, истинско име без
     buy: 'Купи', equip: 'Сложи', equipped: 'Сложено', remove: 'Махни', free: 'безплатно', owned: 'твое',
     need: (n) => `още ${n}`,
     hint: 'Посочи предмет – виждаш го в офиса. Затвори с Esc.',
@@ -403,7 +403,7 @@ const T_EN = {
       cat: 'Cat', cat2: 'One more cat', dog: 'Dog', season: 'Seasonal', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
     },
     slots: { 'rug.team0': 'Team 1', 'rug.team1': 'Team 2', 'chair.team0': 'Sub-agents', 'chair.team1': 'Team 2', 'chair.lead': '★ Leads' },
-    by: (h) => `by @${h}`,
+    by: (h) => `by ${h.includes(' ') ? h : '@' + h}`,
     buy: 'Buy', equip: 'Use', equipped: 'In use', remove: 'Remove', free: 'free', owned: 'owned',
     need: (n) => `${n} more`,
     hint: 'Hover an item to preview it in the office. Esc closes.',
@@ -506,7 +506,7 @@ const T_EN = {
     'dog.husky': 'Husky', 'dog.dalmatian': 'Dalmatian', 'dog.pug': 'Pug',
     'season.pumpkins': 'Pumpkins', 'season.tree': 'Christmas tree', 'season.tulips': 'Tulips', 'season.fan': 'Standing fan',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',
-    'neon.code': 'Neon sign', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet',
+    'neon.code': 'Neon sign', 'neon.cheers': 'Cheers', 'neon.metal': 'Beer & metal', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet',
   },
 };
 

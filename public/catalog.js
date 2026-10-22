@@ -167,6 +167,9 @@ export const ITEMS = [
   I('season.fan', 'season', 200, 'Вентилатор', { style: 'fan', from: '06-01', to: '08-31' }),
   // специални
   I('neon.code', 'neon', 350, 'Неонов надпис', { c: '#ff4ad0' }),
+  I('neon.cheers', 'neon', 350, 'Наздраве', { c: '#ffb02e', style: 'cheers' }),
+  // контрибюшън на Иван Туртев (by = засега името му, GitHub акаунтът предстои)
+  I('neon.metal', 'neon', 0, 'Бира и метъл', { c: '#ff6a3a', style: 'metal', by: 'Ivan Turtev' }),
   I('espresso.pro', 'espresso', 800, 'Еспресо машина', {}),
   I('aquarium.reef', 'aquarium', 1200, 'Аквариум', {}),
   I('arcade.retro', 'arcade', 1500, 'Аркадна машина', {}),

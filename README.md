@@ -259,6 +259,8 @@ Issues and pull requests are welcome – see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Contributor pets:** Bueno, the tricolour mix – [@buensoft](https://github.com/buensoft).
 
+**Contributor decor:** the "Beer & metal" neon sign – Ivan Turtev.
+
 ## License
 
 [MIT](LICENSE) © Kalin Dimitrov
