@@ -40,6 +40,7 @@ All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
 
 - `save.json` (+ `.bak`) – coins, bought decor, achievements, avatar, pet names. No session content.
 - `save.lock` – which running copy counts coins (pid + port).
+- `stats.json` – your stats for the last 60 days: per day and session the project folder name, time in each state, number of tool calls, token counts and the API cost estimate. Numbers only, no commands or text.
 - `weather.json` – the city you picked and the last forecast.
 - `update.json` – whether the update check is on, and the last version number GitHub returned.
 - `lan.json` – the phone view: on/off, its PIN, the preferred port and the sign-in tokens of the phones that entered the PIN.
