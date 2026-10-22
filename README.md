@@ -56,7 +56,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | 📊 **Your stats** | Work time by state, how long agents waited for you, tool calls and the real token usage from the transcripts, per day and project, plus what it would cost at Claude API prices (by model, with cache reads and writes – on a Pro/Max plan you don't pay per token, but it shows what the work is worth), with CSV/JSON export. Stored only on your computer. Click the whiteboard: one of your leads walks over, points the remote and a projector screen rolls down with today's numbers; click again for the last 7 and 30 days. Clicking an agent also shows its last actions. |
 | 🎬 **Share** | A crisp PNG snapshot or a 10-second MP4 clip of the office from the `?` panel. `?overlay` gives a clean scene for an OBS browser source, with commands and paths hidden. |
 | 🎃 **Seasonal decor & pets** | Pumpkins in autumn, a tree at Christmas, tulips in spring, a fan in summer – sold only in season, yours forever. Click a pet to pet it. |
-| 🐧 **WSL** | On Windows the app also watches `~/.claude/projects` inside running WSL distros. |
+| 🐧 **WSL, Docker, Cowork** | On Windows the app also watches `~/.claude/projects` inside running WSL distros. Claude Code in Docker or a VM shows up too once you mount its `~/.claude` to a folder and add it in the settings ([how](docs/docker.md)). Cowork tasks in Claude Desktop are found by themselves. |
 | 🔔 **Sound** | An 8-bit ding-dong when an agent needs you (a question or a permission prompt) and a short fanfare when a session finishes after a minute or more of work. It only plays while you're looking at another window, and the bell in the bottom bar (or the tray menu) mutes it. In a browser it starts working after your first click on the page. |
 | 🖥️ **Desktop widget** | A frameless, always-on-top Windows app above the tray, with a tray menu, `Ctrl+Alt+P`, notifications and start with Windows. |
 | 🧩 **Moddable art** | Everything is drawn in code, but you can replace it with your own PNG character sheet and tileset without touching any code. |
@@ -174,6 +174,7 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 **Privacy**
 - **Hide commands and paths** – bubbles, the card and notifications show only the tool and the session name. For screen sharing and streaming.
 - **Phone view** – off by default. Watch the office from your phone on the same Wi-Fi: the panel shows the address and a 6-digit PIN. View only – the server never sends commands, paths, task names or permission prompts to the phone. It opens a port on your local network (Windows may ask about the firewall); details in [docs/security.md](docs/security.md#phone-view-optional-off-by-default).
+- **More agent folders** – for Claude Code in Docker, a VM or on another drive: add the folder mounted as its `~/.claude`, and its sessions walk into the office like local ones, including "waiting for you". Step by step with `docker run`, compose and Dev Containers: [docs/docker.md](docs/docker.md). Cowork tasks from Claude Desktop are picked up automatically.
 
 **Window** *(app)*
 - **Show only when needed** – the window stays hidden (the tray icon stays) and comes up by itself, without taking focus, when an agent waits for you or a lead finishes; it hides again 8 s later. Ctrl+Alt+P or the tray icon show it any time.

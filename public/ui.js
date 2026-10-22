@@ -519,6 +519,7 @@ export class UI {
       this.help.id = 'help'; this.help.hidden = true;
       this.help.setAttribute('role', 'dialog');
       this.help.addEventListener('change', (e) => this.onHelpChange(e.target));
+      this.help.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches?.('[data-folderin]')) this.setFolders({ add: e.target.value }); });
       this.help.addEventListener('click', (e) => {
         const t = e.target;
         if (t === this.help || t.closest('[data-close]')) this.toggleHelp(false); // клик извън панела или ✕
@@ -529,6 +530,9 @@ export class UI {
         else if (t.closest('[data-updcheck]')) { e.preventDefault(); fetch('api/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {}); }
         else if (t.closest('[data-clip]')) { this.toggleHelp(false); this.onClip?.(); }
         else if (t.closest('[data-lanpin]')) this.setLan({ newPin: true });
+        else if (t.closest('[data-folderadd]')) this.setFolders({ add: this.help.querySelector('[data-folderin]')?.value || '' });
+        else if (t.closest('[data-folderdel]')) this.setFolders({ remove: t.closest('[data-folderdel]').dataset.folderdel });
+        else if (t.closest('[data-folderpick]')) this.bridge?.pickFolder?.().then((p) => { if (p) this.setFolders({ add: p }); }).catch(() => {});
       });
       if (!this.helpTab) { try { this.helpTab = localStorage.getItem('po.helpTab') || 'look'; } catch { this.helpTab = 'look'; } }
       // настройките на приложението се сменят и от трея – панелът ги показва актуални
@@ -575,7 +579,16 @@ export class UI {
   async loadHook() {
     try { this.hook = await (await fetch('api/hook')).json(); } catch { this.hook = null; }
     try { this.lan = await (await fetch('api/lan')).json(); } catch { this.lan = null; }
+    try { this.folders = await (await fetch('api/folders')).json(); } catch { this.folders = null; }
     if (this.help && !this.help.hidden) this.renderHelp(true);
+  }
+  /** Още папки с транскрипти (Docker, VM…): { add: път } | { remove: път } -> сървърът (folders.js). */
+  async setFolders(data) {
+    let r = null;
+    try { r = await (await fetch('api/folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })).json(); } catch { /* */ }
+    if (r?.folders) this.folders = r;
+    this.folderErr = r && !r.ok ? r.error : '';
+    this.renderHelp(true);
   }
   async setHook(on) {
     let r = null;

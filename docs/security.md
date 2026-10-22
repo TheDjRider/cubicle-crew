@@ -26,7 +26,11 @@ The text of your prompts, Claude's answers, thinking, file contents and tool out
 
 **OpenCode sessions** – the OpenCode database `~/.local/share/opencode/opencode.db` (or `$XDG_DATA_HOME/opencode`, `OPENCODE_DB`; `OPENCODE=0` turns it off), opened **read-only**. Once a second it reads the parts changed since the last look: part type, tool name, call id, status, the first of `filePath`/`path`/`command`/`pattern`/`description`/`url`/`query` cut to 60 characters, and token counts; from `session` the folder name, the parent session and the title (shown on a sub-agent's label). Message text and tool output are never used.
 
-**Live sessions** – `~/.claude/sessions/<pid>.json` (or `CLAUDE_SESSIONS_DIR`): `pid`, `sessionId`, `cwd`, `status`, `waitingFor`. Used to know which sessions are open and when one waits for a permission prompt.
+**Live sessions** – `~/.claude/sessions/<pid>.json` (or `CLAUDE_SESSIONS_DIR`): `pid`, `pidDomain`, `sessionId`, `cwd`, `status`, `waitingFor`, `name`. Used to know which sessions are open and when one waits for a permission prompt.
+
+**More agent folders** – only the folders you add in the settings panel (**Privacy & data → More agent folders**, stored in `~/.pixel-office/folders.json`) or in `CLAUDE_PROJECTS_EXTRA`, e.g. the `~/.claude` of Claude Code in Docker mounted on your computer ([docker.md](docker.md)). From each one the app reads `projects/**/*.jsonl` and `sessions/*.json` exactly like the ones above, nothing else (the login file next to them is never opened).
+
+**Claude Desktop Cowork tasks** – Claude Desktop keeps each Cowork task as a Claude Code session in `local-agent-mode-sessions/<account>/<org>/local_<id>/` (Windows: `%LOCALAPPDATA%\Claude-Data\…`, `%APPDATA%\Claude\…` or the Store package; macOS: `~/Library/Application Support/Claude/…`). Every 10 s the app lists these folders; for tasks changed in the last day it reads `local_<id>.json` – only the name of the first folder you picked for the task (`userSelectedFolders`), used as the label – and the task's `.claude/projects/**/*.jsonl` and `.claude/sessions/*.json` like any Claude Code session. The task title, prompts, files and the other fields of that JSON are not used. `CLAUDE_COWORK=0` turns it off.
 
 ## What it writes
 
@@ -39,6 +43,7 @@ All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
 - `weather.json` – the city you picked and the last forecast.
 - `update.json` – whether the update check is on, and the last version number GitHub returned.
 - `lan.json` – the phone view: on/off, its PIN, the preferred port and the sign-in tokens of the phones that entered the PIN.
+- `folders.json` – the extra agent folders you added in the settings panel (paths only).
 
 The desktop app also keeps `settings.json` and `desktop.log` (start, window size, wake/sleep) in `%APPDATA%\pixel-office\`. Page settings (language, sound, Focus mode, session names) live in the app's own browser storage.
 

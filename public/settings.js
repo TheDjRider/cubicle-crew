@@ -52,6 +52,20 @@ function lanBox(N, H) {
     `<div class="btns">${btn('data-lanpin', H.lanNewPin)}</div></div>`;
 }
 
+/** Още папки с транскрипти (Docker, VM…): списъкът, поле за път (+ „Избери…“ в приложението), Cowork задачите. */
+function foldersBox(F, ui, H) {
+  const row = (f, env) => `<li><code title="${esc(f.path)}">${esc(f.path)}</code>${f.found ? '' : ` <small class="dim">${H.folderEmpty}</small>`}` +
+    (env ? ` <small class="dim">${H.folderEnv}</small>` : ` <button type="button" class="mini" data-folderdel="${esc(f.path)}" title="${H.folderDel}">✕</button>`) + '</li>';
+  const list = [...F.env.map((f) => row(f, true)), ...F.folders.map((f) => row(f, false))];
+  return `<h4>${H.folders}</h4><p class="dim">${H.foldersHint}</p>` +
+    (list.length ? `<ul class="folders">${list.join('')}</ul>` : '') +
+    `<div class="btns folderadd"><input type="text" data-folderin placeholder="${esc(H.folderPath)}" spellcheck="false">${btn('data-folderadd', H.folderAdd)}` +
+    (ui.bridge?.pickFolder ? btn('data-folderpick', H.folderPick) : '') + '</div>' +
+    (ui.folderErr ? `<p class="err">${esc(H.folderErr[ui.folderErr] || ui.folderErr)}</p>` : '') +
+    (F.cowork ? `<p class="dim">${H.cowork(F.cowork)}</p>` : '') +
+    `<div class="btns"><a href="https://github.com/rezored/cubicle-crew/blob/main/docs/docker.md" target="_blank" rel="noopener">${H.folderHowto}</a></div>`;
+}
+
 /** Съдържанието на всеки раздел ('' = разделът не се показва тук). ui – за състоянието (легенда, hook, обновления…). */
 function sections(ui) {
   const H = T.help, D = ui.desk, demo = ui.conn === 'demo', U = ui.update;
@@ -71,6 +85,7 @@ function sections(ui) {
   const N = ui.lan?.ok ? ui.lan : null;
   out.privacy = sw('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint) +
     (N && !demo ? sw('id="opt-lan" data-lan', N.enabled, H.lan, H.lanHint) + (N.enabled ? lanBox(N, H) : '') : '') +
+    (ui.folders?.ok && !demo ? foldersBox(ui.folders, ui, H) : '') +
     (U && !demo ? sw('id="opt-update" data-upd', U.enabled, H.update, H.updateHint) +
       `<p class="dim ver">${esc(H.version(U.current))}${U.newer ? ` · <a href="${esc(U.latest.url)}" target="_blank" rel="noopener">${esc(H.newer(U.latest.version))}</a>` : U.latest ? ` · ${H.latest}` : ''}${U.enabled && !U.newer ? ` · <a href="#" data-updcheck>${H.checkNow}</a>` : ''}</p>` +
       (U.newer && D?.selfUpdate ? updInstall(D.upd, H) : '') : '') +

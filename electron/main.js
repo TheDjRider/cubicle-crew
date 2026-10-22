@@ -1,6 +1,6 @@
 // Cubicle Crew (бивш Pixel Office) като desktop приложение: малък прозорец без рамка, винаги отгоре, над трея.
 // Сървърът (server.js) върви в същия процес – не е нужен отделен `npm start`, нито браузър.
-import { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, Notification, shell, globalShortcut } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain, Notification, shell, globalShortcut, dialog } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -413,6 +413,11 @@ ipcMain.on('shop', (_e, open) => {
 // панелът „?“ чете и сменя същите настройки като менюто в трея
 ipcMain.handle('settings:get', () => desktopSettings());
 ipcMain.on('settings:set', (_e, key, v) => applyDesktop(String(key), !!v));
+// „Избери…“ до допълнителните папки (Docker, VM…): системният диалог; пътят отива към сървъра през страницата
+ipcMain.handle('pick-folder', async () => {
+  const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+  return r.canceled ? null : r.filePaths[0] || null;
+});
 
 ipcMain.on('strip-size', (_e, h) => {
   if (!win || !settings.strip) return;

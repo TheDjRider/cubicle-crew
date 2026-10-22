@@ -35,7 +35,7 @@ export const CFG = {
 
 // Цветовете на състоянията са част от визуалния език — не ги променяй без причина.
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
-export const PROVIDERS = { codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
+export const PROVIDERS = { cowork: 'Cowork', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
 
 export const STATES = {
   idle:       { color: '#6b6b80' },
@@ -137,6 +137,11 @@ const T_BG = {
     lan: 'Изглед за телефон', lanHint: 'Офисът на телефона в същата Wi-Fi мрежа – само за гледане, с PIN, без команди, пътища и въпроси за разрешение. Отваря порт в локалната мрежа (Windows може да попита за защитната стена).',
     lanOpen: 'Сканирай кода с камерата на телефона или отвори:', lanQr: 'Сканирай с камерата на телефона', lanPin: 'PIN', lanNewPin: 'Нов PIN (излиза от всички телефони)', lanPhones: (n) => `Влезли телефони: ${n}`,
     lanNoNet: 'Не намирам локална мрежа (Wi-Fi или кабел).', lanErr: 'Не мога да отворя порт за телефона.',
+    folders: 'Още папки с агенти', foldersHint: 'Claude Code в Docker, VM или на друг диск: посочи папката, монтирана като неговата ~/.claude. Офисът чете само нея – нищо не се пуска и не се праща.',
+    folderAdd: 'Добави', folderPick: 'Избери…', folderPath: 'Път до папката, напр. C:\\claude-docker', folderDel: 'Махни',
+    folderEmpty: 'още няма транскрипти', folderEnv: 'от CLAUDE_PROJECTS_EXTRA', folderHowto: 'Как да го пусна с Docker',
+    folderErr: { path: 'Трябва пълен път (напр. C:\\claude-docker).', missing: 'Няма такава папка.', full: 'Стигнат е максимумът папки.' },
+    cowork: (n) => `Claude Desktop (Cowork): следя ${n} ${n === 1 ? 'задача' : 'задачи'} от последното денонощие – сами, без настройка.`,
     private: 'Скривай команди и пътища', privateHint: 'Балончетата, картата и известията показват само инструмента и името на сесията – за споделен екран и стрийм.',
     window: 'Прозорец',
     onTop: 'Винаги отгоре', onTopHint: 'Прозорецът стои над другите, за да виждаш офиса, докато работиш.',
@@ -349,6 +354,11 @@ const T_EN = {
     lan: 'Phone view', lanHint: 'The office on your phone on the same Wi-Fi – view only, with a PIN, without commands, paths or permission prompts. Opens a port on your local network (Windows may ask about the firewall).',
     lanOpen: 'Scan the code with your phone camera, or open:', lanQr: 'Scan with your phone camera', lanPin: 'PIN', lanNewPin: 'New PIN (signs out every phone)', lanPhones: (n) => `Phones signed in: ${n}`,
     lanNoNet: 'No local network found (Wi-Fi or cable).', lanErr: 'Could not open a port for the phone.',
+    folders: 'More agent folders', foldersHint: 'Claude Code in Docker, a VM or on another drive: pick the folder mounted as its ~/.claude. The office only reads it – nothing is started or sent.',
+    folderAdd: 'Add', folderPick: 'Choose…', folderPath: 'Folder path, e.g. C:\\claude-docker', folderDel: 'Remove',
+    folderEmpty: 'no transcripts yet', folderEnv: 'from CLAUDE_PROJECTS_EXTRA', folderHowto: 'How to run it with Docker',
+    folderErr: { path: 'Needs a full path (e.g. C:\\claude-docker).', missing: 'No such folder.', full: 'Too many folders.' },
+    cowork: (n) => `Claude Desktop (Cowork): watching ${n} ${n === 1 ? 'task' : 'tasks'} from the last day – found automatically.`,
     private: 'Hide commands and paths', privateHint: 'Bubbles, the card and notifications show only the tool and the session name – for screen sharing and streaming.',
     window: 'Window',
     onTop: 'Always on top', onTopHint: 'The window stays above the others, so you see the office while you work.',

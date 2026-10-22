@@ -17,6 +17,7 @@
     "providers.js",
     "permissions.js",
     "lan.js",
+    "folders.js",
     "public/",
     "!public/sprites/*.psd"
   ],
@@ -75,6 +76,7 @@
       "providers.js",
       "permissions.js",
       "lan.js",
+      "folders.js",
       "electron/**",
       "public/**",
       "!public/sprites/*.psd"

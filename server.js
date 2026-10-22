@@ -16,6 +16,7 @@ import { focusPid } from './focus.js';
 import { execFile } from 'node:child_process';
 import { Permissions } from './permissions.js';
 import { Lan } from './lan.js';
+import { Folders } from './folders.js';
 import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine } from './providers.js';
 
 const PORT = Number(process.env.PORT) || 4317;
@@ -27,12 +28,19 @@ const SESSIONS = process.env.CLAUDE_SESSIONS_DIR || path.join(path.dirname(ROOT)
 const SESSIONS_MS = 1000;                // и молбите за разрешение идват оттук – да не закъсняват
 const LINK_WINDOW_MS = 15000;            // евристика: под-агент, появил се до толкова след Task/Agent
 const DEBUG = !!process.env.DEBUG || process.argv.includes('--debug');
-// още папки с транскрипти: CLAUDE_PROJECTS_EXTRA (разделени с ;) + на Windows сами – ~/.claude/projects във вече пуснатите
-// WSL дистрибуции (\\wsl.localhost\<distro>\home\<user>\...). WSL не се пуска от нас; CLAUDE_WSL=0 го изключва.
+// още папки с транскрипти: CLAUDE_PROJECTS_EXTRA (разделени с ;), папките от панела и Cowork задачите на Claude Desktop
+// (folders.js) + на Windows сами – ~/.claude/projects във вече пуснатите WSL дистрибуции
+// (\\wsl.localhost\<distro>\home\<user>\...). WSL не се пуска от нас; CLAUDE_WSL=0 го изключва.
 const EXTRA = (process.env.CLAUDE_PROJECTS_EXTRA || '').split(';').map((s) => s.trim()).filter(Boolean);
+const HOME = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office');
+// Cowork: CLAUDE_COWORK=0 го изключва; с CLAUDE_PROJECTS_DIR (тестове) – само с изричен CLAUDE_COWORK_DIR
+const COWORK_ON = process.env.CLAUDE_COWORK !== '0' && (!process.env.CLAUDE_PROJECTS_DIR || !!process.env.CLAUDE_COWORK_DIR);
+const folders = new Folders({ home: HOME, extra: EXTRA, cowork: COWORK_ON, onChange: () => { lastFull = 0; }, log: (m) => console.log(m) });
 const WSL_MS = 60000;
 let wslRoots = [];
-const roots = () => [ROOT, ...EXTRA, ...wslRoots, ...(CODEX_ON ? [CODEX_ROOT] : []), ...(GEMINI_ON ? [GEMINI_ROOT] : [])];
+const roots = () => [ROOT, ...folders.roots().map((r) => r.projects), ...wslRoots, ...(CODEX_ON ? [CODEX_ROOT] : []), ...(GEMINI_ON ? [GEMINI_ROOT] : [])];
+/** Допълнителният корен (Docker, Cowork…), в който е файлът – за етикета и доставчика. */
+const rootOfFile = (file) => folders.roots().find((r) => file.startsWith(r.projects + path.sep));
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const SPRITES = path.join(PUBLIC, 'sprites');
 const HOST = '127.0.0.1';                 // само локално – никой от мрежата (Wi-Fi в офиса/кафенето) не вижда сесиите
@@ -202,6 +210,22 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  // допълнителни папки с транскрипти (Docker, VM…): списък, добавяне, махане – само от тази машина, както магазина
+  if (urlPath === '/api/folders') {
+    if (req.method === 'GET') { res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' }); res.end(JSON.stringify(folders.info())); return; }
+    const origin = req.headers.origin;
+    if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
+    let body = '';
+    req.on('data', (d) => { body += d; if (body.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(body || '{}'); } catch { /* празно */ }
+      const r = folders.set(data);
+      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(r));
+    });
+    return;
+  }
   if (urlPath === '/api/update') {
     const origin = req.headers.origin;
     if (req.method !== 'POST' || !/^application\/json/.test(req.headers['content-type'] || '') || (origin && !LOCAL_ORIGIN.test(origin))) { res.writeHead(403).end(); return; }
@@ -269,18 +293,41 @@ wss.on('connection', (ws) => {
 let live = [], liveKey = '';
 const pidOf = new Map(); // сесия -> pid (за „Към терминала“; не се праща към страницата)
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+// pidDomain (Claude Code ≥ 2.1.3xx): "win32:<машина>", "linux::pid:[…]" – pid от контейнер/VM не е наш процес
+const ownDomains = new Set();
+let nsPid = null;
+try { nsPid = process.platform === 'linux' ? fs.readlinkSync('/proc/self/ns/pid') : null; } catch { /* */ }
+const ownDomain = (d) => !d || ownDomains.has(d) || (process.platform === 'linux' ? !!nsPid && d.endsWith(nsPid) : d.startsWith(process.platform + ':'));
+// сесия от чужд домейн: файлът ѝ няма heartbeat, а при docker kill остава – вярваме му, докато транскриптът е пресен
+const FOREIGN_IDLE_MS = 30 * 60e3, FOREIGN_BUSY_MS = 3 * 3600e3;
+function lastWrite(sid) {
+  let t = 0;
+  for (const [f, st] of tracked) if (st.mtime > t && path.basename(f, '.jsonl') === sid) t = st.mtime;
+  return t;
+}
 function scanSessions() {
-  let names = [];
-  try { names = fs.readdirSync(SESSIONS); } catch { /* няма папка (стар Claude Code) */ }
+  const now = Date.now();
+  const read = (dir) => { try { return fs.readdirSync(dir).filter((n) => n.endsWith('.json')).map((n) => path.join(dir, n)); } catch { return []; } };
+  // основната папка + sessions/ до всеки допълнителен корен (WSL не – достъпът е бавен, а pid-овете са на Linux)
+  const files = read(SESSIONS).map((f) => ({ f, r: null }));
+  for (const r of folders.roots()) for (const f of read(r.sessions)) files.push({ f, r });
   const list = [];
-  for (const n of names) {
-    if (!n.endsWith('.json')) continue;
-    let s;
-    try { s = JSON.parse(fs.readFileSync(path.join(SESSIONS, n), 'utf8')); } catch { continue; }
-    if (!s || typeof s.sessionId !== 'string' || !Number.isInteger(s.pid) || !alive(s.pid)) continue;
+  for (const { f, r } of files) {
+    let s, mtime = 0;
+    try { s = JSON.parse(fs.readFileSync(f, 'utf8')); mtime = fs.statSync(f).mtimeMs; } catch { continue; }
+    if (!s || typeof s.sessionId !== 'string' || !Number.isInteger(s.pid)) continue;
+    const dom = typeof s.pidDomain === 'string' ? s.pidDomain : '';
+    if (!r || ownDomain(dom)) {
+      if (!alive(s.pid)) continue;
+      if (!r && dom) ownDomains.add(dom);
+    } else {
+      const fresh = Math.max(mtime, lastWrite(s.sessionId));
+      if (now - fresh > (s.status === 'busy' ? FOREIGN_BUSY_MS : FOREIGN_IDLE_MS)) continue;
+    }
     if (list.some((x) => x.agent === s.sessionId)) continue;
-    pidOf.set(s.sessionId, s.pid);
-    const item = { agent: s.sessionId, label: s.cwd ? path.basename(s.cwd) : s.sessionId.slice(0, 8), status: s.status || null };
+    if (!r || ownDomain(dom)) pidOf.set(s.sessionId, s.pid); // „Към терминала“ – само за наш процес
+    const item = { agent: s.sessionId, label: r?.label || (s.cwd ? path.basename(s.cwd) : s.sessionId.slice(0, 8)), status: s.status || null };
+    if (r?.provider) item.provider = r.provider;
     // status "waiting" + waitingFor ("permission prompt", …) – Claude Code чака теб (молба за разрешение и т.н.)
     if (typeof s.waitingFor === 'string' && s.waitingFor) item.waitingFor = s.waitingFor.slice(0, 40);
     // името, което Claude Code дава на сесията (напр. "pixel-office-24") – различава две сесии в един проект
@@ -401,14 +448,19 @@ function handleLine(file, line) {
   if (file.startsWith(GEMINI_ROOT + path.sep)) return; // други .jsonl в ~/.gemini/tmp (не са разговори)
   let obj;
   try { obj = JSON.parse(line); } catch { return; }
+  // само разговорът: от Claude Code 2.1.3xx има и "api-request-blob" (копие на заявката към API-то със същите
+  // tool_use/text блокове) – иначе всеки инструмент и отговор идват по два пъти, с етикет от името на папката
+  if (obj.type !== 'user' && obj.type !== 'assistant') return;
   const agent = path.basename(file, '.jsonl');
   const subagent = isSubFile(file) || obj.isSidechain === true;
+  const R = rootOfFile(file);
   const base = {
     agent,
-    label: obj.cwd ? path.basename(obj.cwd) : path.basename(path.dirname(file)),
+    label: R?.label || (obj.cwd ? path.basename(obj.cwd) : path.basename(path.dirname(file))),
     subagent,
     ts: Date.now(),
   };
+  if (R?.provider) base.provider = R.provider;
   if (subagent) {
     const L = linkFor(file, obj, agent);
     // допълнителни полета – само ако ги знаем (старите клиенти просто ги игнорират)
@@ -574,7 +626,8 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   updates.start();
   process.once('exit', () => wallet.close());
   console.log(`Cubicle Crew: http://localhost:${actual}   (demo without Claude: /?demo   showcase: /?demo=showcase)`);
-  console.log(`Watching: ${[ROOT, ...EXTRA].join(', ')}`);
+  folders.start();
+  console.log(`Watching: ${[ROOT, ...folders.roots().filter((r) => r.kind !== 'cowork').map((r) => r.projects)].join(', ')}`);
   detectWsl(); setInterval(detectWsl, WSL_MS).unref?.();
   return { port: actual, external: false };
 }
