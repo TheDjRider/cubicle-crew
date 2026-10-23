@@ -4,6 +4,8 @@
 
 ### Your Claude Code agents, living in a tiny pixel-art office.
 
+**English** · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
+
 Every Claude Code session becomes a coworker at a desk – and so does every **Codex**, **Gemini CLI** and **OpenCode** session. **Copilot CLI, Cursor or any script** can walk in too through a small local API ([docs/api.md](docs/api.md)). Sub-agents walk in through the door, pick up the task
 and sit down with their team. When someone needs you, the whole room lets you know.
 

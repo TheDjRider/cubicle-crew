@@ -3,7 +3,7 @@
 Local app that shows Claude Code sessions as pixel-art people in an office. Node server tails
 `~/.claude/projects/**/*.jsonl` and pushes events over WebSocket; a vanilla-JS canvas client renders them.
 Ships as a browser app (`npm start`) and as an Electron desktop widget with a Windows installer.
-User-facing docs: `README.md` (English, GitHub landing page; media in `docs/media/`). Gamification (`docs/gamification.md`): phases 1–4 done – tokens, decor, shop, achievements.
+User-facing docs: `README.md` (English, GitHub landing page; media in `docs/media/`) + translations `README.ja.md` / `README.zh-CN.md` (they say the English one is the latest; update them for big features, the Settings section only links to the English list). Gamification (`docs/gamification.md`): phases 1–4 done – tokens, decor, shop, achievements.
 
 ## Commands
 ```bash
