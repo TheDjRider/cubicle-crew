@@ -70,6 +70,7 @@ export class UI {
     this.prompt = el('div', null, document.body);
     this.prompt.id = 'prompt'; this.prompt.hidden = true;
     this.prompt.addEventListener('click', (e) => { const b = e.target.closest('[data-perm]'); if (b) this.decide(b.dataset.id, b.dataset.perm); });
+    if (PARAMS.web) this.webBar();
     // статистиката за прожекционния екран над дъската – веднага и после всяка минута
     this.loadBoardStats();
     setInterval(() => this.loadBoardStats(), 60000);
@@ -475,6 +476,7 @@ export class UI {
   // ------------------------------------------------------------------ към терминала (сървърът изкарва прозореца отпред)
   async goTerminal(id) {
     if (PARAMS.lan) return; // от телефона – не
+    if (PARAMS.web) { this.note(T.web.app); return; } // демото в интернет няма сървър
     const a = this.office.actors.get(id);
     const lead = a ? this.office.leadOf(a) : null;
     const agent = lead ? lead.id : id;
@@ -482,6 +484,25 @@ export class UI {
     try { r = await (await fetch('api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent }) })).json(); } catch { r = { ok: false, error: 'offline' }; }
     if (!r?.ok) this.note(T.terminalFail[r?.error] || T.terminalFail.window);
   }
+  /** Демото в интернет: лента горе – какво е това и откъде се взима приложението; ✕ я свива до едно копче. */
+  webBar() {
+    const W = T.web, REPO = 'https://github.com/rezored/cubicle-crew';
+    const bar = el('div', null, document.body);
+    bar.id = 'webbar';
+    document.body.classList.add('web');
+    bar.title = W.try;
+    bar.innerHTML = `<b class="txt">${W.live}</b>` +
+      `<a class="get" href="${REPO}/releases/latest" target="_blank" rel="noopener">⬇ ${W.get}</a>` +
+      `<span class="or">${W.or}</span> <code>npx cubicle-crew</code>` +
+      `<a class="star" href="${REPO}" target="_blank" rel="noopener">★ ${W.star}</a>` +
+      `<button type="button" class="x" title="${W.hide}">✕</button>`;
+    let small = false;
+    try { small = sessionStorage.getItem('po.webbar') === '0'; } catch { /* */ }
+    const set = (s) => { small = s; bar.classList.toggle('small', s); try { sessionStorage.setItem('po.webbar', s ? '0' : '1'); } catch { /* */ } };
+    set(small);
+    bar.querySelector('.x').addEventListener('click', () => set(true));
+  }
+
   /** Кратко съобщение долу в средата. */
   note(text) {
     if (!this.noteEl) { this.noteEl = el('div', null, document.body); this.noteEl.id = 'note'; }

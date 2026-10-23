@@ -7,11 +7,11 @@
 Every Claude Code session becomes a coworker at a desk – and so does every **Codex**, **Gemini CLI** and **OpenCode** session. **Copilot CLI, Cursor or any script** can walk in too through a small local API ([docs/api.md](docs/api.md)). Sub-agents walk in through the door, pick up the task
 and sit down with their team. When someone needs you, the whole room lets you know.
 
-[**▶ Watch the trailer**](docs/media/trailer.mp4) · [**⬇ Download for Windows**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [Desktop app](#desktop-widget-windows) · [How it works](#how-it-works)
+[**🕹 Try the live demo in your browser**](https://rezored.github.io/cubicle-crew/) · [**▶ Watch the trailer**](https://rezored.github.io/cubicle-crew/media/trailer.mp4) · [**⬇ Download**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [How it works](#how-it-works)
 
 [![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
 
-<a href="docs/media/trailer.mp4"><img src="docs/media/demo.gif" alt="Cubicle Crew in action" width="860"></a>
+<a href="https://rezored.github.io/cubicle-crew/"><img src="docs/media/demo.gif" alt="Cubicle Crew in action" width="860"></a>
 
 </div>
 
@@ -86,7 +86,7 @@ The first time you open it, a short setup asks whether the office starts with a 
 
 Then start a Claude Code session anywhere. Its coworker walks in through the door.
 
-No sessions running? Try the built-in simulations:
+No sessions running? The same simulation runs online at **[rezored.github.io/cubicle-crew](https://rezored.github.io/cubicle-crew/)** (made-up agents, nothing is installed or read). Locally there are more:
 
 | URL | What you get |
 |---|---|

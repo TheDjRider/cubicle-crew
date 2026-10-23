@@ -61,6 +61,7 @@ const T_BG = {
   wait: { morning: 'Добро утро!', day: 'Добър ден!', evening: 'Добър вечер!', msg: 'Чакам първия агент…', hint: 'Кликни, за да отвориш офиса' },
   reconnecting: 'връзката падна, опитвам пак…',
   demo: 'ДЕМО',
+  web: { live: 'Демо на живо – агентите са измислени.', try: 'Приложението показва истинските ти сесии на Claude Code, Codex, Gemini CLI и OpenCode.', get: 'Изтегли', or: 'или', star: 'GitHub', hide: 'Скрий', app: 'Това работи в приложението, с истинските ти сесии.' },
   agents: 'Агенти',
   subagents: 'Под-агенти',
   toolCalls: 'Извиквания',
@@ -248,7 +249,7 @@ const T_BG = {
     pop: (n) => `валежи ${n}%`, tip: 'Времето навън – клик за настройки',
     kinds: { clear: 'ясно', cloudy: 'облачно', overcast: 'мрачно', fog: 'мъгла', drizzle: 'ръми', rain: 'дъжд', snow: 'сняг', storm: 'гръмотевици' },
     hint: 'Времето идва от Open-Meteo (open-meteo.com) на всеки 20 минути; изпращат се само координатите на града. Без избран град приложението не прави нито една заявка навън.',
-    demo: 'В демото времето се задава с адреса: ?weather=clear, cloudy, overcast, fog, drizzle, rain, snow или storm.',
+    demo: 'В демото няма град – избери времето зад прозорците (или с адреса: ?weather=rain).',
   },
   achievements: {
     'tokens.100': ['Първите 100', 'Спечели 100 монети'],
@@ -281,6 +282,7 @@ const T_EN = {
   wait: { morning: 'Good morning!', day: 'Good afternoon!', evening: 'Good evening!', msg: 'Waiting for the first agent…', hint: 'Click to open the office' },
   reconnecting: 'connection lost, retrying…',
   demo: 'DEMO',
+  web: { live: 'Live demo – the agents are simulated.', try: 'The app shows your real Claude Code, Codex, Gemini CLI and OpenCode sessions.', get: 'Download', or: 'or', star: 'GitHub', hide: 'Hide', app: 'This works in the app, with your real sessions.' },
   agents: 'Agents',
   subagents: 'Sub-agents',
   toolCalls: 'Tool calls',
@@ -462,7 +464,7 @@ const T_EN = {
     pop: (n) => `${n}% chance of rain`, tip: 'Weather outside – click for settings',
     kinds: { clear: 'clear', cloudy: 'cloudy', overcast: 'overcast', fog: 'fog', drizzle: 'drizzle', rain: 'rain', snow: 'snow', storm: 'thunderstorm' },
     hint: 'Weather comes from Open-Meteo (open-meteo.com) every 20 minutes; only the city coordinates are sent. With no city set, the app makes no requests to the internet at all.',
-    demo: 'In the demo, set the weather in the address: ?weather=clear, cloudy, overcast, fog, drizzle, rain, snow or storm.',
+    demo: 'The demo has no city – pick the weather outside the windows (or in the address: ?weather=rain).',
   },
   achievements: {
     'tokens.100': ['First 100', 'Earn 100 coins'],
@@ -530,8 +532,11 @@ export function setLang(l) {
 
 // ---- URL параметри ----
 const Q = new URLSearchParams(location.search);
+// демото в интернет (GitHub Pages): scripts/pages.mjs слага window.CC_WEB в index.html – без сървър, винаги демо
+const WEB = Q.has('web') || !!globalThis.CC_WEB;
 export const PARAMS = {
-  demo: Q.has('demo') ? (Q.get('demo') || 'sim') : null,  // ?demo  или  ?demo=showcase
+  demo: Q.has('demo') ? (Q.get('demo') || 'sim') : WEB ? 'sim' : null,  // ?demo  или  ?demo=showcase
+  web: WEB,
   debug: Q.has('debug'),
   agents: Q.has('agents') ? Math.max(1, Math.min(36, Number(Q.get('agents')) || 5)) : null,
   time: Q.get('time'),          // ?time=21:30 — фалшив час за небето (за тестове)
@@ -545,7 +550,7 @@ export const PARAMS = {
   focus: Q.has('focus'),       // ?focus – режим „Фокус“ (за тестове; иначе се пази в настройките)
   strip: Q.has('strip'),       // ?strip – тънка лента: по един ред на сесия вместо офиса (Electron го слага от менюто)
   // отворено през адреса в локалната мрежа (изгледът за телефон): само за гледане, винаги без команди и пътища
-  lan: !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname),
+  lan: !WEB && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname),
 };
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
 /** Име на любимец по място (save.petNames, иначе името на породата, ако има такова, иначе това на мястото – на текущия език). */

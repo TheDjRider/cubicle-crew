@@ -6,3 +6,4 @@ dist/
 .idea/
 *.log
 public/sprites/*.psd
+_site/

@@ -62,8 +62,8 @@ if (!PARAMS.demo) {
 
 // ?wait: сутрешен екран, докато не се появи първият агент (или клик) – после Electron връща нормалния размер
 const strip = PARAMS.strip ? new Strip(model, ui) : null;
-// телефонът в изправено положение: офисът горе в естествения си размер, под него – списък на сесиите
-const phoneList = PARAMS.lan && !strip ? new Strip(model, ui, { list: true }) : null;
+// телефонът в изправено положение (и демото в интернет): офисът горе в естествения си размер, под него – списък на сесиите
+const phoneList = (PARAMS.lan || PARAMS.web) && !strip ? new Strip(model, ui, { list: true }) : null;
 const morning = PARAMS.wait && !strip ? new Morning(office, () => { lastSpecKey = ''; window.pixelOffice?.action('wake'); resize(); }) : null;
 window.pixelOffice?.onWake?.(() => morning?.wake());
 
@@ -116,10 +116,11 @@ const fake = parseFakeTime(PARAMS.time);
 const t0 = Date.now();
 // ---------------------------------------------------------------- времето навън (сървър или ?weather=)
 let weatherMsg = null;
-const fakeWx = PARAMS.weather ? fakeNow(PARAMS.weather) : null;
+let fakeWx = PARAMS.weather ? fakeNow(PARAMS.weather) : null;
 const currentWx = () => wxFrom(fakeWx || weatherMsg?.now);
 function onWeather(m) { weatherMsg = m; office.weatherMsg = m; }
 shop.onWeather = onWeather;
+shop.onFakeWeather = (kind) => { fakeWx = fakeNow(kind); }; // демото: копчетата в „Времето“
 
 // часът е на избрания град (началната настройка / магазин → „Времето“); ?time= е фалшив час и не се мести
 function nowDate() {
@@ -180,7 +181,8 @@ window.pixelOffice?.onVisible?.((v) => {
 
 // ---------------------------------------------------------------- PNG override (по желание)
 // Сървърът връща списък на файловете в public/sprites, за да не правим заявки към липсващи файлове.
-fetch('api/sprites').then((r) => (r.ok ? r.json() : [])).then(async (files) => {
+// Демото в интернет няма сървър – там всичко е процедурно.
+(PARAMS.web ? Promise.resolve([]) : fetch('api/sprites').then((r) => (r.ok ? r.json() : []))).then(async (files) => {
   const has = (f) => files.includes(f);
   const img = (f) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = `sprites/${f}`; });
   const json = (f) => fetch(`sprites/${f}`).then((r) => r.json());
