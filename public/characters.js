@@ -7,6 +7,9 @@ import { R, clamp } from './util.js';
 import { drawText } from './pixelfont.js';
 import { prefs } from './prefs.js';
 
+// дишане: редовете над този (глава, рамене, гръден кош) се вдигат с 1 px
+const BREATH_ROW = 19;
+
 const frameAt = (t, ms, n = 2) => Math.floor(t / ms) % n;
 
 /** Поза за седнал герой според състоянието и колко време е в него (lt). */
@@ -227,11 +230,25 @@ export class Actor {
     if (this.alpha < 1) ctx.globalAlpha = this.alpha;
     const grey = this.agent.crashed && !this.agent.crashSeen; // сесията прекъсна насред работа
     if (grey) { ctx.save(); ctx.filter = 'grayscale(1) brightness(0.75)'; }
+    // дишане: глава и тяло се вдигат с 1 px (кръстът се „разтяга“ с един ред) – задържане, не синус; ръцете (front) стоят
+    const b = layer === 'body' && this.mode !== 'walk' && this.breath(now, pose);
+    const blit = (dx) => {
+      if (!b) { ctx.drawImage(img, dx, y); return; }
+      ctx.drawImage(img, 0, BREATH_ROW, FW, FH - BREATH_ROW, dx, y + BREATH_ROW, FW, FH - BREATH_ROW);
+      ctx.drawImage(img, 0, 0, FW, BREATH_ROW + 1, dx, y - 1, FW, BREATH_ROW + 1);
+    };
     if (this.flip) {
-      ctx.save(); ctx.translate(x + FW, y); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0); ctx.restore();
-    } else ctx.drawImage(img, x, y);
+      ctx.save(); ctx.translate(x + FW, 0); ctx.scale(-1, 1); blit(0); ctx.restore();
+    } else blit(x);
     if (grey) ctx.restore();
     if (this.alpha < 1) ctx.globalAlpha = 1;
+  }
+
+  /** Вдишване: ~1.1 s горе на всеки 3.4 s (по-бавно, когато дреме), фазата е различна за всеки. */
+  breath(now, pose) {
+    const per = pose.includes('oze') ? 5200 : 3400;
+    const t = (now + this.phase) % per;
+    return t > per * 0.44 && t < per * 0.77;
   }
 
   drawShadow(ctx) {
