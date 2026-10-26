@@ -4,14 +4,16 @@
 
 ### Your Claude Code agents, living in a tiny pixel-art office.
 
+**English** · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
+
 Every Claude Code session becomes a coworker at a desk – and so does every **Codex**, **Gemini CLI** and **OpenCode** session. **Copilot CLI, Cursor or any script** can walk in too through a small local API ([docs/api.md](docs/api.md)). Sub-agents walk in through the door, pick up the task
 and sit down with their team. When someone needs you, the whole room lets you know.
 
-[**▶ Watch the trailer**](docs/media/trailer.mp4) · [**⬇ Download for Windows**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [Desktop app](#desktop-widget-windows) · [How it works](#how-it-works)
+[**🕹 Try the live demo in your browser**](https://rezored.github.io/cubicle-crew/) · [**▶ Watch the trailer**](https://rezored.github.io/cubicle-crew/media/trailer.mp4) · [**⬇ Download**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [How it works](#how-it-works)
 
 [![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
 
-<a href="docs/media/trailer.mp4"><img src="docs/media/demo.gif" alt="Cubicle Crew in action" width="860"></a>
+<a href="https://rezored.github.io/cubicle-crew/"><img src="docs/media/demo.gif" alt="Cubicle Crew in action" width="860"></a>
 
 </div>
 
@@ -47,7 +49,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | 💥 **Crashed sessions** | If a Claude Code session closes in the middle of a tool (a crash, a killed terminal), its agent doesn't just walk out: it stays at the desk in grey with a "Session ended" bubble until you hover or click it. |
 | 🎨 **7 states** | `idle` · `thinking` · `typing` · `reading` · `running` · `delegating` · `waiting`. Each one has its own poses, monitor content and particles. |
 | 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. Up to three pets roam the lounge: cats with coat patterns and a dog (beagle, golden, corgi, husky, dachshund…) that likes to sit next to whoever is resting. Hover a pet to see its name; click it to rename it. |
-| 🌇 **Real sky** | The tall French windows follow the clock of your city (or your computer's clock): dawn, golden hour, night. Lamps, monitors and the neon sign glow after dark, and the ceiling lights come on in the evening. The switch next to the door turns them off, for colleagues who like working in a cave. |
+| 🌇 **Real sky** | The tall French windows follow the clock of your city (or your computer's clock): dawn, golden hour, night. After dark the room gets moody: lamps, monitors and the neon sign throw soft pools of pixel light, the corners go dark, and the ceiling lights come on in the evening. Everyone breathes, plants sway now and then, and every piece of furniture casts a shadow. The switch next to the door turns them off, for colleagues who like working in a cave. |
 | 🌧️ **Real weather** *(optional)* | Pick your city in the shop's **Weather** tab (or click the little weather station above the bookshelf) and the windows show the weather outside: clouds, rain running down the glass, snow on the ledge, fog, lightning. The room gets darker on grey days, and the station shows the temperature and the chance of rain. Data comes from [Open-Meteo](https://open-meteo.com) every 20 minutes; only the city's coordinates are sent. Until you pick a city, the app makes no requests to the internet at all. |
 | 🪙 **Coins & shop** | Active agents earn coins. Spend them on ~50 decor items: floors, walls, rugs, sofas, a throne for the lead, a neon sign, an aquarium, an arcade cabinet, more cats, a dog and its breeds, nine cat coat patterns. There are also 14 achievements. |
 | 🧍 **Your avatar** | Pick a man or a woman, the hairstyle, top (and skirt, trousers or dress for a woman), skin, hair colour and glasses of your own character: the first orchestrator in the office. Everyone else stays random (men and women, different hair, clothes, beards, skirts and dresses). |
@@ -86,7 +88,7 @@ The first time you open it, a short setup asks whether the office starts with a 
 
 Then start a Claude Code session anywhere. Its coworker walks in through the door.
 
-No sessions running? Try the built-in simulations:
+No sessions running? The same simulation runs online at **[rezored.github.io/cubicle-crew](https://rezored.github.io/cubicle-crew/)** (made-up agents, nothing is installed or read). Locally there are more:
 
 | URL | What you get |
 |---|---|

@@ -1,7 +1,7 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
+import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
@@ -748,7 +748,7 @@ export class Office {
       items.push({ key: p.y + POD.depthChair, fn: () => ctx.drawImage(img.back, p.x, p.y) });
       items.push({ key: p.y + POD.depthDesk, fn: () => this.drawPodFront(ctx, p, img, occupant.get(i), now) });
     });
-    for (const o of room.objects) items.push({ key: o.key, fn: () => ctx.drawImage(o.img, o.x, o.y) });
+    for (const o of room.objects) items.push({ key: o.key, fn: () => (o.sway ? drawSway(ctx, o, now) : ctx.drawImage(o.img, o.x, o.y)) });
     for (const a of this.actors.values()) {
       const k = a.depth(L);
       items.push({ key: k, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
@@ -850,15 +850,22 @@ export class Office {
       if (st === 'waiting') {
         const on = Math.floor(now / 320) % 2 === 0;
         glow(ctx, bx, by + 4, 30, STATES.waiting.color, on ? 0.55 : 0.18);
-      } else if (a) glow(ctx, bx, by + 6, 20, '#ffcf7a', 0.06 + 0.34 * night);
+      } else if (a) {
+        glow(ctx, bx, by + 6, 20, '#ffcf7a', 0.06 + 0.34 * night);
+        glowE(ctx, bx + 8, by + 10, 24, 8, '#ffcf7a', 0.3 * night); // петно светлина по бюрото
+      }
     }
     const lo = L.lounge;
-    if (prefs.lamp) glow(ctx, room.lampGlow.x, room.lampGlow.y, 34, '#ffd890', 0.05 + 0.38 * night);
+    if (prefs.lamp) {
+      glow(ctx, room.lampGlow.x, room.lampGlow.y, 34, '#ffd890', 0.05 + 0.38 * night);
+      glowE(ctx, room.lampGlow.x, lo.floorLamp.base - 1, 40, 13, '#ffd890', 0.32 * night); // кръг светлина на пода
+    }
     // сезонната украса свети нощем: лицето на тиквата, лампичките на елхата
     const se = room.season;
     if (se?.style === 'pumpkins') glow(ctx, se.x + 9, se.base - 7, 14, '#ffb040', (0.08 + 0.4 * night) * (0.85 + 0.15 * Math.sin(now / 160)));
     else if (se?.style === 'tree') glow(ctx, se.x + 15, se.base - 17, 18, Math.floor(now / 700) % 2 ? '#ffd860' : '#ff8a8a', 0.06 + 0.32 * night);
-    if (room.neon && prefs.lamp) glow(ctx, room.neon.x, room.neon.y, 18, room.neon.c, (0.25 + 0.35 * night) * (0.9 + 0.1 * Math.sin(now / 130)));
+    // неонът от време на време премигва за миг (както истинските)
+    if (room.neon && prefs.lamp) glow(ctx, room.neon.x, room.neon.y, 18, room.neon.c, (0.25 + 0.35 * night) * (0.9 + 0.1 * Math.sin(now / 130)) * neonFlicker(now));
     if (room.aquarium) glow(ctx, room.aquarium.x + 14, room.aquarium.y + 12, 22, '#4ab8f0', 0.08 + 0.3 * night);
     if (room.arcade) glow(ctx, room.arcade.x + 9, room.arcade.y + 12, 16, '#a06ae0', 0.1 + 0.3 * night);
     // мелачката свети в гърлото, докато дъвче (chewAt е зададен от drawPaperStack)
@@ -934,4 +941,21 @@ export class Office {
       return { label: { x: p.x + POD.label.x, y: p.y + POD.label.y }, bubble: { x: a.x, y: a.y - 32 }, seated: false };
     return { label: { x: a.x, y: a.y + 3 }, bubble: { x: a.x, y: a.y - 32 }, seated: false };
   }
+}
+
+/** Неонът: ~на всеки 7 s две бързи премигвания (детерминистично по времето). */
+function neonFlicker(now) {
+  const t = now % 7300;
+  return t < 60 || (t > 140 && t < 190) ? 0.35 : 1;
+}
+
+/** Растение: на всеки 9–15 s върхът (горните ~40%) се полюшва 1 px за около секунда, всяко по свое време. */
+const SWAY = [1, 1, 0, -1, -1, 0, 1, 0];
+function drawSway(ctx, o, now) {
+  const per = 9000 + (o.x * 131) % 6000, t = (now + o.x * 977) % per;
+  const i = Math.floor(t / 160), off = i < SWAY.length && !prefs.focus ? SWAY[i] : 0;
+  if (!off) { ctx.drawImage(o.img, o.x, o.y); return; }
+  const h = o.img.height, w = o.img.width, cut = Math.round(h * 0.4);
+  ctx.drawImage(o.img, 0, cut, w, h - cut, o.x, o.y + cut, w, h - cut);
+  ctx.drawImage(o.img, 0, 0, w, cut, o.x + off, o.y, w, cut);
 }

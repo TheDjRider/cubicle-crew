@@ -115,6 +115,7 @@
     background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 3px; padding: 2px 9px 3px; box-shadow: 2px 2px 0 rgba(0,0,0,.3);
     font-size: 12px; line-height: 15px; text-align: center; cursor: pointer; transition: opacity .6s; }
   #wait b { display: block; color: #ffe27a; }
+  #wait b i { font-style: normal; font-weight: normal; color: #9ad0ff; margin-left: 4px; }
   /* с много намерени агенти текстът минава на два реда (прозорецът е 300 px) */
   #wait span { display: block; color: var(--ui-text); }
   #morning.gone, #wait.gone { opacity: 0; pointer-events: none; }
@@ -189,6 +190,7 @@
   .shop-panel .weather h3:first-child { margin-top: 0; }
   .shop-panel .weather .cur { margin: 0 0 10px; }
   .shop-panel .weather .find { display: flex; gap: 6px; margin-bottom: 8px; }
+  .shop-panel .wxdemo { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .shop-panel .weather input { flex: 1; font: inherit; color: var(--ui-text); background: #0f0c16; border: 1px solid #3a3452; border-radius: 3px; padding: 3px 8px; }
   .shop-panel .weather .sw { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; color: var(--ui-dim); font-size: 12px; }
   .shop-panel .weather .hint { margin: 12px 0 0; font-size: 12px; color: var(--ui-dim); }
@@ -450,6 +452,24 @@
   #note { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 36; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 5px 12px;
     background: var(--ui-bg); border: 1px solid #5a5278; border-radius: 3px; box-shadow: 2px 2px 0 rgba(0,0,0,.35); font-size: 12px; pointer-events: none; }
   body.strip #note { bottom: 4px; }
+  /* демото в интернет (?web / GitHub Pages): какво е това + откъде се взима приложението */
+  #webbar { position: fixed; left: 12px; right: 12px; top: 8px; width: fit-content; margin: 0 auto; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 6px 10px; box-sizing: border-box; padding: 6px 10px 6px 14px; background: var(--ui-bg); border: 1px solid #5a5278;
+    border-radius: 3px; box-shadow: 2px 2px 0 rgba(0,0,0,.35); font-size: 12px; }
+  #webbar a { color: #1d1626; background: #e0c24a; border-radius: 3px; padding: 2px 10px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  #webbar a.star { color: var(--ui-text); background: #2a2440; border: 1px solid #3a3452; font-weight: 400; }
+  #webbar a:hover { filter: brightness(1.12); }
+  #webbar .or { color: var(--ui-dim); }
+  #webbar code { font: 12px var(--mono); color: #ffe27a; user-select: all; white-space: nowrap; }
+  #webbar .x { font: inherit; color: var(--ui-dim); background: none; border: 0; cursor: pointer; padding: 0 2px; }
+  #webbar.small { left: auto; right: 8px; padding: 4px; }
+  body.web #toast { top: 52px; }
+  body.portrait #webbar:not(.small) { top: auto; bottom: 84px; padding: 10px 12px; } /* изправен телефон: в празното място под списъка */
+  body.portrait #webbar .txt { display: block; width: 100%; text-align: center; }
+  #webbar.small > :not(.get) { display: none; }
+  body.shopping #webbar, body.setting-up #webbar { display: none; }
+  @media (max-width: 759px) { #webbar .or, #webbar code { display: none; } }
+  @media (max-width: 479px) { #webbar .txt { display: none; } }
   #strip .row { cursor: pointer; }
   /* тънка лента (?strip): по един ред на сесия вместо офиса */
   body.strip #stage, body.strip #hud, body.strip #legend, body.strip #empty, body.strip #tooltip, body.strip #card, body.strip #toast { display: none !important; }
@@ -488,17 +508,17 @@
   /* изгледът за телефон: само за гледане */
   body.lan #prompt, body.lan #hud .shopbtn, body.lan #hud .help, body.lan #hud .statsbtn, body.lan #hud .snd { display: none; }
   body.lan #hud .tok { pointer-events: none; }
-  /* изправен телефон: списък на сесиите под офиса, без легенда (редовете казват състоянието с думи) */
+  /* изправен телефон (изгледът за телефон и демото в интернет): списък на сесиите под офиса, без легенда (редовете казват състоянието с думи) */
   #strip.list { display: none; }
-  body.lan.portrait #strip.list { display: flex; top: calc(var(--office-h, 0px) + 6px); bottom: auto; gap: 4px; padding: 0 8px; background: none; border-top: 0;
+  body.portrait #strip.list { display: flex; top: calc(var(--office-h, 0px) + 6px); bottom: auto; gap: 4px; padding: 0 8px; background: none; border-top: 0;
     -webkit-app-region: no-drag; }
-  body.lan.portrait #strip.list .row { cursor: default; padding: 7px 10px; font-size: 14px; line-height: 18px; grid-template-columns: 11px minmax(0, 1fr) auto; }
-  body.lan.portrait #strip.list .row i { width: 11px; height: 11px; }
-  body.lan.portrait #strip.list .row .what { grid-column: 2 / 4; grid-row: 2; font-size: 12px; }
-  body.lan.portrait #strip.list .row .time { grid-column: 3; grid-row: 1; }
-  body.lan.portrait #strip.list .none { font-size: 13px; }
-  body.lan.portrait #legend { display: none; }
-  body.lan.portrait #hud { max-width: calc(100vw - 16px); }
+  body.portrait #strip.list .row { cursor: default; padding: 7px 10px; font-size: 14px; line-height: 18px; grid-template-columns: 11px minmax(0, 1fr) auto; }
+  body.portrait #strip.list .row i { width: 11px; height: 11px; }
+  body.portrait #strip.list .row .what { grid-column: 2 / 4; grid-row: 2; font-size: 12px; }
+  body.portrait #strip.list .row .time { grid-column: 3; grid-row: 1; }
+  body.portrait #strip.list .none { font-size: 13px; }
+  body.portrait #legend { display: none; }
+  body.portrait #hud { max-width: calc(100vw - 16px); }
   body.lan #legend em { display: none; } /* „L – легенда · Esc“ – на телефона няма клавиатура */
   #lanlogin { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
     padding: 24px; background: #0e0c14; text-align: center; }

@@ -1,0 +1,13 @@
+{
+  "repo": "rezored/cubicle-crew",
+  "timezone": "Europe/Sofia",
+  "default_schedule_time": "10:00",
+  "platforms": {
+    "linkedin": { "enabled": true,  "mode": "schedule", "as": "profile", "language": "en" },
+    "x":        { "enabled": true,  "mode": "draft",    "language": "en" },
+    "facebook": { "enabled": true,  "mode": "draft",    "as": "profile", "audience": "Public", "language": "bg" },
+    "reddit":   { "enabled": true,  "mode": "draft",    "subreddits": ["ClaudeAI"], "language": "en" }
+  },
+  "media_dir": "docs/media",
+  "notes": "mode: draft = fill and stop; schedule = use platform scheduling after approval. Facebook profile and Reddit can only be draft."
+}

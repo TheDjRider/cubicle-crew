@@ -379,7 +379,15 @@ export class Shop {
   renderWeather() {
     const W = T.weather, m = this.weather;
     const sec = el('section', 'weather', this.body);
-    if (PARAMS.demo) { el('p', 'hint', sec).textContent = W.demo; return; }
+    if (PARAMS.demo) { // демото: без град, времето се избира с копче
+      el('p', 'hint', sec).textContent = W.demo;
+      const row = el('div', 'wxdemo', sec);
+      for (const k of Object.keys(W.kinds)) {
+        const b = el('button', null, row); b.type = 'button'; b.textContent = W.kinds[k];
+        b.addEventListener('click', () => this.onFakeWeather?.(k));
+      }
+      return;
+    }
     el('h3', null, sec, W.city);
     const cur = el('p', 'cur', sec);
     if (m?.city) {

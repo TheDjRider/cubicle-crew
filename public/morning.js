@@ -17,6 +17,7 @@ const SCRIPT = [
 const CYCLE = SCRIPT[SCRIPT.length - 1][0];
 const FRAME_MS = 100;  // ~10 fps стигат за пикселна анимация, а прозорецът виси така с часове
 const MIN_W = 120, MIN_H = 68;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export class Morning {
   constructor(office, onWake) {
@@ -147,7 +148,7 @@ export class Morning {
       ctx.fillStyle = g; ctx.fillRect(dx - 20, dTop - 34, 66, 52);
       ctx.globalCompositeOperation = 'source-over';
     }
-    this.updateText(date);
+    this.updateText(date, weather);
   }
 
   /** Текуща поза от сценария (махането и чесането сменят два кадъра). */
@@ -253,10 +254,14 @@ export class Morning {
     }
   }
 
-  updateText(date) {
+  updateText(date, wx) {
     const h = date.getHours();
     const hello = h >= 4 && h < 12 ? T.wait.morning : h >= 12 && h < 18 ? T.wait.day : T.wait.evening;
-    const html = `<b>${hello}</b><span>${T.wait.msg}</span>`;
+    // времето до поздрава – само с избран град (иначе wx е null); градът и валежите са в подсказката
+    const W = T.weather, city = this.office.weatherMsg?.city?.name;
+    const now = wx ? [wx.temp != null ? `${Math.round(wx.temp)}°` : '', W.kinds[wx.kind]].filter(Boolean).join(' ') : '';
+    const tip = [city, now, wx?.pop != null ? W.pop(Math.round(wx.pop)) : ''].filter(Boolean).join(' · ');
+    const html = `<b>${hello}${now ? ` <i title="${esc(tip)}">${esc(now)}</i>` : ''}</b><span>${T.wait.msg}</span>`;
     if (this.box._html !== html) { this.box.innerHTML = html; this.box._html = html; }
   }
 }

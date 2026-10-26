@@ -84,7 +84,7 @@ export const ITEMS = [
   I('floor.checker', 'floor', 250, 'Шахматни плочки', { style: 'checker', a: '#cfc8b8', b: '#8e8678', seam: '#6e685c' }),
   I('floor.concrete', 'floor', 300, 'Бетон (лофт)', { style: 'concrete', base: '#8a8c90', dk: '#7c7e82', hi: '#9a9ca0', seam: '#6a6c70' }),
   // килими под екипите (един купен килим става и за двата екипа)
-  I('rug.plain.blue', 'rug', 0, 'Син', { style: 'plain', c: ['#3a3e5a', '#4a5070', '#525a7c'] }),
+  I('rug.plain.blue', 'rug', 0, 'Син', { style: 'plain', c: ['#323a62', '#425080', '#4a578a'] }),
   I('rug.plain.green', 'rug', 0, 'Зелен', { style: 'plain', c: ['#2e4a42', '#3c5e52', '#466a5c'] }),
   I('rug.plain.plum', 'rug', 40, 'Сливов', { style: 'plain', c: ['#4a2e4a', '#5e3c5e', '#6a466a'] }),
   I('rug.stripes', 'rug', 80, 'На райета', { style: 'stripes', c: ['#2e3a5a', '#c8a050', '#a8484a', '#d8d4cc'] }),

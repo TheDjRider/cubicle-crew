@@ -2,7 +2,7 @@
 // Статичното се рисува ВЕДНЪЖ в офскрийн канвас (bg) + по едно изображение за всяка мебел.
 // Всяка мебел минава през prop(name, ...) – ако има sprites/tiles.png с това име, ползва се то.
 import { CFG } from './config.js';
-import { ENV, mix, shade, rgba, ACCENTS, MUGS, SYNTAX } from './palette.js';
+import { ENV, mix, shade as darken, rgba, hex2rgb, ACCENTS, MUGS, SYNTAX } from './palette.js';
 import { R, rng, makeCanvas, pixLine, hashStr } from './util.js';
 import { POD } from './layout.js';
 import { drawText, textWidth, compactNum } from './pixelfont.js';
@@ -14,14 +14,18 @@ import { drawWindowWeather, drawWeatherPlaque, plaqueWidth } from './weather.js'
 // Обзавеждане (decor): предметите от catalog.js -> цветове/стилове за рисуване
 // =====================================================================
 const DEFAULT_DECOR = resolveDecor({});
+/** По-тъмен тон с изместване на оттенъка към хладно лилаво (сенките в пикселарта не са просто по-черни). */
+const shade = (h, k) => mix(darken(h, k), '#2a1e4a', Math.max(0, 1 - k) * 0.3);
+/** По-светъл тон: към топло, не към чисто бяло. */
+const lighten = (h, k) => mix(h, '#fff0d8', k);
 /** Ключ за tileset: предметът по подразбиране ползва старото име ('sofa_back'), другите – 'sofa_back@sofa.chesterfield'. */
 const variant = (slot, it) => (!it || it.id === SLOTS[slot].def ? null : it.id);
 /** 3 тона от един цвят (ако предметът не ги дава изрично). */
 function tones(it) {
-  return { c: it.c, hi: it.hi || mix(it.c, '#ffffff', 0.2), dk: it.dk || shade(it.c, 0.66), dk2: it.dk2 || shade(it.c, 0.48) };
+  return { c: it.c, hi: it.hi || lighten(it.c, 0.2), dk: it.dk || shade(it.c, 0.66), dk2: it.dk2 || shade(it.c, 0.48) };
 }
 function wallTones(it) {
-  return { wall: it.wall, stripe: it.stripe || mix(it.wall, '#ffffff', 0.05), dark: it.dark || shade(it.wall, 0.68), ceiling: it.ceiling || shade(it.wall, 0.5) };
+  return { wall: it.wall, stripe: it.stripe || lighten(it.wall, 0.05), dark: it.dark || shade(it.wall, 0.68), ceiling: it.ceiling || shade(it.wall, 0.5) };
 }
 
 // =====================================================================
@@ -261,7 +265,25 @@ export function buildPod(variantSeed, lead = false, decor = DEFAULT_DECOR, team 
   drawKeyboard(fx);
   drawLamp(fx, lampColor);
   DESK_ITEMS[item](fx);
+  // до бюрото на пода: кошче вдясно (понякога със смачкана хартия) и/или раница вляво – да изглежда обитавано
+  // (отделни r за да не мести останалите случайни избори)
+  const rr = rng(variantSeed * 7 + 3);
+  if (rr() < 0.55) fx.drawImage(prop('bin', 6, 9, (c) => drawBin(c, rr() < 0.6)), 65, 41);
+  if (rr() < 0.35) fx.drawImage(prop('bag', 7, 9, (c) => drawBag(c, rr.pick(['#5a7ab0', '#b0504a', '#4a8a6a', '#8a6ab0', '#3a3a48']))), 0, 41);
   return { back, front, item, mugColor, lampColor };
+}
+function drawBin(ctx, paper) {
+  R(ctx, 'rgba(20,12,28,0.3)', 0, 8, 6, 1);
+  R(ctx, '#3a3a4a', 0, 1, 6, 7); R(ctx, '#6a6a7e', 1, 2, 4, 5); R(ctx, '#565668', 2, 2, 1, 5); R(ctx, '#565668', 4, 2, 1, 5);
+  R(ctx, '#8a8a9e', 0, 1, 6, 1);
+  if (paper) { R(ctx, '#f4f1e8', 1, 0, 3, 2); R(ctx, '#c9c2b0', 2, 1, 2, 1); }
+}
+function drawBag(ctx, c) {
+  const dk = shade(c, 0.7), hi = lighten(c, 0.2);
+  R(ctx, 'rgba(20,12,28,0.3)', 0, 8, 7, 1);
+  R(ctx, '#1d1626', 1, 1, 5, 8); R(ctx, '#1d1626', 0, 3, 7, 5);
+  R(ctx, c, 1, 2, 5, 6); R(ctx, hi, 2, 2, 3, 1); R(ctx, dk, 1, 6, 5, 2); R(ctx, dk, 2, 4, 3, 1);
+  R(ctx, '#1d1626', 2, 0, 3, 1);
 }
 
 /** Сезонна украса (catalog: group 'season'), 30x36, стъпва на долния ред. Светлините – в office.drawGlows (room.season). */
@@ -763,9 +785,16 @@ function drawRug(g, rug, it) {
   const [c0, c1, c2] = c;
   R(g, c0, rug.x, rug.y, rug.w, rug.h);
   R(g, c1, rug.x + 2, rug.y + 2, rug.w - 4, rug.h - 4);
-  R(g, c2, rug.x + 4, rug.y + 4, rug.w - 8, rug.h - 8);
-  g.fillStyle = c1;
-  for (let x = rug.x + 6; x < rug.x + rug.w - 6; x += 6) for (let y = rug.y + 6; y < rug.y + rug.h - 6; y += 6) if (((x + y) / 6) % 2 === 0) g.fillRect(x, y, 1, 1);
+  R(g, c2, rug.x + 5, rug.y + 5, rug.w - 10, rug.h - 10);
+  // тънка светла линия в бордюра и тъкана текстура в полето (редуващи се редове точки – без шум)
+  const ln = lighten(c1, 0.22), wv = shade(c2, 0.9);
+  R(g, ln, rug.x + 3, rug.y + 3, rug.w - 6, 1); R(g, ln, rug.x + 3, rug.y + rug.h - 4, rug.w - 6, 1);
+  R(g, ln, rug.x + 3, rug.y + 3, 1, rug.h - 6); R(g, ln, rug.x + rug.w - 4, rug.y + 3, 1, rug.h - 6);
+  g.fillStyle = wv;
+  for (let y = rug.y + 7; y < rug.y + rug.h - 7; y += 2) for (let x = rug.x + 7 + ((y - rug.y) % 4 ? 2 : 0); x < rug.x + rug.w - 7; x += 4) g.fillRect(x, y, 1, 1);
+  // ромбчета в ъглите на полето
+  g.fillStyle = ln;
+  for (const [qx, qy] of [[rug.x + 10, rug.y + 10], [rug.x + rug.w - 11, rug.y + 10], [rug.x + 10, rug.y + rug.h - 11], [rug.x + rug.w - 11, rug.y + rug.h - 11]]) { g.fillRect(qx, qy - 1, 1, 3); g.fillRect(qx - 1, qy, 3, 1); }
   fringe(g, rug);
 }
 function drawLoungeRug(g, lr, it, r) {
@@ -962,13 +991,9 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
       }
     }
   }
-  // сянка до стената и по ъглите
-  const ao = g.createLinearGradient(0, WH, 0, WH + 14);
-  ao.addColorStop(0, 'rgba(16,10,24,0.45)'); ao.addColorStop(1, 'rgba(16,10,24,0)');
-  g.fillStyle = ao; g.fillRect(0, WH, W, 14);
-  const vg = g.createLinearGradient(0, H - 30, 0, H);
-  vg.addColorStop(0, 'rgba(16,10,24,0)'); vg.addColorStop(1, 'rgba(16,10,24,0.25)');
-  g.fillStyle = vg; g.fillRect(0, H - 30, W, 30);
+  // сянка до стената и долу: на стъпала (пикселарт), не гладък градиент
+  [[2, 0.4], [3, 0.28], [4, 0.17], [5, 0.08]].reduce((y, [h, a]) => { R(g, `rgba(16,10,24,${a})`, 0, y, W, h); return y + h; }, WH);
+  [[8, 0.06], [8, 0.12], [8, 0.18], [6, 0.24]].reduce((y, [h, a]) => { R(g, `rgba(16,10,24,${a})`, 0, y, W, h); return y + h; }, H - 30);
 
   // ---------- килими ----------
   L.rugs.forEach((rug, ti) => {
@@ -978,14 +1003,9 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   drawLoungeRug(g, L.lounge.rug, decor['rug.lounge'], rng(seed + 202));
 
   // ---------- сенки на мебелите ----------
-  const sh = (x, y, w, h) => { g.fillStyle = ENV.shadow; g.fillRect(x + 1, y, w - 2, h); g.fillRect(x, y + 1, w, h - 2); };
-  for (const p of L.pods) { sh(p.x + 7, p.y + 49, 60, 4); sh(p.x + 16, p.y + 30, 22, 3); }
+  // бюрата и столовете тук, останалите мебели – при add() по-долу (мека елипса под всяка)
+  for (const p of L.pods) { floorShadow(g, p.x + 37, p.y + 46, 66, 8); floorShadow(g, p.x + 27, p.y + 28, 26, 6, 0.8); }
   const lo = L.lounge;
-  sh(lo.bookshelf.x - 1, lo.bookshelf.base - 2, lo.bookshelf.w + 3, 4);
-  sh(lo.counter.x - 1, lo.counter.base - 2, lo.counter.w + 3, 4);
-  sh(lo.cooler.x, lo.cooler.base - 2, lo.cooler.w + 2, 3);
-  sh(lo.sofa.x + 1, lo.sofa.base - 3, lo.sofa.w, 5);
-  sh(lo.table.x, lo.table.base - 1, lo.table.w + 2, 3);
 
   // ---------- стена ----------
   const wallTile = !variant('wall', decor.wall) && !variant('wainscot', decor.wainscot) && patternTile('wall');
@@ -1043,7 +1063,8 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
 
   // ---------- мебели като отделни обекти (сортират се по дълбочина) ----------
   const objects = [];
-  const add = (img, x, base, key = base) => objects.push({ img, x: Math.round(x), y: Math.round(base - img.height), key });
+  // sh = сянката на пода под предмета: { w, h, cx? } (cx – отместване на центъра от левия ръб), null = без сянка
+  const add = (img, x, base, key = base, sh = { w: img.width + 2, h: 5 }) => objects.push({ img, x: Math.round(x), y: Math.round(base - img.height), key, sh });
   const bs = lo.bookshelf;
   add(prop('bookshelf', bs.w, bs.h, (c) => drawBookshelf(c, bs.w, bs.h)), bs.x, bs.base);
   const ct = lo.counter;
@@ -1052,38 +1073,39 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   add(prop('cooler', cl.w, cl.h, (c) => drawCooler(c, cl.w, cl.h)), cl.x, cl.base);
   const pl = decor.plants, pv = variant('plants', pl);
   const bigPlant = () => prop('plant_big', 28, 36, (c) => drawPlant(c, 28, 36, true, pl.style), pv);
+  const PLANT_SH = { w: 18, h: 5 }, SMALL_SH = { w: 12, h: 4 };
   // аркадата заема мястото на голямото растение до диспенсъра (под неоновия надпис), аквариумът стои вдясно от дивана
   let aquarium = null, arcade = null;
   if (decor.arcade) {
     const ar = lo.arcade, img = prop('arcade', ARCADE.w, ARCADE.h, drawArcade);
     arcade = { x: Math.round(ar.x - ARCADE.w / 2), y: ar.base - ARCADE.h, key: ar.base };
-    add(img, arcade.x, ar.base);
-  } else add(bigPlant(), lo.tallPlant.x - 14, lo.tallPlant.base);
+    add(img, arcade.x, ar.base, ar.base, { w: 20, h: 5 });
+  } else add(bigPlant(), lo.tallPlant.x - 14, lo.tallPlant.base, lo.tallPlant.base, PLANT_SH);
   if (decor.aquarium) {
     const aq = lo.aquarium, img = prop('aquarium', AQUA.w, AQUA.h, drawAquarium);
     aquarium = { x: Math.round(aq.x - AQUA.w / 2), y: aq.base - AQUA.h, key: aq.base };
-    add(img, aquarium.x, aq.base);
+    add(img, aquarium.x, aq.base, aq.base, { w: 30, h: 5 });
   }
-  add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base);
+  add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base, lo.cornerPlant.base, PLANT_SH);
   const sf = lo.sofa, so = decor.sofa, sv = variant('sofa', so);
-  add(prop('sofa_back', sf.w, 18, (c) => drawSofaBack(c, sf.w, 18, so), sv), sf.x, sf.base - 14, sf.base - 14);
-  add(prop('sofa_front', sf.w, 20, (c) => drawSofaFront(c, sf.w, 20, so), sv), sf.x, sf.base, sf.base + 1);
+  add(prop('sofa_back', sf.w, 18, (c) => drawSofaBack(c, sf.w, 18, so), sv), sf.x, sf.base - 14, sf.base - 14, null);
+  add(prop('sofa_front', sf.w, 20, (c) => drawSofaFront(c, sf.w, 20, so), sv), sf.x, sf.base, sf.base + 1, { w: sf.w + 4, h: 7 });
   if (so.style !== 'beanbags') add(prop('table', lo.table.w, lo.table.h, (c) => drawTable(c, lo.table.w, lo.table.h)), lo.table.x, lo.table.base);
   let lampGlow;
   if (decor.lamp.style === 'arc') {
-    add(prop('floor_lamp', ARC_LAMP.w, ARC_LAMP.h, (c) => drawArcLamp(c, ARC_LAMP.w, ARC_LAMP.h), decor.lamp.id), lo.floorLamp.x, lo.floorLamp.base);
+    add(prop('floor_lamp', ARC_LAMP.w, ARC_LAMP.h, (c) => drawArcLamp(c, ARC_LAMP.w, ARC_LAMP.h), decor.lamp.id), lo.floorLamp.x, lo.floorLamp.base, lo.floorLamp.base, { w: 12, h: 4, cx: 6 });
     lampGlow = { x: lo.floorLamp.x + ARC_LAMP.bulb[0], y: lo.floorLamp.base - ARC_LAMP.h + ARC_LAMP.bulb[1] };
   } else {
-    add(prop('floor_lamp', 11, 36, (c) => drawFloorLamp(c, 11, 36)), lo.floorLamp.x, lo.floorLamp.base);
+    add(prop('floor_lamp', 11, 36, (c) => drawFloorLamp(c, 11, 36)), lo.floorLamp.x, lo.floorLamp.base, lo.floorLamp.base, { w: 12, h: 4 });
     lampGlow = { x: lo.floorLamp.x + 5, y: lo.floorLamp.base - 30 };
   }
   // растения около бюрата, ако има място
   const smallPlant = prop('plant_small', 16, 20, (c) => drawPlant(c, 16, 20, false, pl.style), pv);
   // до вратата: сезонната украса (ако е сложена), иначе малко растение – мястото се вижда при всякакъв размер
   let season = null;
-  if (decor.season) { const sx = L.door.x + L.door.w + 1; add(seasonImg(decor.season), sx, CFG.WALL_H + 6); season = { x: sx, base: CFG.WALL_H + 6, style: decor.season.style }; }
-  else add(smallPlant, L.door.x + L.door.w + 1, CFG.WALL_H + 4);
-  if (H - Math.max(...L.rugs.map((r) => r.y + r.h)) > 26) add(bigPlant(), 4, H - 6);
+  if (decor.season) { const sx = L.door.x + L.door.w + 1; add(seasonImg(decor.season), sx, CFG.WALL_H + 6, CFG.WALL_H + 6, { w: 26, h: 5 }); season = { x: sx, base: CFG.WALL_H + 6, style: decor.season.style }; }
+  else add(smallPlant, L.door.x + L.door.w + 1, CFG.WALL_H + 4, CFG.WALL_H + 4, SMALL_SH);
+  if (H - Math.max(...L.rugs.map((r) => r.y + r.h)) > 26) add(bigPlant(), 4, H - 6, H - 6, PLANT_SH);
 
   // между бюрата на двамата оркестратори: шкаф с принтер, мелачка и растение
   let shredder = null;
@@ -1093,10 +1115,18 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
     const gw = L.teams[0]?.gw || CFG.POD_W, mx = p.x + gw;
     // центрирана група в средната клетка; при тясно разположение (телефон, gw < 82) мелачката отпада
     const hasShred = gw >= 82, x0 = mx + Math.floor((gw - (hasShred ? 80 : 58)) / 2);
-    add(prop('printer', 26, 30, (c) => drawPrinter(c, 26, 30)), x0, p.y + 48);
-    if (hasShred) add(prop('shredder', SHREDDER.w, SHREDDER.h, (c) => drawShredder(c, SHREDDER.w, SHREDDER.h)), x0 + 30, p.y + 48);
-    add(bigPlant(), x0 + (hasShred ? 52 : 30), p.y + 48);
+    add(prop('printer', 26, 30, (c) => drawPrinter(c, 26, 30)), x0, p.y + 48, p.y + 48, { w: 28, h: 6 });
+    if (hasShred) add(prop('shredder', SHREDDER.w, SHREDDER.h, (c) => drawShredder(c, SHREDDER.w, SHREDDER.h)), x0 + 30, p.y + 48, p.y + 48, { w: 20, h: 6 });
+    add(bigPlant(), x0 + (hasShred ? 52 : 30), p.y + 48, p.y + 48, PLANT_SH);
     shredder = hasShred ? { x: x0 + 30, base: p.y + 48, chewAt: -60000 } : null;
+  }
+
+  // сенките на мебелите – на пода под тях (в bg, мебелите се рисуват отгоре)
+  for (const o of objects) {
+    o.sway = o.sh === PLANT_SH || o.sh === SMALL_SH; // растенията се полюшват (office.render)
+    if (!o.sh) continue;
+    const base = o.y + o.img.height, cx = o.x + (o.sh.cx ?? o.img.width / 2);
+    floorShadow(g, cx, base - o.sh.h + 2, o.sh.w, o.sh.h);
   }
 
   // ---------- небе: звезди, облаци, силует на града ----------
@@ -1345,9 +1375,10 @@ export function drawTint(ctx, room, tod, lit = 0) {
   if (tod.tint === '#ffffff') return;
   ctx.save();
   ctx.globalCompositeOperation = 'multiply';
-  const k = lit * nightK(tod) * 0.72;
+  // лампите не изсветляват всичко до бяло: стаята остава вечерна, светлите петна идват от lightGlows
+  const k = lit * nightK(tod) * 0.5;
   if (k > 0.01) {
-    ctx.fillStyle = mix(tod.tint, '#fff4e2', k);
+    ctx.fillStyle = mix(tod.tint, '#f4dcc4', k);
     ctx.beginPath(); ctx.rect(0, 0, room.W, room.H);
     for (const w of room.windows) ctx.rect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
     ctx.fill('evenodd');
@@ -1355,6 +1386,30 @@ export function drawTint(ctx, room, tod, lit = 0) {
     for (const w of room.windows) ctx.fillRect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
   } else { ctx.fillStyle = tod.tint; ctx.fillRect(0, 0, room.W, room.H); }
   ctx.restore();
+  // ъглите потъмняват вечер (по-силно без лампите) – стъпаловидна винетка
+  const n = nightK(tod);
+  if (n > 0.02) {
+    const prev = ctx.globalAlpha;
+    ctx.globalAlpha = n * (0.55 + 0.45 * (1 - lit));
+    ctx.drawImage(vignette(room.W, room.H), 0, 0);
+    ctx.globalAlpha = prev;
+  }
+}
+let vigCache = null;
+/** Винетка W x H: тъмни ъгли на 4 стъпала с дитеринг. */
+function vignette(W, H) {
+  if (vigCache && vigCache.width === W && vigCache.height === H) return vigCache;
+  const c = makeCanvas(W, H), g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const dx = (x - W / 2) / (W / 2), dy = (y - H * 0.55) / (H * 0.6), t = Math.sqrt(dx * dx * 0.8 + dy * dy);
+    const f = Math.min(1, Math.max(0, (t - 0.55) / 0.65)) * 0.62;
+    const q = stepAt(f, x, y);
+    if (q <= 0) continue;
+    const i = (y * W + x) * 4;
+    d[i] = 10; d[i + 1] = 6; d[i + 2] = 22; d[i + 3] = Math.round(q * 255);
+  }
+  g.putImageData(img, 0, 0);
+  return (vigCache = c);
 }
 
 /** Колко „нощ“ е за осветлението (вечер вече пали, през деня – нищо). */
@@ -1381,10 +1436,17 @@ export function drawLightFixtures(ctx, room, on, lampOn = true) {
 export function lightGlows(ctx, room, tod, lit, now) {
   const n = nightK(tod);
   if (lit > 0.01 && n > 0.01) {
+    const a = lit * n;
     for (const x of room.ceil || []) {
       R(ctx, rgba('#fff2d6', 0.9 * lit), x - 8, 1, 16, 1);
-      glow(ctx, x, 4, 24, '#fff0d0', 0.32 * lit * n);
-      glow(ctx, x, CFG.WALL_H + 46, 80, '#fff0d4', 0.07 * lit * n);
+      glow(ctx, x, 4, 24, '#fff0d0', 0.32 * a);
+      // конус по стената (2 стъпала) и петно на пода под тялото
+      for (let y = 4; y < CFG.WALL_H; y++) {
+        const hw = Math.round(7 + (y - 4) * 0.5);
+        R(ctx, rgba('#ffe8c4', 0.07 * a), x - hw, y, hw * 2, 1);
+        R(ctx, rgba('#ffe8c4', 0.06 * a), x - Math.round(hw * 0.55), y, Math.round(hw * 0.55) * 2, 1);
+      }
+      glowE(ctx, x, CFG.WALL_H + 26, 62, 22, '#ffe2b8', 0.22 * a);
     }
   }
   // светодиодът на ключа свети, докато лампите са изгасени – да се намира на тъмно
@@ -1392,15 +1454,62 @@ export function lightGlows(ctx, room, tod, lit, now) {
   if (s && lit < 0.5 && n > 0.05) glow(ctx, s.x + 2, s.y + 5, 3, '#ff9a3a', 0.6 * n * (0.85 + 0.15 * Math.sin(now / 400)));
 }
 
-/** Мека кръгла светлина (adds light). */
-export function glow(ctx, x, y, r, color, a) {
+// ---- светлина по пикселната мрежа: 4 стъпала с дитеринг (Bayer 4x4) вместо гладък преход ----
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+const LEVELS = 4;
+/** Стъпаловидна стойност 0..1: чисти ленти, дитеринг само в тясна ивица около границата между две стъпала. */
+function stepAt(f, x, y) {
+  const v = f * LEVELS, b = Math.floor(v), fr = v - b;
+  const up = fr > 0.62 ? 1 : fr < 0.38 ? 0 : (fr - 0.38) / 0.24 > BAYER[(y & 3) * 4 + (x & 3)] ? 1 : 0;
+  return (b + up) / LEVELS;
+}
+const glowCache = new Map();
+/** Спрайт на светлината (кръг или елипса rx x ry) в даден цвят; алфата е стъпаловидна. Кешира се. */
+function glowSprite(rx, ry, color) {
+  const key = `${rx}|${ry}|${color}`;
+  let c = glowCache.get(key);
+  if (c) return c;
+  if (glowCache.size > 400) glowCache.clear();
+  const w = rx * 2, h = ry * 2;
+  c = makeCanvas(w, h);
+  const g = c.getContext('2d'), img = g.createImageData(w, h), d = img.data;
+  const [cr, cg, cb] = hex2rgb(color);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = (x + 0.5 - rx) / rx, dy = (y + 0.5 - ry) / ry, t = Math.sqrt(dx * dx + dy * dy);
+    if (t >= 1) continue;
+    const f = t < 0.45 ? 1 - (t / 0.45) * 0.55 : 0.45 * (1 - (t - 0.45) / 0.55); // същият профил като старата радиална светлина
+    const q = stepAt(f, x, y);
+    if (q <= 0) continue;
+    const i = (y * w + x) * 4;
+    d[i] = cr; d[i + 1] = cg; d[i + 2] = cb; d[i + 3] = Math.round(q * 255);
+  }
+  g.putImageData(img, 0, 0);
+  glowCache.set(key, c);
+  return c;
+}
+/** Мека кръгла светлина (adds light) – на стъпала, по пикселите на сцената. */
+export function glow(ctx, x, y, r, color, a) { glowE(ctx, x, y, r, r, color, a); }
+/** Същата светлина като елипса – петно по пода/бюрото (rx > ry заради перспективата). */
+export function glowE(ctx, x, y, rx, ry, color, a) {
   if (a <= 0.005) return;
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, rgba(color, a));
-  g.addColorStop(0.45, rgba(color, a * 0.45));
-  g.addColorStop(1, rgba(color, 0));
-  ctx.fillStyle = g;
-  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  rx = Math.max(1, Math.round(rx)); ry = Math.max(1, Math.round(ry));
+  const prev = ctx.globalAlpha;
+  ctx.globalAlpha = prev * Math.min(1, a);
+  ctx.drawImage(glowSprite(rx, ry, color), Math.round(x - rx), Math.round(y - ry));
+  ctx.globalAlpha = prev;
+}
+
+/** Мека сянка на пода: елипса в 2 нюанса (по-тъмна сърцевина), центрирана в cx, горният ѝ ръб е y. */
+export function floorShadow(g, cx, y, w, h, k = 1) {
+  const ell = (rx, ry, col) => {
+    g.fillStyle = col;
+    for (let j = 0; j < ry * 2; j++) {
+      const t = (j + 0.5 - ry) / ry, hw = Math.round(rx * Math.sqrt(Math.max(0, 1 - t * t)));
+      if (hw > 0) g.fillRect(Math.round(cx - hw), Math.round(y + (h / 2 - ry)) + j, hw * 2, 1);
+    }
+  };
+  ell(w / 2, h / 2, `rgba(20,12,28,${0.2 * k})`);
+  ell(Math.max(1, w / 2 - 3), Math.max(1, h / 2 - 1), `rgba(20,12,28,${0.22 * k})`);
 }
 
 export { ACCENTS };
