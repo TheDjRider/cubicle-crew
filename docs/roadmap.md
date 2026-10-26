@@ -5,6 +5,8 @@ Ticked = done and merged.
 
 ## Now (no decision needed)
 - [x] Codex and OpenCode sessions (2.3.0)
+- [x] **OpenCode v2** – the new `session_message` / `session_v2` database (v2.1.x stopped writing the old tables), live busy/waiting/idle status, and idle sessions capped to the open `opencode` terminals (the DB has no "closed" flag)
+- [x] **Model name** on the card and tooltip (Claude, OpenCode, Codex when it reports one) and the **shredder** compaction beat (papers fly to the shredder; OpenCode's `compaction` row is detected directly)
 - [x] **Context gauge** – a stack of paper on every desk that grows with the agent's context window, turns
       yellow/red when it fills up, and goes into the bin when the conversation is compacted; numbers in the card
 - [x] **Gemini CLI** sessions (`~/.gemini/tmp/*/chats/*.jsonl`, v0.64+ format; the old whole-file `.json` isn't read)

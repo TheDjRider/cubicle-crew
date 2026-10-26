@@ -1,7 +1,7 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG } from './environment.js';
+import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
@@ -655,7 +655,8 @@ export class Office {
     }
     if (performance.now() - this.lights.at < 900 || boardMoving(this.board, performance.now())) return true; // лампите примигват, екранът се движи
     const d = this.room.doorOpen;
-    return (d > 0 && d < 1) || this.darts.flying.length > 0 || this.fx.list.some((p) => p.layer === 'top');
+    return (d > 0 && d < 1) || this.darts.flying.length > 0 || this.fx.list.some((p) => p.layer === 'top') ||
+      (this.room.shredder && performance.now() - this.room.shredder.chewAt < 4000); // мелачката дъвчи (пълни кадри и след частиците)
   }
 
   emitParticles(a, now, dt) {
@@ -755,6 +756,7 @@ export class Office {
     for (const c of this.pets) items.push({ key: c.y, fn: () => c.draw(ctx, now) });
     if (room.aquarium) items.push({ key: room.aquarium.key + 0.5, fn: () => drawAquariumFish(ctx, room.aquarium, now) });
     if (room.arcade) items.push({ key: room.arcade.key + 0.5, fn: () => drawArcadeScreen(ctx, room.arcade, now) });
+    if (room.shredder) items.push({ key: room.shredder.base + 0.5, fn: () => drawShredderChew(ctx, room.shredder, now) });
     items.forEach((it, i) => { it.i = i; });
     items.sort((a, b) => a.key - b.key || a.i - b.i);
     for (const it of items) it.fn();
@@ -784,7 +786,13 @@ export class Office {
     if (!(ag.ctx > 0)) return;
     const r = Math.min(1, ag.ctx / (ag.ctxMax || 200000));
     const x = p.x + 58, base = p.y + 36;
-    if (ag.compactedAt && ag.compactedAt !== who.paperFx) { who.paperFx = ag.compactedAt; if (!prefs.focus) this.fx.papers(x, base - 4); }
+    if (ag.compactedAt && ag.compactedAt !== who.paperFx) {
+      who.paperFx = ag.compactedAt;
+      if (!prefs.focus) {
+        const sh = this.room.shredder;
+        if (sh) { this.fx.papers(x, base - 4, 14, sh); sh.chewAt = now; } else this.fx.papers(x, base - 4);
+      }
+    }
     const n = Math.max(1, Math.round(r * 10));
     for (let i = 0; i < n; i++) R(ctx, i % 2 ? '#e4dfd2' : '#f6f3ea', x + (i % 3 === 1 ? 1 : 0), base - i, 6, 1);
     R(ctx, 'rgba(16,10,24,0.35)', x, base + 1, 7, 1);
@@ -804,7 +812,7 @@ export class Office {
     const s = POD.screen;
     if (a) {
       const fade = clamp((now - a.vstateAt) / CFG.CROSSFADE_MS, 0, 1);
-      drawScreen(ctx, p.x + s.x, p.y + s.y, s.w, s.h, a.vstate, now + a.phase, hashStr(a.id) % 997, a.prevVState, fade);
+      drawScreen(ctx, p.x + s.x, p.y + s.y, s.w, s.h, a.vstate, now + a.phase, hashStr(a.id) % 997, a.prevVState, fade, a.provider);
       a.draw(ctx, now, 'front');
     } else {
       // празно бюро – монитор в покой
@@ -853,6 +861,9 @@ export class Office {
     if (room.neon && prefs.lamp) glow(ctx, room.neon.x, room.neon.y, 18, room.neon.c, (0.25 + 0.35 * night) * (0.9 + 0.1 * Math.sin(now / 130)));
     if (room.aquarium) glow(ctx, room.aquarium.x + 14, room.aquarium.y + 12, 22, '#4ab8f0', 0.08 + 0.3 * night);
     if (room.arcade) glow(ctx, room.arcade.x + 9, room.arcade.y + 12, 16, '#a06ae0', 0.1 + 0.3 * night);
+    // мелачката свети в гърлото, докато дъвче (chewAt е зададен от drawPaperStack)
+    const shred = room.shredder;
+    if (shred && now - shred.chewAt > 0 && now - shred.chewAt < 4000) glow(ctx, shred.x + 9, shred.base - 27, 10, '#e0a44a', 0.35 * (0.9 + 0.1 * Math.sin(now / 90)));
     glow(ctx, lo.counter.x + 14, lo.counter.base - 36, 6, '#6ae0ff', 0.3);
     // зелената табела над вратата
     glow(ctx, L.door.x + 12, L.door.y - 6, 10, '#4ac26b', 0.15 + 0.35 * night);

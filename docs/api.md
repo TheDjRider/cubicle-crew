@@ -105,6 +105,17 @@ Many agents copy Claude Code's hook format (`hook_event_name`, `session_id`, `to
 command or HTTP hook at `http://127.0.0.1:4317/api/event?from=<agent>` the same way. Don't add it to Claude Code itself
 – Claude Code is already read from its transcripts, so it would show up twice.
 
+## What the page receives (WebSocket)
+
+The office page gets the same events over WebSocket. The contract only ever grows by optional fields, so older clients keep working:
+
+| Field / type | |
+|---|---|
+| `model` (optional on events) | the raw model id (`claude-sonnet-4-5-20250929`); the page shortens it (`shortModel()`) and shows it on the card and tooltip only when known. Sent for Claude Code, OpenCode and Codex (if its payload has one); the native format above has no `model` field |
+| `ctx`, `ctxMax` (optional on events) | context size and window in tokens, tracked by the server and sent with the agent's next event when they changed |
+| `type: "compact"` | `{ agent, type: "compact", ts }` – the conversation was compacted (OpenCode reports it directly; for Claude Code and Codex the page notices `ctx` dropping below 60 %). Papers fly to the shredder |
+| `sessions` list | entries `{ agent, label, status, waitingFor?, name?, provider?, model? }` – OpenCode sessions come with `status` `busy` / `idle` / `waiting` read from its database (`waiting` while a `question` is open) |
+
 ## How events map
 
 | Hook event | Office |
