@@ -27,6 +27,11 @@ There is no build step for the client and no test framework. `node --check <file
 - Keep `?demo` and `?demo=showcase` working; they are how features get checked without real sessions.
 - The procedural art must stay **override-able** by PNGs (`public/sprites/characters.png`, `tiles.png`+`tiles.json`); new props should go through `prop(name, …)` in `environment.js` so a tileset can replace them.
 
+## Release announcements
+After the user ships a new version (`gh release create v…`), or mentions a new tag or release, ask whether to run the
+`release-announcer` skill (`.claude/skills/release-announcer/`) – never start it on your own. A PostToolUse hook
+(`.claude/hooks/release-check.mjs`) adds the same reminder after release commands. Drafts go to `release-posts/` (gitignored).
+
 ## Architecture (public/)
 - `config.js` – `CFG` constants, `STATES`, `T` strings (`T_BG`/`T_EN`), URL `PARAMS` (`demo, debug, agents, time, wander, seed, desktop, web`…); re-exports `TOOL_STATE`/`DELEGATE_TOOLS` from `rules.js`.
 - `rules.js` – **shared with the server** (no DOM/`location`!): `TOOL_STATE`, `EARN` weights/bonuses, `Earner` (events → whole tokens per agent + bonuses).

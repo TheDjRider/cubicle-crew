@@ -7,3 +7,4 @@ dist/
 *.log
 public/sprites/*.psd
 _site/
+release-posts/
