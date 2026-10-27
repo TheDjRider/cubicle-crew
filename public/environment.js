@@ -352,7 +352,7 @@ function drawShredder(ctx, w, h) {
   R(ctx, '#4a4a58', w - 6, h - 12, 2, 2);                        // копче
 }
 
-/** Дъвченето: зъби з гърлото се отварят/затварят (~125 ms), светваща LED и хартиени трохи от дюзата.
+/** Дъвченето: зъби в гърлото се отварят/затварят (~125 ms), светваща LED и хартиени трохи от дюзата.
  *  sh = room.shredder ({x, base, chewAt}); base е дъното на пропа (същата координата като при add). */
 export function drawShredderChew(ctx, sh, now) {
   const t = now - sh.chewAt;
@@ -360,7 +360,7 @@ export function drawShredderChew(ctx, sh, now) {
   const t2 = t / 1000;
   const x = sh.x, y = sh.base - SHREDDER.cab; // тялото е над шкафчето
   if (Math.floor(t2 * 6) % 2 === 0) R(ctx, '#e0a44a', x + SHREDDER.w - 7, y - 15, 2, 2); // LED на тялото
-  const open = (Math.floor(t2 * 8) % 2) === 0 ? 0 : 2;           // зъбите се чапват на всеки ~125 ms
+  const open = (Math.floor(t2 * 8) % 2) === 0 ? 0 : 2;           // зъбите щракат на всеки ~125 ms
   const tx = x + 5, ty = y - 15;                                 // гърлото (в горните редове на тялото)
   for (let i = 0; i < 2; i++) {                                  // 2 чифта зъби: точно в гърлото (x+5..x+13)
     R(ctx, '#8a8ea0', tx + i * 4, ty + open, 2, 2);              // горни зъби – слиза

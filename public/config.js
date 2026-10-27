@@ -37,7 +37,7 @@ export const CFG = {
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
 export const PROVIDERS = { cowork: 'Cowork', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
 
-/** Бранд цветове + пиксел символ за заставката на монитора при idle (агент без активност); липсващ запис = звёздичката на Claude. */
+/** Бранд цветове + пиксел символ за заставката на монитора при idle (агент без активност); липсващ запис = звездичката на Claude. */
 export const PROVIDER_MARK = { opencode: { c: '#fab283', g: 'ring' }, codex: { c: '#10a37f', g: 'gear' }, gemini: { c: '#4285f4', g: 'star4' }, copilot: { c: '#a371f7', g: 'eyes' }, cursor: { c: '#7f8ea3', g: 'bar' } };
 
 export const STATES = {

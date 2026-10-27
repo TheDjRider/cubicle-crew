@@ -64,7 +64,7 @@ export class Model {
     if (e.parent_tool_use_id && !a.parentToolUseId) a.parentToolUseId = e.parent_tool_use_id;
     if (e.parent && e.parent !== a.parent && e.parent !== a.id) this.link(a.id, e.parent);
     // контекстът (ctx/ctxMax от сървъра): рязък спад = разговорът е сбит (compaction) – купчината отива в коша
-    // 16 с прозорец срещу двойно сработване: точно събитие (compact) + хеuristicата от спада на ctx
+    // 16 с прозорец срещу двойно сработване: точно събитие (compact) + евристиката от спада на ctx
     if (e.ctx > 0) {
       if (a.ctx > 30000 && e.ctx < a.ctx * 0.6 && (!a.compactedAt || now - a.compactedAt > 16000)) a.compactedAt = now;
       a.ctx = e.ctx; a.ctxMax = e.ctxMax || a.ctxMax || 200000;
@@ -108,7 +108,7 @@ export class Model {
       case 'user_prompt':
         a.lastTool = null;
         break;
-      case 'compact': // точно събитие за битието (OpenCode compaction part) – хеuristicата на ctx спада го дублира
+      case 'compact': // точно събитие за сбиването (OpenCode compaction part) – евристиката на ctx спада го дублира
         if (e.ts > (a.compactTs || 0) + 15000) { a.compactTs = e.ts; a.compactedAt = now; }
         break;
       default: break;

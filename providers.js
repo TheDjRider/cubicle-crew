@@ -204,8 +204,7 @@ export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => 
   const session = (sid) => {
     let s = sessions.get(sid);
     if (s) return s;
-    const cols = 'parent_id, directory, title, agent, model';
-    const row = (has2 && db.prepare(`SELECT ${cols} FROM session_v2 WHERE id = ?`).get(sid)) || db.prepare(`SELECT ${cols} FROM session WHERE id = ?`).get(sid);
+    const row = (has2 && pick('session_v2', sid)) || pick('session', sid);
     const mode = typeof row?.agent === 'string' ? row.agent : null;
     s = { agent: 'oc:' + sid, label: row?.directory ? path.basename(String(row.directory).replace(/[\\/]+$/, '')) : 'opencode', parent: row?.parent_id ? 'oc:' + row.parent_id : null, model: row?.model ? modelId(row.model) : null, sub: !!row?.parent_id || OC_MODES[mode] || false, desc: row?.title ? clip(row.title, 80) : null };
     if (row?.parent_id) { const q = tasks.get(row.parent_id); if (q?.length) childOf.set(sid, q.shift()); }
@@ -213,8 +212,22 @@ export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => 
     return s;
   };
 
+  // само колоните, които ги има (по-старите v1 бази нямат agent/model) – иначе SELECT гърми и спира сървъра
+  const colsOf = new Map();
+  const pick = (table, sid) => {
+    try {
+      if (!colsOf.has(table)) {
+        const have = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name));
+        colsOf.set(table, have.has('id') ? ['parent_id', 'directory', 'title', 'agent', 'model'].filter((c) => have.has(c)) : null);
+      }
+      const cols = colsOf.get(table);
+      return cols?.length ? db.prepare(`SELECT ${cols.join(', ')} FROM ${table} WHERE id = ?`).get(sid) : null;
+    } catch { return null; }
+  };
+
   let procs = null;                // брой отворени OpenCode процеси (без фоновия сървър); null = не се знае → без ограничение
-  const pollProcs = () => countOpencodeProcs((n) => { procs = n; });
+  // процесите се броят само докато има живи OpenCode сесии (иначе PowerShell на всеки 15 с за нищо)
+  const pollProcs = () => { if (db && liveSeen.size) countOpencodeProcs((n) => { procs = n; }); };
 
   const liveOf = (sid) => {
     let lv = liveSeen.get(sid);
@@ -381,7 +394,7 @@ export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => 
             const q = tasks.get(r.sid) || [];
             q.push(id);
             tasks.set(r.sid, q);
-            // вече شوند деца без връзка (напр. заредени при отварянето на базата)
+            // вече има деца без връзка (напр. заредени при отварянето на базата)
             for (const [cid, cs] of sessions) if (cs.parent === base.agent && !childOf.has(cid) && q.length) childOf.set(cid, q.shift());
           }
           parts.set(r.id, 'start');
@@ -393,7 +406,7 @@ export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => 
         lastSay.set(s.agent, Date.now());
       } else if (d.type === 'compaction' && !was) {
         parts.set(r.id, 'end');
-        emit({ ...base, type: 'compact', ts: r.t }); // събит битието – листовете отиват в мелачката
+        emit({ ...base, type: 'compact', ts: r.t }); // разговорът е сбит – листовете отиват в мелачката
       } else if (d.type === 'step-finish' && d.tokens && !was) {
         parts.set(r.id, 'end');
         const t = d.tokens, model = r.model || s.model || undefined;
@@ -405,9 +418,11 @@ export async function watchOpencode(emit, usage, log = () => {}, setCtx = () => 
     if (parts.size > 20000) for (const k of [...parts.keys()].slice(0, 10000)) parts.delete(k);
     pushLive();
   };
-  timer = setInterval(tick, 1000);
+  // грешка в базата (непозната схема) не бива да спре целия сървър
+  const safeTick = () => { try { tick(); } catch (e) { log(`OpenCode: ${e.message}`); } };
+  timer = setInterval(safeTick, 1000);
   if (live) { pollProcs(); procTimer = setInterval(pollProcs, 15000); procTimer.unref?.(); }
-  tick();
+  safeTick();
   return { stop() { clearInterval(timer); clearInterval(procTimer); try { db?.close(); } catch { /* */ } } };
 }
 
