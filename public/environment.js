@@ -1328,7 +1328,7 @@ export function drawSky(ctx, room, tod, t) {
     // луна / слънце
     if (tod.moon != null && tod.night > 0.3 && cover < 0.75) {
       const mx = Math.round(sky.x0 + tod.moon * span), my = Math.round(w.y + 5 + Math.abs(tod.moon - 0.5) * 10);
-      ctx.fillStyle = rgba('#f0ecd8', 0.15); ctx.fillRect(mx - 4, my - 4, 9, 9);
+      ctx.fillStyle = rgba('#f0ecd8', 0.12); ctx.fillRect(mx - 5, my - 2, 11, 5); ctx.fillRect(mx - 2, my - 5, 5, 11); ctx.fillRect(mx - 4, my - 4, 9, 9); // кръгъл ореол на стъпала
       R(ctx, '#f0ecd8', mx - 2, my - 3, 5, 7); R(ctx, '#f0ecd8', mx - 3, my - 2, 7, 5);
       R(ctx, '#c8c4b0', mx, my - 1, 2, 2); R(ctx, '#c8c4b0', mx - 2, my + 1, 1, 1);
     }
@@ -1336,7 +1336,7 @@ export function drawSky(ctx, room, tod, t) {
       const sx = Math.round(sky.x0 + tod.sun * span);
       const sy = Math.round(w.y + 3 + Math.pow(Math.abs(tod.sun - 0.5) * 2, 2) * 15);
       const sc = mix('#fff6c0', '#ffa860', tod.warm);
-      ctx.fillStyle = rgba(sc, 0.25); ctx.fillRect(sx - 5, sy - 5, 11, 11);
+      ctx.fillStyle = rgba(sc, 0.2); ctx.fillRect(sx - 6, sy - 2, 13, 5); ctx.fillRect(sx - 2, sy - 6, 5, 13); ctx.fillRect(sx - 5, sy - 4, 11, 9); ctx.fillRect(sx - 4, sy - 5, 9, 11);
       R(ctx, sc, sx - 2, sy - 3, 5, 7); R(ctx, sc, sx - 3, sy - 2, 7, 5);
     }
     // облаци
@@ -1406,34 +1406,6 @@ function drawMountains(ctx, w, sky, tod) {
     if (hh > 11 * k) R(ctx, snow, x, w.y + w.h - hh, 1, Math.min(Math.round(2 * k), Math.round(hh - 11 * k)));
   }
   R(ctx, mix('#2e5a34', '#0c1410', tod.night * 0.7), w.x, w.y + w.h - Math.round(2 * k), w.w, Math.round(2 * k));
-}
-
-/** Слънчеви снопове от прозорците върху пода (adds light). */
-export function drawShafts(ctx, room, tod, t) {
-  const a = tod.daylight * 0.16 * (1 - tod.night * 0.5) * (tod.sunny ?? 1);
-  if (a < 0.01) return;
-  const color = mix('#fff2c8', '#ffa860', tod.warm);
-  const skew = Math.round((tod.h - 12.5) * -5);
-  const len = 46 + Math.round(tod.warm * 20);
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  for (const w of room.windows) {
-    const y0 = w.y + w.h;
-    const gr = ctx.createLinearGradient(0, y0, 0, CFG.WALL_H + len);
-    gr.addColorStop(0, rgba(color, a * 0.8));
-    gr.addColorStop(0.35, rgba(color, a));
-    gr.addColorStop(1, rgba(color, 0));
-    ctx.fillStyle = gr;
-    ctx.beginPath();
-    ctx.moveTo(w.x + 2, y0 + 2);
-    ctx.lineTo(w.x + w.w - 2, y0 + 2);
-    ctx.lineTo(w.x + w.w - 2 + skew, CFG.WALL_H + len);
-    ctx.lineTo(w.x + 2 + skew, CFG.WALL_H + len);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.restore();
-  void t;
 }
 
 const ICONS = {
@@ -1514,35 +1486,9 @@ export function drawWallDynamic(ctx, room, date, stats, t) {
   void t;
 }
 
-/** Цялостен оттенък според часа (multiply). lit 0..1 = лампите на тавана: стаята е по-светла и топла,
- *  стъклата на прозорците остават с нощния оттенък (навън си е тъмно). */
-export function drawTint(ctx, room, tod, lit = 0) {
-  if (tod.tint === '#ffffff') return;
-  ctx.save();
-  ctx.globalCompositeOperation = 'multiply';
-  // лампите не изсветляват всичко до бяло: стаята остава вечерна, светлите петна идват от lightGlows
-  const k = lit * nightK(tod) * 0.5;
-  if (k > 0.01) {
-    ctx.fillStyle = mix(tod.tint, '#f4dcc4', k);
-    ctx.beginPath(); ctx.rect(0, 0, room.W, room.H);
-    for (const w of room.windows) ctx.rect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
-    ctx.fill('evenodd');
-    ctx.fillStyle = tod.tint;
-    for (const w of room.windows) ctx.fillRect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
-  } else { ctx.fillStyle = tod.tint; ctx.fillRect(0, 0, room.W, room.H); }
-  ctx.restore();
-  // ъглите потъмняват вечер (по-силно без лампите) – стъпаловидна винетка
-  const n = nightK(tod);
-  if (n > 0.02) {
-    const prev = ctx.globalAlpha;
-    ctx.globalAlpha = n * (0.55 + 0.45 * (1 - lit));
-    ctx.drawImage(vignette(room.W, room.H), 0, 0);
-    ctx.globalAlpha = prev;
-  }
-}
 let vigCache = null;
 /** Винетка W x H: тъмни ъгли с плавен преход (стъпалата с дитеринг очертаваха пръстени). */
-function vignette(W, H) {
+export function vignette(W, H) {
   if (vigCache && vigCache.width === W && vigCache.height === H) return vigCache;
   const c = makeCanvas(W, H), g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
