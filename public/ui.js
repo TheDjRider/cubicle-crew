@@ -7,6 +7,7 @@ import { soundOn, setSound } from './sound.js';
 import { prefs } from './prefs.js';
 import { boardData, demoBoardData, PAGE_DAYS } from './board.js';
 import { settingsHtml } from './settings.js';
+import { WhatsNew } from './whatsnew.js';
 
 // торбичка за пазаруване 9x9 (иконата на бутона за магазина) – рисува се тук, без външни файлове
 const BAG = ['...aaa...', '..a...a..', '..a...a..', 'bbbbbbbbb', 'bcccccccb', 'bcccdcccb', 'bccdddccb', 'bcccdcccb', 'bbbbbbbbb'];
@@ -127,7 +128,7 @@ export class UI {
     const prompt = this.model.prompts.keys().next().value || null; // най-старата молба за разрешение (глобалните Ctrl+Alt+Y / N)
     const update = this.update?.newer ? this.update.latest : null; // нова версия -> ред в менюто на трея
     // „само когато трябва“: докато мишката е над прозореца или е отворен панел/магазин/настройка, приложението не го скрива
-    const hold = !!document.querySelector('body:hover') || (this.help && !this.help.hidden) || document.body.classList.contains('shopping') || document.body.classList.contains('setting-up') || !!this.office.focusId;
+    const hold = !!document.querySelector('body:hover') || (this.help && !this.help.hidden) || document.body.classList.contains('shopping') || document.body.classList.contains('setting-up') || !!this.whatsNew?.open || !!this.office.focusId;
     const key = `${s.agents}|${s.subs}|${s.tools}|${waiting.join(',')}|${sound}|${prefs.focus}|${prefs.private}|${leads.join(',')}|${prompt}|${update?.version}|${hold}`;
     if (key === this._lastStats) return;
     this._lastStats = key;
@@ -541,6 +542,15 @@ export class UI {
       this.help.id = 'help'; this.help.hidden = true;
       this.help.setAttribute('role', 'dialog');
       this.help.addEventListener('change', (e) => this.onHelpChange(e.target));
+      // плъзгачът за прозрачност: на живо, докато се влачи
+      this.help.addEventListener('input', (e) => {
+        const t = e.target;
+        if (!t.dataset?.deskrange) return;
+        const out = t.closest('label')?.querySelector('output');
+        if (out) out.textContent = `${t.value}%`;
+        if (this.desk) this.desk[t.dataset.deskrange] = t.value / 100;
+        this.bridge?.setDesktop?.(t.dataset.deskrange, t.value / 100);
+      });
       this.help.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches?.('[data-folderin]')) this.setFolders({ add: e.target.value }); });
       this.help.addEventListener('click', (e) => {
         const t = e.target;
@@ -588,6 +598,7 @@ export class UI {
   /** WS {type:'update'}: проверката за нова версия (точка на „?“, ред в панела, приложението – в трея). */
   setUpdate(e) {
     this.update = e; this.lastHud = 0; this._lastStats = '';
+    (this.whatsNew ||= new WhatsNew(this)).onUpdate(e); // „Какво ново“ след обновяване / „Има нова версия“
     if (this.help && !this.help.hidden) this.renderHelp(true);
   }
 

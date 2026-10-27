@@ -11,6 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MARGIN = 8;                  // разстояние от ръба на работния плот (над лентата със задачи)
 const MAC = process.platform === 'darwin'; // macOS: горе вдясно под менюто, без икона в Dock, без стартиране при вход по подразбиране
 const TARGET = { w: 712, h: 416 }; // физически пиксели – стаята (356×208) в мащаб 2
+const CLEAR_H = 332;                // прозрачен фон: стаята е 356×166 (по-ниска стена, застъпени редове)
+const target = () => (settings.clear ? { w: TARGET.w, h: CLEAR_H } : TARGET);
 const OLD_TARGET = { w: 790, h: 470 }; // до 2.7: по-голямата стая – прозорците с този размер се смаляват веднъж
 const HIDE_AFTER_MS = 8000;           // „само когато трябва“: скрива се толкова след последното „трябваш“
 const SHORTCUT = 'CommandOrControl+Alt+P';
@@ -39,7 +41,7 @@ let waiting = false; // сутрешен екран: малко прозорче
 
 // ---------------------------------------------------------------- настройки
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false, strip: false, autoHide: false, taskbar: false };
+let settings = { bounds: null, onTop: true, through: false, demo: false, notify: true, lang: null, waitWindow: true, loginInit: false, strip: false, autoHide: false, taskbar: false, opacity: 1, clear: false };
 let programmatic = 0; // setBounds от нас – да не се брои като ръчно преоразмеряване
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* първо пускане */ }
@@ -80,7 +82,7 @@ function saveSettings() {
 function defaultBounds() {
   const d = screen.getPrimaryDisplay();
   const wa = d.workArea, k = d.scaleFactor || 1;
-  const w = Math.min(Math.ceil(TARGET.w / k), wa.width - 2 * MARGIN), h = Math.min(Math.ceil(TARGET.h / k), wa.height - 2 * MARGIN);
+  const T = target(), w = Math.min(Math.ceil(T.w / k), wa.width - 2 * MARGIN), h = Math.min(Math.ceil(T.h / k), wa.height - 2 * MARGIN);
   // Windows: долу вдясно = точно над часовника/трея; macOS: горе вдясно = под иконата в лентата с менюто
   return { x: wa.x + wa.width - w - MARGIN, y: MAC ? wa.y + MARGIN : wa.y + wa.height - h - MARGIN, width: w, height: h };
 }
@@ -107,7 +109,7 @@ const L = {
 if (MAC) { L.bg.login = 'Стартирай при вход'; L.en.login = 'Start at login'; }
 const tr = () => L[lang()];
 function setLang(l) { settings.lang = l; saveSettings(); win?.loadURL(pageUrl()); refreshTray(); }
-function pageUrl() { return `http://localhost:${port}/?desktop${settings.demo ? '&demo' : ''}${waiting ? '&wait' : ''}${settings.strip ? '&strip' : ''}&lang=${lang()}`; }
+function pageUrl() { return `http://localhost:${port}/?desktop${settings.demo ? '&demo' : ''}${settings.clear ? '&clear' : ''}${waiting ? '&wait' : ''}${settings.strip ? '&strip' : ''}&lang=${lang()}`; }
 // презареждане винаги с актуалния адрес (reload() би запазил &wait и след събуждане)
 const reloadPage = () => win?.loadURL(pageUrl());
 
@@ -184,12 +186,15 @@ function createWindow() {
     minWidth: waiting || settings.strip ? 200 : 320, minHeight: waiting ? 120 : settings.strip ? 30 : 190,
     // maximizable: false – двоен клик върху лентата за местене иначе разпъва прозореца на цял екран
     frame: false, resizable: !waiting && !settings.strip, maximizable: false, fullscreenable: false, skipTaskbar: !settings.taskbar, show: false,
-    alwaysOnTop: settings.onTop, backgroundColor: '#0e0c14', title: 'Cubicle Crew',
+    alwaysOnTop: settings.onTop, title: 'Cubicle Crew',
+    // прозрачен фон: transparent се задава само при създаване – превключването прави прозореца наново (rebuildWindow)
+    ...(settings.clear ? { transparent: true, backgroundColor: '#00000000' } : { backgroundColor: '#0e0c14' }),
     // autoplayPolicy: звукът "чака те" трябва да свири и преди първия клик в прозореца
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' },
   });
   applyOnTop();
   applyThrough();
+  win.setOpacity(settings.opacity);
   if (MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); // следва те по всички работни плотове (Spaces)
   win.loadURL(pageUrl());
   win.once('ready-to-show', () => { win.showInactive(); peek(6000); }); // „само когато трябва“: виждаш, че е тръгнало, после се скрива
@@ -208,6 +213,19 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:\/\//i.test(url)) shell.openExternal(url); return { action: 'deny' }; });
 }
 
+// прозорецът наново на същото място (смяна на прозрачния фон)
+function rebuildWindow() {
+  const old = win;
+  if (!waiting && !settings.strip) {
+    // прозрачният фон е по-нисък: височината следва стаята, долният десен ъгъл остава на място
+    const b = old.getBounds(), h = Math.round(b.width * (settings.clear ? CLEAR_H : TARGET.h) / TARGET.w);
+    settings.bounds = { ...b, y: b.y + b.height - h, height: h };
+    settings.baseSize = { w: b.width, h };
+  }
+  createWindow();
+  old.destroy();
+}
+
 function applyOnTop() { win.setAlwaysOnTop(settings.onTop, 'floating'); sendState(); }
 function applyThrough() { win.setIgnoreMouseEvents(settings.through, { forward: true }); sendState(); }
 function sendState() { win?.webContents.send('state', { onTop: settings.onTop, through: settings.through }); }
@@ -217,7 +235,8 @@ const CAN_LOGIN = process.platform !== 'linux'; // Electron не поддърж�
 function desktopSettings() {
   return { onTop: settings.onTop, through: settings.through, notify: settings.notify, strip: settings.strip, waitWindow: settings.waitWindow,
     demo: settings.demo, login: CAN_LOGIN ? loginItem().get() : false, canLogin: CAN_LOGIN, platform: process.platform,
-    autoHide: settings.autoHide, taskbar: settings.taskbar, screen: screenShares(), selfUpdate: SELF_UPDATE, upd };
+    autoHide: settings.autoHide, taskbar: settings.taskbar, screen: screenShares(), selfUpdate: SELF_UPDATE, upd,
+    opacity: settings.opacity, clear: settings.clear, canClear: process.platform !== 'linux' };
 }
 
 // ---------------------------------------------------------------- „Изтегли и инсталирай“ (updater.js): само инсталираното приложение в Windows
@@ -248,6 +267,8 @@ function applyDesktop(key, v) {
   if (key === 'onTop') { settings.onTop = v; applyOnTop(); }
   else if (key === 'through') { settings.through = v; applyThrough(); }
   else if (key === 'notify') settings.notify = v;
+  else if (key === 'opacity') { settings.opacity = Math.min(1, Math.max(0.25, Number(v) || 1)); win.setOpacity(settings.opacity); saveSettings(); return; }
+  else if (key === 'clear') { settings.clear = v; saveSettings(); rebuildWindow(); return; }
   else if (key === 'taskbar') { settings.taskbar = v; win.setSkipTaskbar(!v); }
   else if (key === 'strip') { setStrip(v); return; }
   else if (key === 'login') { if (CAN_LOGIN) loginItem().set(v); }
@@ -325,7 +346,7 @@ function resetSize() {
   wake();
   const b = win.getBounds();
   const d = screen.getDisplayMatching(b), wa = d.workArea, k = d.scaleFactor || 1;
-  const w = Math.min(Math.ceil(TARGET.w / k), wa.width - 2 * MARGIN), h = Math.min(Math.ceil(TARGET.h / k), wa.height - 2 * MARGIN);
+  const T = target(), w = Math.min(Math.ceil(T.w / k), wa.width - 2 * MARGIN), h = Math.min(Math.ceil(T.h / k), wa.height - 2 * MARGIN);
   const right = Math.min(b.x + b.width, wa.x + wa.width - MARGIN), bottom = Math.min(b.y + b.height, wa.y + wa.height - MARGIN);
   programmatic = Date.now();
   win.setBounds({ x: Math.max(wa.x + MARGIN, right - w), y: Math.max(wa.y + MARGIN, bottom - h), width: w, height: h });
@@ -412,7 +433,12 @@ ipcMain.on('shop', (_e, open) => {
 
 // панелът „?“ чете и сменя същите настройки като менюто в трея
 ipcMain.handle('settings:get', () => desktopSettings());
-ipcMain.on('settings:set', (_e, key, v) => applyDesktop(String(key), !!v));
+ipcMain.on('settings:set', (_e, key, v) => applyDesktop(String(key), typeof v === 'number' ? v : !!v));
+// прозрачен фон: над празно място кликовете минават към това отдолу (forward – страницата пак получава движението на мишката)
+ipcMain.on('clear-hit', (_e, solid) => {
+  if (!win || !settings.clear || settings.through || shopOpen) return;
+  win.setIgnoreMouseEvents(!solid, { forward: true });
+});
 // „Избери…“ до допълнителните папки (Docker, VM…): системният диалог; пътят отива към сървъра през страницата
 ipcMain.handle('pick-folder', async () => {
   const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });

@@ -15,7 +15,8 @@ contextBridge.exposeInMainWorld('pixelOffice', {
   onVisible: (fn) => ipcRenderer.on('visible', (_e, v) => fn(!!v)), // скрит прозорец -> страницата не рисува
   onSound: (fn) => ipcRenderer.on('sound', (_e, on) => fn(!!on)),     // "Звуци" от менюто в трея
   getDesktop: () => ipcRenderer.invoke('settings:get'),             // настройките на приложението (за панела „?“)
-  setDesktop: (key, v) => ipcRenderer.send('settings:set', key, !!v),
+  setDesktop: (key, v) => ipcRenderer.send('settings:set', key, typeof v === 'number' ? v : !!v),
+  clearHit: (solid) => ipcRenderer.send('clear-hit', !!solid),   // прозрачен фон: мишката над нарисувано (true) или над празното
   pickFolder: () => ipcRenderer.invoke('pick-folder'),             // допълнителна папка с транскрипти (Docker, VM…)
   onDesktop: (fn) => ipcRenderer.on('desktop-settings', (_e, s) => fn(s)),
   onOpenHelp: (fn) => ipcRenderer.on('open-help', () => fn()),        // „Настройки и помощ…“ от менюто в трея

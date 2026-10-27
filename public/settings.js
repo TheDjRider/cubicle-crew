@@ -95,6 +95,9 @@ function sections(ui) {
   // прозорецът (само в приложението)
   out.window = D ? `<h4>${H.place}</h4><div class="btns">${btn('data-act="reset-size"', H.resetSize)}${btn('data-act="reset-place"', H.resetPlace)}${btn('data-act="browser"', H.browser)}</div>` +
     sw('id="desk-ontop" data-desk="onTop"', D.onTop, H.onTop, H.onTopHint) +
+    (D.opacity != null ? `<label class="opt"><span><b>${H.opacity} <output>${Math.round(D.opacity * 100)}%</output></b><small>${H.opacityHint}</small></span>` +
+      `<input type="range" class="range" min="25" max="100" step="5" value="${Math.round(D.opacity * 100)}" data-deskrange="opacity"></label>` : '') +
+    (D.canClear ? sw('id="desk-clear" data-desk="clear"', D.clear, H.clear, H.clearHint) : '') +
     sw('id="desk-through" data-desk="through"', D.through, H.through, H.throughHint) +
     (D.platform !== 'darwin' ? sw('id="desk-taskbar" data-desk="taskbar"', D.taskbar, H.taskbar, H.taskbarHint) : '') +
     sw('id="desk-wait" data-desk="waitWindow"', D.waitWindow, H.wait, H.waitHint) +

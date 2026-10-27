@@ -151,6 +151,8 @@ const T_BG = {
     window: 'Прозорец',
     onTop: 'Винаги отгоре', onTopHint: 'Прозорецът стои над другите, за да виждаш офиса, докато работиш.',
     taskbar: 'Иконка в лентата на задачите', taskbarHint: 'Освен до часовника, приложението има и бутон в лентата на задачите – клик го показва или прибира.',
+    opacity: 'Прозрачност на прозореца', opacityHint: 'Колко се вижда офисът – по-ниско и работата отдолу прозира.',
+    clear: 'Прозрачен фон (опит)', clearHint: 'Без стени и под – само хората и мебелите върху работния плот. Кликовете в празното минават през тях.',
     through: 'Кликовете минават през прозореца', throughHint: 'Мишката „минава“ през офиса към това отдолу. Връща се само от менюто в трея (иконата до часовника).',
     autoHide: 'Показвай се само когато трябва', autoHideHint: 'Прозорецът е скрит и излиза сам (без да взима фокуса), когато агент те чака или оркестратор приключи; скрива се 8 с след това. Иконата в трея и Ctrl+Alt+P го показват по всяко време.',
     wait: 'Малко прозорче, когато няма сесии', waitHint: 'Без нито една сесия офисът се свива до сутрешна сцена и се отваря сам, щом се появи сесия.',
@@ -222,6 +224,20 @@ const T_BG = {
     },
   },
   // еднократни известия за новости (tokens.js news())
+  whatsNew: {
+    label: 'Ново', title: (v) => `Какво ново във версия ${v}`, ok: 'Супер',
+    updLabel: 'Нова версия', updTitle: (v) => `Излезе версия ${v}`, updText: (c) => `Ти си на ${c}. Новата е в GitHub – монетите, обзавеждането и настройките остават.`,
+    updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
+    install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
+    items: {
+      '2.18.0': [
+        ['Прозрачен фон', 'Настройки → Прозорец: без стени и небе, подът избледнява – офисът стои направо на работния плот, по-нисък, точно над лентата на задачите. Кликовете в празното минават през него.'],
+        ['Прозрачност на прозореца', 'Плъзгач в Настройки → Прозорец – колко да прозира работата ти отдолу.'],
+        ['⤡ Нулирай размера', 'Бутонът е в лентата горе (вместо „Кликовете минават през“ – то остава в менюто в трея и в настройките).'],
+        ['Кът за любимците', 'Масажният стол е вдясно до дивана, а отдолу има място за тях: купичка за всеки, фонтан с течаща вода и разхвърляни играчки.'],
+      ],
+    },
+  },
   news: { label: 'Ново', bueno: ['Буено е в магазина', 'Безплатна нова порода за кучето ти – Магазин → Любимци'] },
   // офисните любимци: имена по подразбиране (по място) и подсказката при посочване
   pets: {
@@ -273,7 +289,7 @@ const T_BG = {
   },
   tokensHint: 'Монети: печелиш ги, докато агентите работят – харчиш ги в магазина (B)',
   lang: 'Език: български – смени на English',
-  winbar: { settings: 'Настройки и помощ', pin: 'Винаги отгоре', through: 'Кликовете минават през прозореца (махни от менюто в трея)', hide: 'Скрий в трея', quit: 'Затвори' },
+  winbar: { settings: 'Настройки и помощ', pin: 'Винаги отгоре', through: 'Кликовете минават през прозореца (махни от менюто в трея)', 'reset-size': 'Нулирай размера', hide: 'Скрий в трея', quit: 'Затвори' },
   demo2: { which: 'Кой вариант да избера?', cont: 'Да продължа ли?', whichShort: 'Кой вариант?', arch: 'Прегледай архитектурата', tests: 'Пусни тестовете', cache: 'Измисли план за кеша' },
 };
 
@@ -370,6 +386,8 @@ const T_EN = {
     window: 'Window',
     onTop: 'Always on top', onTopHint: 'The window stays above the others, so you see the office while you work.',
     taskbar: 'Taskbar button', taskbarHint: 'Besides the icon by the clock, the app gets a button on the taskbar – click it to show or minimise the window.',
+    opacity: 'Window opacity', opacityHint: 'How solid the office is – lower and your work shows through.',
+    clear: 'Transparent background (experiment)', clearHint: 'No walls or floor – just the people and the furniture on your desktop. Clicks on empty spots go through.',
     through: 'Click-through', throughHint: 'The mouse goes through the office to whatever is below. Turn it off from the tray menu (the icon by the clock).',
     autoHide: 'Show only when needed', autoHideHint: 'The window stays hidden and comes up by itself (without taking focus) when an agent waits for you or a lead finishes; it hides 8 s later. The tray icon and Ctrl+Alt+P show it any time.',
     wait: 'Small window when there are no sessions', waitHint: 'With no session open the office shrinks to a morning scene and opens by itself when a session starts.',
@@ -440,6 +458,20 @@ const T_EN = {
       hairs: ['Black', 'Brown', 'Light brown', 'Blonde', 'Ginger', 'Grey', 'Blue', 'Pink', 'Green', 'Purple'],
     },
   },
+  whatsNew: {
+    label: 'New', title: (v) => `What's new in ${v}`, ok: 'Nice',
+    updLabel: 'New version', updTitle: (v) => `Version ${v} is out`, updText: (c) => `You are on ${c}. The new one is on GitHub – your coins, decor and settings stay.`,
+    updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
+    install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
+    items: {
+      '2.18.0': [
+        ['Transparent background', 'Settings → Window: no walls or sky, the floor fades out – the office sits right on your desktop, lower, just above the taskbar. Clicks on empty spots go through.'],
+        ['Window opacity', 'A slider in Settings → Window – how much of your work shows through.'],
+        ['⤡ Reset size', 'The button is on the title bar now (instead of click-through – that stays in the tray menu and in settings).'],
+        ['A pet corner', 'The massage chair moved next to the sofa, and below it there is room for them: a bowl each, a fountain with running water and toys lying around.'],
+      ],
+    },
+  },
   news: { label: 'New', bueno: ['Bueno is in the shop', 'A free new breed for your dog – Shop → Pets'] },
   pets: {
     names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex' },
@@ -489,7 +521,7 @@ const T_EN = {
   },
   tokensHint: 'Coins: earned while your agents work – spend them in the shop (B)',
   lang: 'Language: English – switch to български',
-  winbar: { settings: 'Settings and help', pin: 'Always on top', through: 'Click-through (turn it off from the tray menu)', hide: 'Hide to tray', quit: 'Quit' },
+  winbar: { settings: 'Settings and help', pin: 'Always on top', through: 'Click-through (turn it off from the tray menu)', 'reset-size': 'Reset size', hide: 'Hide to tray', quit: 'Quit' },
   demo2: { which: 'Which option should I pick?', cont: 'Shall I continue?', whichShort: 'Which option?', arch: 'Review the architecture', tests: 'Run the tests', cache: 'Plan the cache' },
   // имена на предметите (catalog.js пази българските; id-тата са записът и не се пипат)
   items: {
@@ -551,12 +583,16 @@ export const PARAMS = {
   wait: Q.has('wait'),         // сутрешен екран, докато няма сесия (Electron при старт с Windows)
   weather: Q.get('weather'),   // ?weather=clear|cloudy|overcast|fog|drizzle|rain|snow|storm — фалшиво време (за тестове/демото)
   setup: Q.has('setup'),       // ?setup — показва началната настройка отново (за тестове; в демото – в паметта)
+  clear: Q.has('clear'),       // прозрачен фон (приложението с transparent прозорец): без стени, небе и оттенък, подът избледнява
   overlay: Q.has('overlay'),   // ?overlay – за OBS/стрийм: без HUD и легенда, командите и пътищата са скрити
   focus: Q.has('focus'),       // ?focus – режим „Фокус“ (за тестове; иначе се пази в настройките)
   strip: Q.has('strip'),       // ?strip – тънка лента: по един ред на сесия вместо офиса (Electron го слага от менюто)
   // отворено през адреса в локалната мрежа (изгледът за телефон): само за гледане, винаги без команди и пътища
   lan: !WEB && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname),
 };
+// прозрачен фон: стената я няма – по-ниска „стена“ (колкото да се събере библиотеката) и редовете бюра леко застъпени:
+// стаята е 356×166 вместо 356×208 – по-подходящо над лентата на задачите
+if (PARAMS.clear) Object.assign(CFG, { WALL_H: 44, MIN_H: 160, ROW_STEP: 40, LOUNGE_UP: true, FIXED_ROOM: true });
 if (PARAMS.wander != null && !Number.isNaN(PARAMS.wander)) CFG.WANDER_AFTER_MS = PARAMS.wander;
 /** Име на любимец по място (save.petNames, иначе името на породата, ако има такова, иначе това на мястото – на текущия език). */
 export const petName = (slot, names, look) => names?.[slot] || T.pets.breeds[look] || T.pets.names[slot] || slot;

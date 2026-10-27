@@ -24,7 +24,8 @@ export const POD = {
 export function teamNeed(podH = CFG.POD_H) {
   return {
     w: Math.max(CFG.MIN_W, CFG.MARGIN_L + CFG.SUB_PER_ROW * CFG.POD_W + CFG.LOUNGE_W + CFG.MARGIN_R),
-    h: Math.max(CFG.MIN_H, CFG.WALL_H + CFG.TOP_GAP + 2 * podH + CFG.MARGIN_B),
+    // ROW_STEP (прозрачен фон): долният ред е по-близо от височината на едно място – бюрата се застъпват
+    h: Math.max(CFG.MIN_H, CFG.WALL_H + CFG.TOP_GAP + (CFG.ROW_STEP ?? podH) + podH + CFG.MARGIN_B),
   };
 }
 
@@ -44,8 +45,9 @@ export function computeLayout(devW, devH) {
     if (!best || score > best.score) best = { scale, score, needW: need.w, needH: need.h, podH };
   }
   const { scale, podH } = best;
-  const W = Math.max(best.needW, Math.floor(devW / scale));
-  const H = Math.max(best.needH, Math.floor(devH / scale));
+  // FIXED_ROOM (прозрачен фон): стаята не се разтяга по прозореца – около нея е работният плот (index.html я слага долу вдясно)
+  const W = CFG.FIXED_ROOM ? best.needW : Math.max(best.needW, Math.floor(devW / scale));
+  const H = CFG.FIXED_ROOM ? best.needH : Math.max(best.needH, Math.floor(devH / scale));
   const per = CFG.SUB_PER_ROW, rows = 2;
 
   // зоната с бюрата
@@ -53,7 +55,7 @@ export function computeLayout(devW, devH) {
   const ay0 = CFG.WALL_H + CFG.TOP_GAP, ay1 = H - CFG.MARGIN_B;
   const cols = per;
   const gw = Math.max(CFG.POD_W, Math.min(CFG.POD_W * CFG.SPREAD_X, (ax1 - ax0) / cols));
-  const gh = Math.max(podH, Math.min(CFG.POD_H * CFG.SPREAD_Y, (ay1 - ay0) / rows));
+  const gh = CFG.ROW_STEP ?? Math.max(podH, Math.min(CFG.POD_H * CFG.SPREAD_Y, (ay1 - ay0) / rows));
   const gridW = gw * (per - 1) + CFG.POD_W, gridH = gh * (rows - 1) + podH;
   const ox = Math.round(ax0 + (ax1 - ax0 - gridW) / 2);
   // вертикално: малко по-близо до стената, отколкото в средата
@@ -77,10 +79,15 @@ export function computeLayout(devW, devH) {
   // зона за почивка вдясно
   const lx = W - CFG.MARGIN_R - CFG.LOUNGE_W, lw = CFG.LOUNGE_W, ly = CFG.WALL_H, lh = H - CFG.WALL_H;
   const base = CFG.WALL_H + 8;
-  const sofaW = 58, sofaBase = Math.round(Math.min(H - 34, ly + Math.max(70, lh * 0.56)));
+  // LOUNGE_UP (ниската стая с прозрачен фон): диванът с килима е по-нагоре, пътеката минава по-близо до кафемашината –
+  // отдолу остава място за разходка на любимците
+  const sofaW = 58, sofaBase = CFG.LOUNGE_UP ? base + 50 : Math.round(Math.min(H - 34, ly + Math.max(70, lh * 0.56)));
   const sofaX = Math.round(lx + (lw - sofaW) / 2 + 4);
-  // масажният стол (купува се) – под килима, вляво; пътеката на зоната (lx + 9) остава свободна
-  const massage = { x: sofaX + 14, base: Math.min(H - 5, sofaBase + 42) };
+  // масажният стол (купува се) – вдясно до дивана (центърът); долу остава свободно за любимците
+  const massage = { x: sofaX + sofaW + 17, base: sofaBase + 6 };
+  // аквариумът също е вдясно от дивана – ако има и масажен стол, отива под него, в същата тясна колона
+  const aquarium = { x: sofaX + sofaW + 15, base: sofaBase };
+  const aquaLow = { x: sofaX + sofaW + 17, base: Math.min(H - 5, sofaBase + 44) };
   const lounge = {
     x: lx, y: ly, w: lw, h: lh,
     bookshelf: { x: lx + 4, base, w: 30, h: 50 },
@@ -92,8 +99,17 @@ export function computeLayout(devW, devH) {
     floorLamp: { x: sofaX - 12, base: sofaBase - 2 },
     cornerPlant: { x: lx + lw - 20, base: H - 6 },
     arcade: { x: lx + lw - 14, base },                       // под неоновия надпис, вдясно от диспенсъра (центърът)
-    aquarium: { x: sofaX + sofaW + 15, base: sofaBase },     // вдясно от дивана (центърът)
+    aquarium, aquaLow,                                       // вдясно от дивана / под масажния стол (центърът)
     massage,                                                 // центърът на стола
+    // кътът на любимците под килима: фонтан вляво, купичките до него, играчките – разхвърляни (base = долният ръб)
+    pets: {
+      fountain: { x: lx + 13, base: sofaBase + 38 },
+      bowls: [{ x: lx + 29, base: sofaBase + 38 }, { x: lx + 31, base: sofaBase + 45 }, { x: lx + 41, base: sofaBase + 41 }],
+      toys: [
+        { kind: 'ball', x: lx + 58, base: sofaBase + 30 }, { kind: 'yarn', x: lx + 74, base: sofaBase + 36 },
+        { kind: 'mouse', x: lx + 55, base: sofaBase + 46 }, { kind: 'bone', x: lx + 79, base: sofaBase + 49 },
+      ],
+    },
     rug: { x: sofaX - 10, y: sofaBase - 10, w: sofaW + 20, h: 30 },
     darts: { x: ax1 - 22, y: 16, w: 15, h: 15 },   // дъската за дартс – в десния край на стената с прозорците
     spots: {
@@ -102,6 +118,7 @@ export function computeLayout(devW, devH) {
       darts: { x: ax1 - 15, y: CFG.WALL_H + 13, face: 'back' },
       arcade: { x: lx + lw - 14, y: base + 11, face: 'back' },
       aquarium: { x: sofaX + sofaW + 7, y: sofaBase + 4, face: 'back' },   // в левия край – рибките се виждат
+      aquaLow: { x: aquaLow.x - 10, y: aquaLow.base + 3, face: 'back' },
       massage: { x: massage.x, y: massage.base - 3 },
       sofa: [{ x: sofaX + 16, y: sofaBase - 5 }, { x: sofaX + 42, y: sofaBase - 5 }],
       // места за чакащи сесии (опашка) – прави около масичката и до библиотеката
@@ -110,7 +127,7 @@ export function computeLayout(devW, devH) {
         { x: sofaX + sofaW + 2, y: Math.min(H - 6, sofaBase + 22) }, { x: sofaX + 40, y: Math.min(H - 4, sofaBase + 30) }, // вдясно от масажния стол
       ],
     },
-    laneY: Math.round(Math.min(sofaBase - 22, base + 26)),   // пътека през зоната за почивка
+    laneY: Math.round(CFG.LOUNGE_UP ? base + 16 : Math.min(sofaBase - 22, base + 26)),   // пътека през зоната за почивка
   };
 
   const door = { x: 10, y: CFG.WALL_H - 42, w: 24, h: 42, cx: 22, floorY: CFG.WALL_H + 6 };

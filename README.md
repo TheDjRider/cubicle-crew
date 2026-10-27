@@ -48,7 +48,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | ⚠️ **Risky commands in red** | Shell commands that delete recursively, rewrite git history or touch production (`rm -rf`, `Remove-Item -Recurse -Force`, force push, `git reset --hard`, `terraform apply`, `kubectl delete`, `DROP TABLE`, `curl … \| sh`, anything with "prod") get a red ⚠ in the bubble, the card, the thin strip and the Allow / Deny bar, so you look twice before you allow them. |
 | 💥 **Crashed sessions** | If a Claude Code session closes in the middle of a tool (a crash, a killed terminal), its agent doesn't just walk out: it stays at the desk in grey with a "Session ended" bubble until you hover or click it. |
 | 🎨 **7 states** | `idle` · `thinking` · `typing` · `reading` · `running` · `delegating` · `waiting`. Each one has its own poses, monitor content and particles. |
-| 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. Up to three pets roam the lounge: cats with coat patterns and a dog (beagle, golden, corgi, husky, dachshund…) that likes to sit next to whoever is resting. Hover a pet to see its name; click it to rename it. |
+| 🛋️ **Lounge** | Idle sessions grab a coffee, play handheld games on the sofa, doze off or throw darts. Up to three pets roam the lounge: cats with coat patterns and a dog (beagle, golden, corgi, husky, dachshund…) that likes to sit next to whoever is resting. They have their own corner under the sofa rug: a food bowl each, a water fountain with running water and toys lying around. Hover a pet to see its name; click it to rename it. |
 | 🌇 **Real sky** | The tall French windows follow the clock of your city (or your computer's clock): dawn, golden hour, night. After dark the room gets moody: lamps, monitors and the neon sign throw soft pools of pixel light, the corners go dark, and the ceiling lights come on in the evening. Everyone breathes, plants sway now and then, and every piece of furniture casts a shadow. The switch next to the door turns them off, for colleagues who like working in a cave. |
 | 🌧️ **Real weather** *(optional)* | Pick your city in the shop's **Weather** tab (or click the little weather station above the bookshelf) and the windows show the weather outside: clouds, rain running down the glass, snow on the ledge, fog, lightning. The room gets darker on grey days, and the station shows the temperature and the chance of rain. Data comes from [Open-Meteo](https://open-meteo.com) every 20 minutes; only the city's coordinates are sent. Until you pick a city, the app makes no requests to the internet at all. |
 | 🪙 **Coins & shop** | Active agents earn coins. Spend them on ~50 decor items: floors, walls, rugs, sofas, a throne for the lead, a neon sign, an aquarium, an arcade cabinet, a massage chair, more cats, a dog and its breeds, nine cat coat patterns. There are also 14 achievements. |
@@ -60,7 +60,7 @@ scene you can leave open on a second monitor, or pin in the corner of your scree
 | 🎃 **Seasonal decor & pets** | Pumpkins in autumn, a tree at Christmas, tulips in spring, a fan in summer – sold only in season, yours forever. Click a pet to pet it. |
 | 🐧 **WSL, Docker, Cowork** | On Windows the app also watches `~/.claude/projects` inside running WSL distros. Claude Code in Docker or a VM shows up too once you mount its `~/.claude` to a folder and add it in the settings ([how](docs/docker.md)). Cowork tasks in Claude Desktop are found by themselves. |
 | 🔔 **Sound** | An 8-bit ding-dong when an agent needs you (a question or a permission prompt) and a short fanfare when a session finishes after a minute or more of work. It only plays while you're looking at another window, and the bell in the bottom bar (or the tray menu) mutes it. In a browser it starts working after your first click on the page. |
-| 🖥️ **Desktop widget** | A frameless, always-on-top Windows app above the tray, with a tray menu, `Ctrl+Alt+P`, notifications and start with Windows. |
+| 🖥️ **Desktop widget** | A frameless, always-on-top Windows app above the tray, with a tray menu, `Ctrl+Alt+P`, notifications and start with Windows. Turn on the **transparent background** and the office sits right on your desktop – no walls, the floor fades out, lower, just above the taskbar – or make the whole window see-through with the opacity slider. After an update it shows what is new, and when a newer version is out it offers to download it. |
 | 🧩 **Moddable art** | Everything is drawn in code, but you can replace it with your own PNG character sheet and tileset without touching any code. |
 
 ## Quick start
@@ -122,9 +122,9 @@ npm run dist         # build the installer → release/CubicleCrew-Setup-<versio
 ```
 
 The widget runs its own server, so you don't need a browser or `npm start`. It sits in the bottom-right corner above
-the tray and stays on top of other windows. Hover it to show a drag bar with settings, pin, click-through, hide and
+the tray and stays on top of other windows. Hover it to show a drag bar with pin, reset size, settings, hide and
 quit buttons.
-`Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has notifications, sound, start with Windows, demo mode and size reset.
+`Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has the shop, stats, weather, the thin strip and click-through; everything else is in the settings panel.
 
 The installed app starts with Windows by default. Whenever it starts and no Claude Code session is open yet, it waits in a small window above the tray with a morning scene (your avatar with a coffee at the desk in front of the window, with the sky at the real time of day and the weather outside; now and then they get up, look out and go to pet your pet asleep on the floor); when a session appears, or you click it, it opens into the full office, and a minute after the last session closes it goes back to the small window. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.
 
@@ -171,7 +171,7 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 - **System notification** *(app)* – a pop-up when an agent waits for you; clicking it opens that session's terminal.
 
 **Updates**
-- **Check for new versions** – off by default. Every 6 hours (or with "Check now" in the panel) asks GitHub for the latest release number; when there is a newer one, the `?` button gets a green dot and the panel (and the tray menu in the app) shows a download link. In the Windows app the panel and the tray also offer **Download and install**: one click downloads the installer from the GitHub release, checks its SHA-256 and installs it over the current version (coins and settings stay), then the app restarts. Nothing is downloaded or installed until you click it.
+- **Check for new versions** – off by default. Every 6 hours (or with "Check now" in the panel) asks GitHub for the latest release number; when there is a newer one, a short window says so once (with **Download**, the release notes and **Later**), the `?` button gets a green dot and the panel (and the tray menu in the app) shows a download link. In the Windows app the panel and the tray also offer **Download and install**: one click downloads the installer from the GitHub release, checks its SHA-256 and installs it over the current version (coins and settings stay), then the app restarts. Nothing is downloaded or installed until you click it.
 
 **Privacy**
 - **Hide commands and paths** – bubbles, the card and notifications show only the tool and the session name. For screen sharing and streaming.
@@ -180,7 +180,10 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 
 **Window** *(app)*
 - **Show only when needed** – the window stays hidden (the tray icon stays) and comes up by itself, without taking focus, when an agent waits for you or a lead finishes; it hides again 8 s later. Ctrl+Alt+P or the tray icon show it any time.
+- **Reset size** – also the ⤡ button on the title bar: back to the default size, keeping the bottom-right corner where it is.
 - **Always on top** – the window stays above the others, so you see the office while you work.
+- **Window opacity** – a slider from 25 % to 100 %: how much of your work shows through the whole window.
+- **Transparent background (experiment)** – no walls, sky or night tint; the floor fades out at the edges and the room is lower (356×166), so the office sits right on your desktop above the taskbar. Clicks on empty spots go through to the window below. Not on Linux.
 - **Click-through** – the mouse goes through the office to whatever is below. Turn it off from the tray menu.
 - **Taskbar button** – off by default; the app also shows up on the taskbar, not only by the clock (Windows and Linux).
 - **Small window when there are no sessions** – with no session open the office shrinks to a morning scene and opens by itself when a session starts.

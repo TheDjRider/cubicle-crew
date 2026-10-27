@@ -116,7 +116,7 @@ export function demoWallet(tokens) {
   const earner = new Earner({ rate: 10 });
   const start = PARAMS.demo === 'showcase' ? 1240 : 600; // демото започва с малко токени, за да се пробва магазинът
   // ?demo&setup – началната настройка в паметта (иначе демото я пропуска)
-  const save = { tokens: start, lifetimeTokens: start, tasksDone: 0, lifetimeActiveSec: 0, daysActive: 0, owned: [], equipped: {}, achievements: {}, setup: PARAMS.setup ? null : 'demo' };
+  const save = { tokens: start, lifetimeTokens: start, tasksDone: 0, lifetimeActiveSec: 0, daysActive: 0, owned: ['massage.chair'], equipped: { massage: 'massage.chair' }, achievements: { 'shop.1': dayKey() }, setup: PARAMS.setup ? null : 'demo' }; // демото: с масажния стол (без „Първа покупка“ за него)
   const push = (delta, reason, src, by, extra) => tokens.onWallet({
     type: 'wallet', tokens: save.tokens, lifetime: save.lifetimeTokens, delta, reason, src, by,
     owned: save.owned, equipped: save.equipped, achievements: save.achievements, avatar: save.avatar,

@@ -7,7 +7,7 @@ import { R, rng, makeCanvas, pixLine, hashStr } from './util.js';
 import { POD } from './layout.js';
 import { drawText, textWidth, compactNum } from './pixelfont.js';
 import { drawCoin } from './tokens.js';
-import { SLOTS, resolveDecor } from './catalog.js';
+import { SLOTS, PET_SLOTS, resolveDecor } from './catalog.js';
 import { drawWindowWeather, drawWeatherPlaque, plaqueWidth } from './weather.js';
 
 // =====================================================================
@@ -887,6 +887,53 @@ export function drawArcadeScreen(ctx, ar, t) {
   R(ctx, '#ffffff', px, y0 + s.h - 2, 3, 1);
   R(ctx, '#f0d040', x0 + ((k * 3) % (s.w - 1)), y0 + 2 + (k % (s.h - 4)), 1, 1);
 }
+// ---------- кътът на любимците: играчки (разхвърляни), купички с храна (по една на любимец), фонтан за вода ----------
+// играчките са нарисувани в една обща схема; TOYS[вид] = [x, y, w, h] – парчето от нея за отделния предмет
+const TOYS = { yarn: [0, 2, 13, 7], mouse: [15, 3, 8, 6], bone: [24, 3, 8, 6], ball: [33, 2, 7, 8] };
+function drawToySheet(g) {
+  // кълбо прежда (розово) с навита нишка и опашка
+  R(g, '#b0405a', 1, 3, 6, 5); R(g, '#e06a8a', 0, 4, 8, 3); R(g, '#e06a8a', 2, 2, 4, 1); R(g, '#f0a0b8', 2, 3, 2, 1);
+  R(g, '#b0405a', 3, 4, 1, 3); R(g, '#b0405a', 5, 3, 1, 3); R(g, '#e06a8a', 8, 6, 3, 1); R(g, '#e06a8a', 11, 7, 2, 1);
+  // мишка (сива) с опашка
+  R(g, '#7a7a8a', 15, 5, 5, 3); R(g, '#9a9aaa', 16, 4, 3, 1); R(g, '#f0a0b8', 15, 4, 1, 1); R(g, '#1a1420', 15, 6, 1, 1); R(g, '#5a5a6a', 20, 6, 2, 1); R(g, '#5a5a6a', 22, 7, 1, 1);
+  // кокал (бял)
+  R(g, '#e8e4dc', 25, 5, 6, 2); R(g, '#e8e4dc', 24, 4, 2, 2); R(g, '#e8e4dc', 24, 7, 2, 1); R(g, '#e8e4dc', 30, 4, 2, 2); R(g, '#e8e4dc', 30, 7, 2, 1); R(g, '#b8b2a6', 26, 7, 4, 1);
+  // гумена топка (червена с жълта лента)
+  R(g, '#c03a3a', 34, 3, 5, 6); R(g, '#c03a3a', 33, 4, 7, 4); R(g, '#f0c850', 33, 5, 7, 1); R(g, '#f08a7a', 35, 4, 1, 1); R(g, '#8a2a2a', 34, 8, 5, 1);
+  // сенки
+  g.fillStyle = 'rgba(20,12,28,0.25)'; g.fillRect(1, 8, 7, 1); g.fillRect(15, 8, 6, 1); g.fillRect(25, 8, 6, 1);
+}
+function drawToy(g, kind) { const [x, y] = TOYS[kind]; g.translate(-x, -y); drawToySheet(g); g.setTransform(1, 0, 0, 1, 0, 0); }
+// купичка с гранули; c = цветът ѝ (различен за всеки любимец)
+const BOWL = { w: 9, h: 5 };
+const BOWL_COLS = ['#d84a5a', '#4a8fe0', '#e0a43a', '#4ac26b'];
+function drawBowl(g, c) {
+  R(g, 'rgba(20,12,28,0.25)', 1, 4, 7, 1);
+  R(g, shade(c, 0.7), 1, 2, 7, 2); R(g, c, 0, 1, 9, 2); R(g, lighten(c, 0.35), 1, 1, 7, 1);
+  R(g, '#a8683a', 2, 0, 5, 1); R(g, '#7a4826', 3, 0, 1, 1); R(g, '#c8884a', 5, 0, 1, 1); // гранулите отгоре
+}
+// фонтан за вода: керамично основание с басейнче и чучур в средата (водата е анимирана – drawFountainWater)
+const FOUNTAIN = { w: 14, h: 13 };
+function drawFountain(g) {
+  R(g, '#2a7a8a', 1, 8, 12, 4); R(g, '#1e5a68', 2, 11, 10, 1); R(g, '#3a9aaa', 0, 7, 14, 2); R(g, '#7ad0dc', 1, 7, 12, 1);
+  R(g, '#4ab0d8', 2, 8, 10, 1);                               // басейнчето
+  R(g, '#e8e4dc', 6, 3, 2, 5); R(g, '#c8c2b6', 7, 3, 1, 5);   // чучурът
+  R(g, '#f6f3ea', 5, 2, 4, 1); R(g, '#e8e4dc', 6, 1, 2, 1);   // цветчето отгоре
+}
+/** Водата във фонтана: две струйки капки от чучура към басейна и отблясък, който обикаля (~6 кадъра в секунда). */
+export function drawFountainWater(ctx, f, t) {
+  const k = Math.floor(t / 160), x = f.x, y = f.y;
+  const W = '#a8e8ff', D = '#6ac8f0';
+  const arcL = [[5, 2], [4, 3], [3, 5], [3, 7]], arcR = [[8, 2], [9, 3], [10, 5], [10, 7]];
+  for (let i = 0; i < 4; i += 2) {
+    const [lx, ly] = arcL[(k + i) % 4], [rx, ry] = arcR[(k + i + 1) % 4];
+    R(ctx, i ? D : W, x + lx, y + ly, 1, 1); R(ctx, i ? W : D, x + rx, y + ry, 1, 1);
+  }
+  R(ctx, W, x + 6, y + 1, 2, 1);                               // бликащата вода отгоре
+  R(ctx, '#d8f6ff', x + 2 + (k % 10), y + 8, 1, 1);            // отблясък по басейна
+  if (k % 3 === 0) R(ctx, W, x + 3 + ((k * 7) % 8), y + 7, 1, 1); // вълничка
+}
+
 // масажен стол отпред: облегалка за глава, ролкови възглавници, подлакътници (с пулт вдясно), поставка за краката
 const MASSAGE = { w: 28, h: 37, led: { x: 24, y: 21 } }; // по-голям от седящия: главата и подлакътниците се подават
 function drawMassage(ctx) {
@@ -1029,6 +1076,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   // бюрата и столовете тук, останалите мебели – при add() по-долу (мека елипса под всяка)
   for (const p of L.pods) { floorShadow(g, p.x + 37, p.y + 46, 66, 8); floorShadow(g, p.x + 27, p.y + 28, 26, 6, 0.8); }
   const lo = L.lounge;
+  // ---------- играчките на любимците (само ако има поне един): на пода под килима на дивана ----------
 
   // ---------- стена ----------
   const wallTile = !variant('wall', decor.wall) && !variant('wainscot', decor.wainscot) && patternTile('wall');
@@ -1073,7 +1121,8 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   for (const p of posters) drawPoster(g, p.x, p.y, p.kind);
   if (board) drawWhiteboardFrame(g, board);
   const dt = lo.darts;
-  g.drawImage(prop('dartboard', dt.w, dt.h, (c) => drawDartboard(c, dt.w, dt.h)), dt.x, dt.y);
+  const dartImg = prop('dartboard', dt.w, dt.h, (c) => drawDartboard(c, dt.w, dt.h));
+  g.drawImage(dartImg, dt.x, dt.y);
   // стената в зоната за почивка: часовник над кафемашината и постер над диспенсъра
   const clock = { x: lo.counter.x + 22, y: 11, r: 7 };
   drawClockFace(g, clock);
@@ -1105,8 +1154,8 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
     add(img, arcade.x, ar.base, ar.base, { w: 20, h: 5 });
   } else add(bigPlant(), lo.tallPlant.x - 14, lo.tallPlant.base, lo.tallPlant.base, PLANT_SH);
   if (decor.aquarium) {
-    const aq = lo.aquarium, img = prop('aquarium', AQUA.w, AQUA.h, drawAquarium);
-    aquarium = { x: Math.round(aq.x - AQUA.w / 2), y: aq.base - AQUA.h, key: aq.base };
+    const aq = decor.massage && lo.massage && lo.aquaLow ? lo.aquaLow : lo.aquarium, img = prop('aquarium', AQUA.w, AQUA.h, drawAquarium);
+    aquarium = { x: Math.round(aq.x - AQUA.w / 2), y: aq.base - AQUA.h, key: aq.base, low: aq === lo.aquaLow };
     add(img, aquarium.x, aq.base, aq.base, { w: 30, h: 5 });
   }
   if (decor.massage && lo.massage) {
@@ -1114,7 +1163,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
     massage = { x: Math.round(ms.x - MASSAGE.w / 2), y: ms.base - MASSAGE.h, w: MASSAGE.w, key: ms.base };
     add(prop('massage', MASSAGE.w, MASSAGE.h, drawMassage), massage.x, ms.base, ms.base, { w: 30, h: 6 });
   }
-  add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base, lo.cornerPlant.base, PLANT_SH);
+  if (!aquarium?.low) add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base, lo.cornerPlant.base, PLANT_SH); // аквариумът под масажния стол заема ъгъла
   const sf = lo.sofa, so = decor.sofa, sv = variant('sofa', so);
   add(prop('sofa_back', sf.w, 18, (c) => drawSofaBack(c, sf.w, 18, so), sv), sf.x, sf.base - 14, sf.base - 14, null);
   add(prop('sofa_front', sf.w, 20, (c) => drawSofaFront(c, sf.w, 20, so), sv), sf.x, sf.base, sf.base + 1, { w: sf.w + 4, h: 7 });
@@ -1134,6 +1183,20 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   if (decor.season) { const sx = L.door.x + L.door.w + 1; add(seasonImg(decor.season), sx, CFG.WALL_H + 6, CFG.WALL_H + 6, { w: 26, h: 5 }); season = { x: sx, base: CFG.WALL_H + 6, style: decor.season.style }; }
   else add(smallPlant, L.door.x + L.door.w + 1, CFG.WALL_H + 4, CFG.WALL_H + 4, SMALL_SH);
   if (H - Math.max(...L.rugs.map((r) => r.y + r.h)) > 26) add(bigPlant(), 4, H - 6, H - 6, PLANT_SH);
+
+  // кътът на любимците (само ако има поне един): фонтан, купичка за всеки, разхвърляни играчки
+  let fountain = null;
+  const nPets = PET_SLOTS.filter((sl) => decor[sl]).length;
+  if (nPets && lo.pets) {
+    const P = lo.pets;
+    add(prop('pet_fountain', FOUNTAIN.w, FOUNTAIN.h, drawFountain), P.fountain.x, P.fountain.base, P.fountain.base, { w: 14, h: 3 });
+    fountain = { x: P.fountain.x, y: P.fountain.base - FOUNTAIN.h, key: P.fountain.base };
+    for (let i = 0; i < Math.min(nPets, P.bowls.length); i++) {
+      const bw = P.bowls[i];
+      add(prop('pet_bowl', BOWL.w, BOWL.h, (c) => drawBowl(c, BOWL_COLS[i]), 'c' + i), bw.x, bw.base, bw.base, null);
+    }
+    for (const t of P.toys) { const [, , w, h] = TOYS[t.kind]; add(prop('toy_' + t.kind, w, h, (c) => drawToy(c, t.kind)), t.x, t.base, t.base - 3, null); }
+  }
 
   // между бюрата на двамата оркестратори: шкаф с принтер, мелачка и растение
   let shredder = null;
@@ -1179,14 +1242,47 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, massage, season, shredder, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
-    doorOpen: 0,
+    lampGlow, aquarium, arcade, massage, season, shredder, fountain, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
+    doorOpen: 0, dartboard: { img: dartImg, x: dt.x, y: dt.y }, // dartboard – за прозрачния фон (там стената я няма)
+    decor, seed,
   };
 }
 
 // =====================================================================
 // Динамични слоеве
 // =====================================================================
+/** Прозрачен фон: целият под (с килимите и сенките в него), избледняващ към краищата – рисува се веднъж в room.clearBg –
+ *  и дъската за дартс на стойка (стената я няма). */
+export function drawClearFloor(ctx, room) {
+  const db = room.dartboard, WH = CFG.WALL_H;
+  if (!room.clearBg) {
+    const c = makeCanvas(room.W, room.H), g = c.getContext('2d');
+    g.drawImage(room.bg, 0, WH, room.W, room.H - WH, 0, WH, room.W, room.H - WH);
+    // маска: плътно в средата, прозрачно към ръбовете (отгоре 12 px, отстрани и отдолу 26 px)
+    const F = 26, mask = makeCanvas(room.W, room.H), m = mask.getContext('2d');
+    m.fillStyle = '#000'; m.fillRect(0, WH, room.W, room.H - WH);
+    m.globalCompositeOperation = 'destination-out';
+    const edge = (x0, y0, x1, y1, x, y, w, h) => { const gr = m.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)'); m.fillStyle = gr; m.fillRect(x, y, w, h); };
+    edge(0, WH, 0, WH + 12, 0, WH, room.W, 12);
+    edge(0, room.H, 0, room.H - F, 0, room.H - F, room.W, F);
+    edge(0, 0, F, 0, 0, WH, F, room.H - WH);
+    edge(room.W, 0, room.W - F, 0, room.W - F, WH, F, room.H - WH);
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(mask, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    if (db) floorShadow(g, db.x + Math.floor(db.img.width / 2), WH, 16, 4);
+    room.clearBg = c;
+  }
+  ctx.drawImage(room.clearBg, 0, 0);
+  // дъската за дартс на стойка (стената я няма): два крака до мястото, където беше стената
+  if (db) {
+    const cx = db.x + Math.floor(db.img.width / 2), y0 = db.y + db.img.height - 2, y1 = CFG.WALL_H + 3;
+    R(ctx, '#2a2030', cx - 4, y0, 2, y1 - y0); R(ctx, '#2a2030', cx + 3, y0, 2, y1 - y0);
+    R(ctx, '#4a3e52', cx - 4, y0, 1, y1 - y0); R(ctx, '#4a3e52', cx + 3, y0, 1, y1 - y0);
+    ctx.drawImage(db.img, db.x, db.y);
+  }
+}
+
 export function drawSky(ctx, room, tod, t) {
   const { windows, sky } = room;
   const wx = tod.wx || null, cover = tod.cover || 0;

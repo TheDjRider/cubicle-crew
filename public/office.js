@@ -1,7 +1,7 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
-import { CFG, STATES } from './config.js';
+import { CFG, STATES, PARAMS } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
+import { buildRoom, buildPod, drawClearFloor, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawFountainWater, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
@@ -327,7 +327,7 @@ export class Office {
       case 'cooler': return lo.spots.cooler;
       case 'darts': return lo.spots.darts;
       case 'arcade': return lo.spots.arcade;
-      case 'aquarium': return lo.spots.aquarium;
+      case 'aquarium': return this.room?.aquarium?.low ? lo.spots.aquaLow : lo.spots.aquarium;
       case 'massage': return lo.spots.massage;
       case 'board': { const b = this.room?.board; return b ? { x: b.x + b.w + 10, y: CFG.WALL_H + 13 } : lo.spots.darts; }
       case 'sofa': return lo.spots.sofa[loc.i];
@@ -349,7 +349,7 @@ export class Office {
       // вратата е на стената: излиза се направо на горната пътека под нея
       case 'door': return { pts: [{ x: L.door.cx, y: L.door.floorY }, { x: L.door.cx, y: ln.topY }], lane: 'row', y: ln.topY };
       case 'visit': { const pt = this.locPoint(loc, a); return { pts: [pt], lane: 'row', y: pt.y }; }
-      case 'coffee': case 'cooler': case 'arcade': case 'aquarium': case 'massage': { const s = lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
+      case 'coffee': case 'cooler': case 'arcade': case 'aquarium': case 'massage': { const s = loc.type === 'aquarium' && this.room?.aquarium?.low ? lo.spots.aquaLow : lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       case 'darts': { const s = lo.spots.darts; return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'board': { const s = this.locPoint(loc, a); return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'sofa': { const s = lo.spots.sofa[loc.i]; const ay = lo.sofa.base + 4; return { pts: [{ x: s.x, y: ay }, { x: ln.loungeX, y: ay }], lane: 'v', x: ln.loungeX }; }
@@ -714,17 +714,22 @@ export class Office {
     const L = this.L, room = this.room;
     this.tod = tod;
     ctx.imageSmoothingEnabled = false;
+    // ?clear (прозрачен фон): без небе, стени, под, оттенък и светлини – мебелите, хората, любимците, дартса и сенките под бюрата
+    const clear = PARAMS.clear;
     // 1) небе (под прозрачните стъкла) 2) фон
-    drawSky(ctx, room, tod, now);
-    ctx.drawImage(room.bg, 0, 0);
-    const st = this.model.stats();
-    drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
-    drawBoardScreen(ctx, room, this.board, this.boardStats, now);
+    if (clear) { ctx.clearRect(0, 0, room.W, room.H); drawClearFloor(ctx, room); }
+    else {
+      drawSky(ctx, room, tod, now);
+      ctx.drawImage(room.bg, 0, 0);
+      const st = this.model.stats();
+      drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
+      drawBoardScreen(ctx, room, this.board, this.boardStats, now);
+      drawLightFixtures(ctx, room, this.lights.on, prefs.lamp);
+    }
     const lit = this.lightLevel(now);
-    drawLightFixtures(ctx, room, this.lights.on, prefs.lamp);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
-    drawShafts(ctx, room, tod, now);
+    if (!clear) drawShafts(ctx, room, tod, now);
     this.drawLinks(ctx, now);
     for (const a of this.actors.values()) {
       if (a.vstate === 'waiting' && a.isAtDesk(L)) {
@@ -758,12 +763,22 @@ export class Office {
     if (room.aquarium) items.push({ key: room.aquarium.key + 0.5, fn: () => drawAquariumFish(ctx, room.aquarium, now) });
     if (room.arcade) items.push({ key: room.arcade.key + 0.5, fn: () => drawArcadeScreen(ctx, room.arcade, now) });
     if (room.massage) { const on = this.live().some((x) => x.loc.type === 'massage' && x.mode === 'idleSpot'); items.push({ key: room.massage.key + 3, fn: () => drawMassageLed(ctx, room.massage, now, on) }); }
+    if (room.fountain) items.push({ key: room.fountain.key + 0.5, fn: () => drawFountainWater(ctx, room.fountain, now) });
     if (room.shredder) items.push({ key: room.shredder.base + 0.5, fn: () => drawShredderChew(ctx, room.shredder, now) });
     items.forEach((it, i) => { it.i = i; });
     items.sort((a, b) => a.key - b.key || a.i - b.i);
     for (const it of items) it.fn();
 
     this.drawDarts(ctx, now, 'air');
+    if (!clear) this.drawLight(ctx, room, tod, lit, now, occupant);
+    // 7) частици и икони отгоре
+    this.fx.draw(ctx, 'top');
+    for (const a of this.actors.values()) a.drawOverlay(ctx, now);
+    if (this.focusId && this.actors.has(this.focusId)) this.drawFocus(ctx, this.actors.get(this.focusId), now);
+  }
+
+  /** Оттенъкът за часа, светкавицата и светлините (multiply/lighter – върху прозрачен фон биха оцветили празното). */
+  drawLight(ctx, room, tod, lit, now, occupant) {
     // 5) нощен/вечерен оттенък
     drawTint(ctx, room, tod, lit);
     // светкавица при буря – цялата стая проблясва за миг
@@ -776,10 +791,6 @@ export class Office {
     boardGlow(ctx, room, this.board, now, tod.night);
     this.drawGlows(ctx, now, tod, occupant);
     ctx.restore();
-    // 7) частици и икони отгоре
-    this.fx.draw(ctx, 'top');
-    for (const a of this.actors.values()) a.drawOverlay(ctx, now);
-    if (this.focusId && this.actors.has(this.focusId)) this.drawFocus(ctx, this.actors.get(this.focusId), now);
   }
 
   /** Купчина листове в десния ъгъл на бюрото: колко е пълен контекстът на агента (жълто > 60%, червено > 85%). */
