@@ -1144,13 +1144,14 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c, decor.neon.style);
 
   // прозрачен фон: стената я няма – часовникът виси във въздуха вляво от дартса, времето навън стои върху
-  // кафемашината (във въздуха изглеждаше без опора), неонът – на мястото си над зоната за почивка
+  // кафемашината (във въздуха изглеждаше без опора), неонът – над диспенсъра (стаята е по-ниска и на старото място
+  // аркадата го закриваше)
   let clearProps = null;
   if (CFG.FIXED_ROOM) {
     const ck = { x: dt.x - 22, y: 12, r: 7 }, dg = { x: ck.x - 10, y: ck.y + 9, w: 21, h: 7 };
     clearProps = {
       clock: ck, digital: dg, plaque: { cx: lo.counter.x + 15, y: lo.counter.base - lo.counter.h - 22 - 6 }, // точно върху машината
-      neon: decor.neon ? { x: lo.x + lo.w - 26, y: 12, c: decor.neon.c, style: decor.neon.style } : null,
+      neon: decor.neon ? { x: Math.round(lo.cooler.x + lo.cooler.w / 2 - 11), y: Math.max(1, lo.cooler.base - lo.cooler.h - neonH(decor.neon.style) - 2), c: decor.neon.c, style: decor.neon.style } : null,
     };
   }
 
