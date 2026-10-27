@@ -266,6 +266,9 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.1': [
+        ['Прозрачен фон: подредено', 'Времето навън стои върху кафемашината, вместо да виси във въздуха, неонът е пак над зоната за почивка, а отрязаната саксия в ъгъла я няма.'],
+      ],
       '2.19.0': [
         ['Светлина по часа', 'Зазоряване, златен час, синьо време и нощ имат свои цветове. Слънцето пада на петна през прозорците и се движи с деня; нощем мониторите светят в цвета на състоянието, лампите – топло. Настройки → Изглед → „Атмосфера“: пълна, лека или изключена.'],
         ['Премиум осветление (GPU)', 'По желание: истинска светлина за всеки пиксел – лампи, монитори, неон, луна, сенки и сияние. Настройки → Изглед, сменя се веднага; на батерия или при бавна видеокарта минава само на обикновеното.'],
@@ -562,6 +565,9 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.1': [
+        ['Transparent background, tidied up', 'The weather sign now sits on the coffee machine instead of floating in the air, the neon is back above the lounge, and the cut-off plant in the corner is gone.'],
+      ],
       '2.19.0': [
         ['Light that follows the day', 'Dawn, golden hour, blue hour and night each have their own colours. Sunlight falls through the windows in patches that move with the day; at night monitors glow in their state colour and lamps glow warm. Settings → Look → "Atmosphere": full, soft or off.'],
         ['Premium lighting (GPU)', 'Optional: real per-pixel light – lamps, monitors, neon, moonlight, shadows and bloom. Settings → Look, switches instantly; on battery or a slow GPU it falls back to the normal look.'],

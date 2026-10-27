@@ -1143,14 +1143,14 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   drawPoster(g, lo.cooler.x - 1, 10, decor.posters.kinds[1 + (posters.length % 2)]);
   if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c, decor.neon.style);
 
-  // прозрачен фон: стената я няма – часовникът и метеостанцията под него висят във въздуха вляво от дартса,
-  // неонът – вляво от часовника, под лентата на прозореца (горе вдясно стоят бутоните ▲ ◐ ⤡ ⚙ – там се криеше)
+  // прозрачен фон: стената я няма – часовникът виси във въздуха вляво от дартса, времето навън стои върху
+  // кафемашината (във въздуха изглеждаше без опора), неонът – на мястото си над зоната за почивка
   let clearProps = null;
   if (CFG.FIXED_ROOM) {
     const ck = { x: dt.x - 22, y: 12, r: 7 }, dg = { x: ck.x - 10, y: ck.y + 9, w: 21, h: 7 };
     clearProps = {
-      clock: ck, digital: dg, plaque: { cx: ck.x, y: dg.y + dg.h + 3 },
-      neon: decor.neon ? { x: dg.x - 30, y: 15, c: decor.neon.c, style: decor.neon.style } : null,
+      clock: ck, digital: dg, plaque: { cx: lo.counter.x + 15, y: lo.counter.base - lo.counter.h - 22 - 6 }, // точно върху машината
+      neon: decor.neon ? { x: lo.x + lo.w - 26, y: 12, c: decor.neon.c, style: decor.neon.style } : null,
     };
   }
 
@@ -1185,7 +1185,8 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
     massage = { x: Math.round(ms.x - MASSAGE.w / 2), y: ms.base - MASSAGE.h, w: MASSAGE.w, key: ms.base };
     add(prop('massage', MASSAGE.w, MASSAGE.h, drawMassage), massage.x, ms.base, ms.base, { w: 30, h: 6 });
   }
-  if (!aquarium?.low) add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base, lo.cornerPlant.base, PLANT_SH); // аквариумът под масажния стол заема ъгъла
+  // аквариумът под масажния стол заема ъгъла; на прозрачния фон саксията в ъгъла стоеше отрязана на ръба – без нея
+  if (!aquarium?.low && !CFG.FIXED_ROOM) add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base, lo.cornerPlant.base, PLANT_SH);
   const sf = lo.sofa, so = decor.sofa, sv = variant('sofa', so);
   add(prop('sofa_back', sf.w, 18, (c) => drawSofaBack(c, sf.w, 18, so), sv), sf.x, sf.base - 14, sf.base - 14, null);
   add(prop('sofa_front', sf.w, 20, (c) => drawSofaFront(c, sf.w, 20, so), sv), sf.x, sf.base, sf.base + 1, { w: sf.w + 4, h: 7 });
