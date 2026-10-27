@@ -266,6 +266,9 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.3': [
+        ['Лентата горе се скрива', 'При прозрачен фон лентата на прозореца, долните бутони и подсказките се скриват, когато мишката излезе – и когато е излязла през празно място.'],
+      ],
       '2.19.2': [
         ['Неонът се вижда', 'При прозрачен фон неонът е над диспенсъра за вода – аркадата вече не го закрива.'],
       ],
@@ -568,6 +571,9 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.3': [
+        ['The top bar hides again', 'On the transparent background the title bar, the bottom buttons and tooltips now hide when the mouse leaves – also when it leaves through an empty spot.'],
+      ],
       '2.19.2': [
         ['The neon is visible', 'On the transparent background the neon now hangs above the water cooler – the arcade no longer hides it.'],
       ],

@@ -40,7 +40,13 @@ function clearHits() {
     const px = Math.floor((x - r.left) * k), py = Math.floor((y - r.top) * k);
     try { return g.getImageData(px - 1, py - 1, 3, 3).data.some((v, i) => i % 4 === 3 && v > 24); } catch { return true; }
   };
-  bridge.onClearProbe((x, y) => bridge.clearHit(solidAt(x, y)));
+  bridge.onClearProbe((x, y) => {
+    // (-1, -1) = курсорът е извън прозореца: махаме „посочено“ (лентата горе, HUD, подсказката)
+    const out = x < 0 && y < 0;
+    document.body.classList.toggle('mouse-out', out);
+    if (out) { ui.mouse = null; return; }
+    bridge.clearHit(solidAt(x, y));
+  });
 }
 const model = new Model();
 const fx = new Particles();

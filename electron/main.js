@@ -441,11 +441,17 @@ ipcMain.on('settings:set', (_e, key, v) => applyDesktop(String(key), typeof v ==
 // прозрачен фон: 20 пъти в секунда питаме страницата какво има под курсора и според отговора кликовете минават или не.
 // Не разчитаме на препратените от Windows движения на мишката: над лентата горе (drag) ги няма,
 // а при мащаб на екрана ≠ 100% се разминават – прозорецът оставаше „прозрачен за кликове“ навсякъде.
-let clearSolid = null;
+let clearSolid = null, clearIn = false;
 function clearTick() {
   if (!win || !settings.clear || waiting || settings.strip || settings.through || shopOpen || !win.isVisible()) return;
   const p = screen.getCursorScreenPoint(), b = win.getBounds();
-  if (p.x < b.x || p.y < b.y || p.x >= b.x + b.width || p.y >= b.y + b.height) return;
+  if (p.x < b.x || p.y < b.y || p.x >= b.x + b.width || p.y >= b.y + b.height) {
+    // излезе: при пропуснати кликове страницата не получава mouseleave и :hover остава (лентата горе не се скрива) –
+    // казваме ѝ веднъж с проба (-1, -1)
+    if (clearIn) { clearIn = false; win.webContents.send('clear-probe', -1, -1); }
+    return;
+  }
+  clearIn = true;
   win.webContents.send('clear-probe', p.x - b.x, p.y - b.y);
 }
 ipcMain.on('clear-hit', (_e, solid) => {

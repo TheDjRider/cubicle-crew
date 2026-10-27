@@ -100,6 +100,7 @@
     padding: 0 4px 0 10px; background: rgba(14, 10, 22, 0.88); border-bottom: 1px solid var(--ui-border); -webkit-app-region: drag; user-select: none;
     opacity: 0; transition: opacity .2s; font-size: 12px; color: var(--ui-dim); }
   body.desktop:hover #winbar { opacity: 1; }
+  body.desktop.mouse-out #winbar { opacity: 0; } /* прозрачен фон: мишката излезе през празното – :hover остава, затова клас */
   #winbar .grip { flex: 1; }
   #winbar button { -webkit-app-region: no-drag; width: 26px; height: 20px; border: 0; border-radius: 3px; background: transparent; color: var(--ui-text);
     font: 13px/20px var(--font); cursor: pointer; padding: 0; }
@@ -124,7 +125,8 @@
   #morning.gone, #wait.gone { opacity: 0; pointer-events: none; }
   body.waiting #hud, body.waiting #legend, body.waiting #empty, body.waiting #card, body.waiting #tooltip { visibility: hidden; }
   body.desktop #hud span { transition: opacity .2s; }
-  body.desktop:not(:hover) #hud span:not(.alert):not(.tok):not(.shopbtn):not(.mute) { opacity: 0; }
+  body.desktop:not(:hover) #hud span:not(.alert):not(.tok):not(.shopbtn):not(.mute),
+  body.desktop.mouse-out #hud span:not(.alert):not(.tok):not(.shopbtn):not(.mute) { opacity: 0; }
   body.desktop #empty { font-size: 12px; padding: 5px 10px; }
   body.tiny .tag { font-size: 10px; line-height: 12px; padding: 0 4px 1px; gap: 3px; }
   body.tiny .tag i { width: 6px; height: 6px; }
