@@ -4,7 +4,8 @@
 //  - кафемашина / диспенсър / дартс / аркада / вратата / мелачката, когато някой ги ползва
 //  - дъжд по стъклото (по истинското време), гръм при буря; отворен прозорец – птички денем, щурци нощем
 //  - много тих „въздух“ на стаята; нощем всичко е по-тихо
-//  - lofi (отделен ключ): бавни акорди през мек филтър + рядко пращене като от плоча
+//  - lofi (отделен ключ): бавни акорди през мек филтър + рядко пращене като от плоча; следва часа и времето (lofiMood)
+//  - „чака те“ (sound.js duck) сваля фона и lofi за ~2.5 s
 // Във „Фокус“, ?overlay, скрит прозорец или без звук – мълчи и спира аудио нишката (audioIdle).
 import { PARAMS } from './config.js';
 import { prefs } from './prefs.js';
@@ -12,9 +13,19 @@ import { audioPrefs, audioOut, audioIdle, noiseSource, SFX } from './sound.js';
 import { flashAt } from './weather.js';
 
 const TICK_MS = 200;
-// lofi: Fmaj7 – Em7 – Dm7 – Cmaj7 (Hz), по 8 s
-const CHORDS = [[174.6, 220, 261.6, 329.6], [164.8, 196, 246.9, 293.7], [146.8, 174.6, 220, 261.6], [130.8, 164.8, 196, 246.9]];
-const CHORD_S = 8;
+// lofi по часа (Hz): сутрин Cmaj7 – Am7 – Fmaj7 – G6 (светло), денем Fmaj7 – Em7 – Dm7 – Cmaj7 (топло),
+// вечер и нощем Am7 – Fmaj7 – Dm7 – Em7 (минор, по-бавно, по-тъмен филтър, по-рядка мелодия)
+const PROG = {
+  morning: [[130.8, 164.8, 196, 246.9], [110, 130.8, 164.8, 196], [174.6, 220, 261.6, 329.6], [196, 246.9, 293.7, 329.6]],
+  day: [[174.6, 220, 261.6, 329.6], [164.8, 196, 246.9, 293.7], [146.8, 174.6, 220, 261.6], [130.8, 164.8, 196, 246.9]],
+  night: [[110, 130.8, 164.8, 196], [87.3, 110, 130.8, 164.8], [73.4, 87.3, 110, 130.8], [82.4, 98, 123.5, 146.8]],
+};
+/** Как свири lofi сега: акорди, дължина на акорд, филтър, честота на мелодията. */
+function lofiMood(tod) {
+  const h = tod?.h ?? 12, night = tod?.night ?? 0, rain = tod?.wx?.rain || tod?.wx?.storm ? 1 : 0;
+  const prog = night > 0.5 || h >= 20 || h < 5 ? PROG.night : h < 11 ? PROG.morning : PROG.day;
+  return { prog, chordS: 8 + 3 * night + 1.5 * rain, cutoff: (1150 - 500 * night) * (rain ? 0.75 : 1), melody: 0.7 - 0.35 * night - 0.2 * rain };
+}
 
 export class Ambience {
   constructor() {
@@ -27,7 +38,7 @@ export class Ambience {
 
   /** Може ли изобщо да звучи (настройки, режим, видим прозорец). */
   allowed(shown) {
-    return shown && !prefs.focus && !PARAMS.overlay && !PARAMS.wait && !PARAMS.strip && audioPrefs.vol > 0;
+    return shown && !prefs.focus && !PARAMS.overlay && !PARAMS.wait && !PARAMS.strip && audioPrefs.vol > 0 && !audioPrefs.muted;
   }
 
   tick(now, office, tod, shown) {
@@ -41,7 +52,7 @@ export class Ambience {
     audioIdle(true);
     const { ac } = o, t = ac.currentTime + 0.03;
     const night = tod?.night ?? 0, quiet = 1 - 0.45 * night;
-    if (lofi) this.lofi(ac, o.amb, t, quiet); else this.stopLofi();
+    if (lofi) this.lofi(ac, o.amb, t, quiet, lofiMood(tod)); else this.stopLofi();
     if (!amb) { this.stopBeds(); return; }
     this.ensureBeds(ac, o.amb);
     const W = office.room?.W || 356, pan = (x) => (x / W) * 1.4 - 0.7;
@@ -61,17 +72,16 @@ export class Ambience {
       if (night < 0.5 && Math.random() < dt * 0.35 * open) play('bird', office.pokes.openX(), t + Math.random() * 0.2);
       if (night >= 0.5 && Math.random() < dt * 1.2 * open) play('cricket', office.pokes.openX(), t + Math.random() * 0.2);
     }
-    // хората: клавиатури и почивката
+    // хората: клавиатури и почивката. Тракането има таван: общата гъстота расте с корен от броя пишещи,
+    // за да не стане трясък при 4 агента (1 -> ~5 удара/s, 4 -> ~10/s), ударите се разпределят между тях
     const L = office.L;
-    let typists = 0;
+    const typists = [];
     for (const a of office.actors.values()) {
       if (a.alpha < 0.5) continue;
       const st = a.vstate;
-      if (a.pod >= 0 && (st === 'typing' || st === 'running') && a.isAtDesk(L) && typists < 4) {
-        typists++;
-        const p = L.pods[a.pod], n = Math.round((st === 'running' ? 1.2 : 2) * (0.6 + Math.random() * 0.8) * (dt / 0.2));
-        for (let i = 0; i < n; i++) play('key', p.cx, t + Math.random() * dt);
-        if (st === 'running' && Math.random() < dt * 0.4) play('enter', p.cx, t + Math.random() * dt);
+      if (a.pod >= 0 && (st === 'typing' || st === 'running') && a.isAtDesk(L) && typists.length < 4) {
+        typists.push({ x: L.pods[a.pod].cx, rate: st === 'running' ? 3 : 5 });
+        if (st === 'running' && Math.random() < dt * 0.3) play('enter', L.pods[a.pod].cx, t + Math.random() * dt);
       }
       const lt = a.loc?.type;
       if (a.mode === 'idleSpot' && (lt === 'coffee' || lt === 'cooler') && this.seen.get(a) !== a.spotSince) {
@@ -79,6 +89,11 @@ export class Ambience {
         play(lt === 'coffee' ? 'brew' : 'glug', a.x, t + 0.4);
       }
       if (a.mode === 'idleSpot' && lt === 'arcade' && Math.random() < dt * 1.5) play('arcadeBg', a.x);
+    }
+    if (typists.length) {
+      const rate = typists.reduce((s, x) => s + x.rate, 0) / Math.sqrt(typists.length);
+      const n = Math.round(rate * dt * (0.6 + Math.random() * 0.8));
+      for (let i = 0; i < n; i++) play('key', typists[Math.floor(Math.random() * typists.length)].x, t + Math.random() * dt);
     }
     const stuck = office.darts?.stuck.length || 0;
     if (stuck > this.darts) play('dart', L.lounge.darts?.x ?? W);
@@ -113,7 +128,8 @@ export class Ambience {
   }
 
   // ---------------------------------------------------------------- lofi
-  lofi(ac, out, t, quiet) {
+  lofi(ac, out, t, quiet, mood) {
+    const CHORD_S = mood.chordS;
     if (!this.lofiOut) {
       const fl = ac.createBiquadFilter(), g = ac.createGain();
       fl.type = 'lowpass'; fl.frequency.value = 900; fl.Q.value = 0.4; g.gain.value = 0;
@@ -122,8 +138,9 @@ export class Ambience {
       this.nextChord = t + 0.2;
     }
     this.lofiOut.g.gain.setTargetAtTime(0.5 * quiet, t, 1.5);
+    this.lofiOut.in.frequency.setTargetAtTime(mood.cutoff, t, 4); // филтърът се плъзга бавно с часа и дъжда
     if (this.nextChord - t < 0.6) {
-      const at = Math.max(this.nextChord, t), notes = CHORDS[this.chord++ % CHORDS.length];
+      const at = Math.max(this.nextChord, t), notes = mood.prog[this.chord++ % mood.prog.length];
       for (const [i, f] of notes.entries()) {
         for (const det of [-4, 4]) {
           const o = ac.createOscillator(), g = ac.createGain();
@@ -134,7 +151,7 @@ export class Ambience {
         }
       }
       // мелодична нотка отгоре, понякога
-      if (Math.random() < 0.7) {
+      if (Math.random() < mood.melody) {
         const o = ac.createOscillator(), g = ac.createGain(), f = notes[2 + (this.chord % 2)] * 2, s = at + 2 + Math.random() * 3;
         o.type = 'sine'; o.frequency.value = f;
         g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(0.02, s + 0.05); g.gain.exponentialRampToValueAtTime(0.0005, s + 1.6);

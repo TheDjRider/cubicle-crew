@@ -55,6 +55,8 @@ const away = () => document.hidden || !document.hasFocus();
 
 /** Пуска звук `name` за агент `id`; force – без правилата (проба при включване). */
 export function play(name, id, force = false) {
+  if (name === 'ask') duck(); // фонът и lofi притихват, дори когато самият сигнал не свири (гледаш прозореца)
+  if (audioPrefs.muted && !force) return false; // „Тишина“
   if (!force) {
     const now = performance.now();
     if (!soundOn() || !away() || now - started < QUIET_START_MS || now - lastAny < GAP_MS) return false;
@@ -75,6 +77,7 @@ export function play(name, id, force = false) {
 //   ambient – фонов звук: клавиатурите на работещите, дъжд по стъклото, кафемашината, вратата… – изключено
 //   lofi    – много тих синтезиран lofi фон (бавни акорди) – изключено
 //   vol     – обща сила 0..1 за тези три (известията 'ask'/'done' не се пипат)
+//   muted   – „Тишина“ (бутонът в HUD / клавиш M): спира всичко наведнъж, и известията; настройките остават
 // Във „Фокус“ и в ?overlay мълчат. Контекстът се спира (suspend), щом нищо не звучи – процесорът не работи напразно.
 const AKEY = 'po.audio';
 const ADEF = { sfx: false, ambient: false, lofi: false, vol: 0.5 };
@@ -87,11 +90,14 @@ export const audioPrefs = {
   get ambient() { return !!A.ambient; },
   get lofi() { return !!A.lofi; },
   get vol() { return Math.max(0, Math.min(1, Number(A.vol) || 0)); },
+  get muted() { return !!A.muted; },
+  /** Нещо от звуците на офиса е включено (тогава бутонът „Тишина“ се вижда винаги). */
+  get any() { return !!(A.sfx || A.ambient || A.lofi); },
   set(k, v) {
     if (A[k] === v) return;
     A = { ...A, [k]: v };
     try { localStorage.setItem(AKEY, JSON.stringify(A)); } catch { /* */ }
-    if (bus.master) bus.master.gain.setTargetAtTime(curve(audioPrefs.vol), bus.master.context.currentTime, 0.05);
+    if (bus.master) bus.master.gain.setTargetAtTime(audioPrefs.muted ? 0 : curve(audioPrefs.vol), bus.master.context.currentTime, 0.05);
     for (const fn of aListeners) fn(k, v);
   },
   onChange(fn) { aListeners.push(fn); },
@@ -105,12 +111,20 @@ export function audioOut() {
   const ac = audio();
   if (!ac) return null;
   if (!bus.master) {
-    bus.master = ac.createGain(); bus.master.gain.value = curve(audioPrefs.vol); bus.master.connect(ac.destination);
+    bus.master = ac.createGain(); bus.master.gain.value = audioPrefs.muted ? 0 : curve(audioPrefs.vol); bus.master.connect(ac.destination);
     bus.sfx = ac.createGain(); bus.sfx.gain.value = 0.9; bus.sfx.connect(bus.master);
     bus.amb = ac.createGain(); bus.amb.gain.value = 0.7; bus.amb.connect(bus.master);
   }
   lastUse = performance.now();
   return { ac, sfx: bus.sfx, amb: bus.amb };
+}
+/** „Тишина“: всичко спира веднага (master към 0 за ~50 ms); второ натискане връща както беше. */
+export function toggleMute() { audioPrefs.set('muted', !audioPrefs.muted); return audioPrefs.muted; }
+/** Фонът и lofi притихват за ~2.5 s (до 20 %) и плавно се връщат – „чака те“ е по-важен от музиката. */
+export function duck(ms = 2500) {
+  if (!bus.amb || !ctx) return;
+  const g = bus.amb.gain, t = ctx.currentTime;
+  g.cancelScheduledValues(t); g.setTargetAtTime(0.14, t, 0.06); g.setTargetAtTime(0.7, t + ms / 1000, 0.6);
 }
 /** Нищо не звучи няколко секунди и фонът е спрян -> спира аудио нишката (без празна работа). */
 export function audioIdle(busy) {
@@ -216,7 +230,7 @@ export const SFX = {
 
 /** Отклик при клик по предмет (pan: -1..1 според мястото в стаята). quiet – „Фокус“ и подобни. */
 export function sfx(name, pan = 0, quiet = false) {
-  if (!audioPrefs.sfx || quiet || !SFX[name]) return false;
+  if (!audioPrefs.sfx || audioPrefs.muted || quiet || !SFX[name]) return false;
   const o = audioOut();
   if (!o) return false;
   SFX[name](o.ac, o.sfx, o.ac.currentTime + 0.01, pan);

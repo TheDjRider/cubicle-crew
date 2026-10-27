@@ -1144,13 +1144,13 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c, decor.neon.style);
 
   // прозрачен фон: стената я няма – часовникът и метеостанцията под него висят във въздуха вляво от дартса,
-  // неонът – на мястото си над зоната за почивка
+  // неонът – вляво от часовника, под лентата на прозореца (горе вдясно стоят бутоните ▲ ◐ ⤡ ⚙ – там се криеше)
   let clearProps = null;
   if (CFG.FIXED_ROOM) {
     const ck = { x: dt.x - 22, y: 12, r: 7 }, dg = { x: ck.x - 10, y: ck.y + 9, w: 21, h: 7 };
     clearProps = {
       clock: ck, digital: dg, plaque: { cx: ck.x, y: dg.y + dg.h + 3 },
-      neon: decor.neon ? { x: lo.x + lo.w - 26, y: 12, c: decor.neon.c, style: decor.neon.style } : null,
+      neon: decor.neon ? { x: dg.x - 30, y: 15, c: decor.neon.c, style: decor.neon.style } : null,
     };
   }
 
@@ -1264,7 +1264,9 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, massage, season, shredder, fountain, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, massage, season, shredder, fountain,
+    // сиянието на неона: където е табелата (на прозрачния фон – до часовника)
+    neon: decor.neon ? { x: (clearProps?.neon?.x ?? lo.x + lo.w - 26) + 11, y: (clearProps?.neon?.y ?? 12) + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0, dartboard: { img: dartImg, x: dt.x, y: dt.y }, // dartboard – за прозрачния фон (там стената я няма)
     decor, seed, clearProps,
   };

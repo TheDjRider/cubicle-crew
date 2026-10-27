@@ -3,7 +3,7 @@
 import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petTitle } from './config.js';
 import { shortDetail, fmtDuration, danger, fmtUsd, shortModel } from './util.js';
 import { coinUrl } from './tokens.js';
-import { soundOn, setSound, sfx, audioPrefs } from './sound.js';
+import { soundOn, setSound, sfx, audioPrefs, toggleMute } from './sound.js';
 import { TREAT_PRICE } from './catalog.js';
 import { prefs } from './prefs.js';
 import { boardData, demoBoardData, PAGE_DAYS } from './board.js';
@@ -36,6 +36,16 @@ function bellUrl(on) {
   c.width = 9; c.height = 9;
   BELL.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
   if (!on) { g.fillStyle = '#e04a6b'; for (let i = 0; i < 9; i++) g.fillRect(i, 8 - i, 1, 1); }
+  return c.toDataURL();
+}
+// високоговорител 9x9 за „Тишина“: звучи – с вълни; тихо – червен кръст
+const SPK = ['...a.....', '..aa..c..', 'aaba.c...', 'abba.c.c.', 'abba.c.c.', 'aaba.c...', '..aa..c..', '...a.....', '.........'];
+function speakerUrl(muted) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const col = muted ? { a: '#3a3a4a', b: '#8a8aa0' } : { a: '#2a6a7a', b: '#8ae0f0', c: '#8ae0f0' };
+  c.width = 9; c.height = 9;
+  SPK.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
+  if (muted) { g.fillStyle = '#e04a6b'; for (let i = 0; i < 4; i++) { g.fillRect(5 + i, 2 + i, 1, 1); g.fillRect(8 - i, 2 + i, 1, 1); } }
   return c.toDataURL();
 }
 
@@ -81,6 +91,7 @@ export class UI {
       if (e.target.closest('.tok, .shopbtn')) this.onShop?.();
       else if (e.target.closest('.help')) this.toggleHelp();
       else if (e.target.closest('.statsbtn')) this.onStats?.();
+      else if (e.target.closest('.mute')) { this.mute(); }
       else if (e.target.closest('.snd')) {
         setSound(!soundOn()); this.lastHud = 0; // Electron научава новия избор от stats (sound)
       }
@@ -213,6 +224,8 @@ export class UI {
       }
       if (e.key === 'Escape') { this.focus(null); if (this.help && !this.help.hidden) this.toggleHelp(false); }
       if (e.key === '?' && !e.target?.closest?.('input, textarea')) this.toggleHelp();
+      // M (и кирилското м) – „Тишина“ на всички звуци, за бързо спиране
+      if ('mMмМ'.includes(e.key) && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target?.closest?.('input, textarea')) this.mute();
     });
   }
 
@@ -495,6 +508,7 @@ export class UI {
       `<span>${T.toolCalls} <b>${s.tools}</b></span>` +
       (s.waiting ? `<span class="alert">${T.waitingYou} <b>${s.waiting}</b></span>` : '') +
       (this.conn !== 'demo' ? `<span class="snd" title="${soundOn() ? T.sound.on : T.sound.off}"><i style="background-image:url(${(this.bells ||= [bellUrl(false), bellUrl(true)])[+soundOn()]})"></i></span>` : '') +
+      (audioPrefs.any || audioPrefs.muted ? `<span class="mute${audioPrefs.muted ? ' on' : ''}" title="${audioPrefs.muted ? T.mute.off : T.mute.on}"><i style="background-image:url(${(this.spk ||= [speakerUrl(false), speakerUrl(true)])[+audioPrefs.muted]})"></i></span>` : '') +
       (this.conn !== 'demo' ? `<span class="statsbtn" title="${T.stats.open}"><i style="background-image:url(${this.barsIcon ||= barsUrl()})"></i></span>` : '') +
       (this.update?.newer ? `<span class="help upd" title="${T.help.open} · ${esc(T.help.newer(this.update.latest.version))}">?</span>` : `<span class="help" title="${T.help.open}">?</span>`) +
       `<span class="lang" title="${T.lang}">${LANG === 'bg' ? 'БГ' : 'EN'}</span>`;
@@ -616,6 +630,9 @@ export class UI {
     if (open && !this.helpGrew && !document.body.classList.contains('shopping')) { this.helpGrew = true; this.bridge?.shop?.(true); }
     else if (!open && this.helpGrew) { this.helpGrew = false; this.bridge?.shop?.(false); }
   }
+
+  /** „Тишина“: всички звуци спират/тръгват наведнъж (HUD бутонът и клавиш M). */
+  mute() { toggleMute(); this.lastHud = 0; this.hud._html = null; this.note?.(audioPrefs.muted ? T.mute.done : T.mute.back); }
 
   /** Отметка/избор в панела -> съответната настройка (страницата, звукът, езикът или приложението). */
   onHelpChange(t) {

@@ -124,7 +124,7 @@
   #morning.gone, #wait.gone { opacity: 0; pointer-events: none; }
   body.waiting #hud, body.waiting #legend, body.waiting #empty, body.waiting #card, body.waiting #tooltip { visibility: hidden; }
   body.desktop #hud span { transition: opacity .2s; }
-  body.desktop:not(:hover) #hud span:not(.alert):not(.tok):not(.shopbtn) { opacity: 0; }
+  body.desktop:not(:hover) #hud span:not(.alert):not(.tok):not(.shopbtn):not(.mute) { opacity: 0; }
   body.desktop #empty { font-size: 12px; padding: 5px 10px; }
   body.tiny .tag { font-size: 10px; line-height: 12px; padding: 0 4px 1px; gap: 3px; }
   body.tiny .tag i { width: 6px; height: 6px; }
@@ -137,6 +137,10 @@
   #hud .lang:hover { color: #fff; border-color: #6b6b80; }
   /* звънче: звук вкл./изкл. */
   #hud .snd { pointer-events: auto; cursor: pointer; }
+  #hud .mute { pointer-events: auto; cursor: pointer; }
+  #hud .mute:hover { filter: brightness(1.25); border-color: #6b6b80; }
+  #hud .mute.on { border-color: #e04a6b; }
+  #hud .mute i { display: inline-block; width: 11px; height: 11px; vertical-align: -2px; background-size: 100% 100%; image-rendering: pixelated; }
   #hud .snd:hover { filter: brightness(1.25); border-color: #6b6b80; }
   #hud .snd i { display: inline-block; width: 11px; height: 11px; vertical-align: -2px; background-size: 100% 100%; image-rendering: pixelated; }
 

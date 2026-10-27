@@ -102,6 +102,12 @@ const T_BG = {
     on: 'Звук: включен – звъни, когато агент чака теб или сесия приключи (само ако не гледаш прозореца). Клик – изключи.',
     off: 'Звук: изключен. Клик – включи.',
   },
+  mute: {
+    on: 'Тишина – спира всички звуци наведнъж (и известията). Клавиш M.',
+    off: 'Тишина: включена – нищо не звучи. Клик или M – звуците се връщат.',
+    done: 'Тишина – всички звуци са спрени (M ги връща)',
+    back: 'Звуците са включени отново',
+  },
   thinking: 'мисли…',
   legendHint: 'L – легенда · Esc – без фокус',
   // лична статистика (раздел в чекмеджето; работи и във „Фокус“)
@@ -384,6 +390,12 @@ const T_EN = {
   sound: {
     on: 'Sound: on – chimes when an agent needs you or a session finishes (only while you are not looking at the window). Click to mute.',
     off: 'Sound: off. Click to turn it on.',
+  },
+  mute: {
+    on: 'Mute – stops every sound at once (alerts too). Key M.',
+    off: 'Muted – nothing plays. Click or press M to bring the sounds back.',
+    done: 'Muted – every sound is stopped (M brings them back)',
+    back: 'Sounds are back on',
   },
   thinking: 'thinking…',
   legendHint: 'L – legend · Esc – clear focus',
