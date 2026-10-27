@@ -122,8 +122,8 @@ npm run dist         # build the installer → release/CubicleCrew-Setup-<versio
 ```
 
 The widget runs its own server, so you don't need a browser or `npm start`. It sits in the bottom-right corner above
-the tray and stays on top of other windows. Hover it to show a drag bar with pin, reset size, settings, hide and
-quit buttons.
+the tray and stays on top of other windows. Hover it to show a drag bar with pin, transparent background (◐), reset size, settings, hide
+and quit buttons.
 `Ctrl+Alt+P` shows or hides it from anywhere. The tray menu has the shop, stats, weather, the thin strip and click-through; everything else is in the settings panel.
 
 The installed app starts with Windows by default. Whenever it starts and no Claude Code session is open yet, it waits in a small window above the tray with a morning scene (your avatar with a coffee at the desk in front of the window, with the sky at the real time of day and the weather outside; now and then they get up, look out and go to pet your pet asleep on the floor); when a session appears, or you click it, it opens into the full office, and a minute after the last session closes it goes back to the small window. You can turn off either part in the tray menu: **Start with Windows** and **Small window until the first session**.
@@ -183,7 +183,7 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 - **Reset size** – also the ⤡ button on the title bar: back to the default size, keeping the bottom-right corner where it is.
 - **Always on top** – the window stays above the others, so you see the office while you work.
 - **Window opacity** – a slider from 25 % to 100 %: how much of your work shows through the whole window.
-- **Transparent background (experiment)** – no walls, sky or night tint; the floor fades out at the edges and the room is lower (356×166), so the office sits right on your desktop above the taskbar. Clicks on empty spots go through to the window below. Not on Linux.
+- **Transparent background (experiment)** – no walls, sky or night tint; the floor fades out at the edges and the room is lower (356×166), so the office sits right on your desktop above the taskbar. Clicks on empty spots go through to the window below. Also the ◐ button on the title bar. Not on Linux.
 - **Click-through** – the mouse goes through the office to whatever is below. Turn it off from the tray menu.
 - **Taskbar button** – off by default; the app also shows up on the taskbar, not only by the clock (Windows and Linux).
 - **Small window when there are no sessions** – with no session open the office shrinks to a morning scene and opens by itself when a session starts.

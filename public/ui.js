@@ -109,6 +109,10 @@ export class UI {
     if (stored == null) this.legend.hidden = true; // в малкия прозорец легендата е скрита по подразбиране (L я показва)
     const bar = document.getElementById('winbar');
     for (const b of bar.querySelectorAll('button[data-act]')) if (T.winbar[b.dataset.act]) b.title = T.winbar[b.dataset.act];
+    // прозрачният фон: бутонът светва, когато е включен; на Linux го няма (прозрачните прозорци там не са надеждни)
+    const clearBtn = bar.querySelector('[data-act="clear"]');
+    clearBtn.classList.toggle('on', !!PARAMS.clear);
+    if (/Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent)) clearBtn.hidden = true;
     bar.addEventListener('click', (e) => {
       const act = e.target.closest('button')?.dataset.act;
       if (act && bridge) bridge.action(act);

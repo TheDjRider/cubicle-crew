@@ -232,6 +232,10 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.18.5': [
+        ['Бутон за прозрачния фон', 'Новият бутон ◐ в лентата на прозореца, до „Винаги отгоре“, включва и изключва прозрачния фон с едно щракване.'],
+        ['Без стойки', 'При прозрачен фон часовникът и времето под него просто висят във въздуха над бюрата, а неонът е пак на мястото си над зоната за почивка.'],
+      ],
       '2.18.4': [
         ['Часовник, неон и време при прозрачен фон', 'Стоят на стойки над бюрата, до дартса – стрелките, цифрите и времето навън се движат както на стената.'],
         ['Нощ и при прозрачен фон', 'Вечер офисът потъмнява, а лампите, мониторите и неонът светят – само върху нарисуваното, работният плот около него остава чист.'],
@@ -306,7 +310,7 @@ const T_BG = {
   },
   tokensHint: 'Монети: печелиш ги, докато агентите работят – харчиш ги в магазина (B)',
   lang: 'Език: български – смени на English',
-  winbar: { settings: 'Настройки и помощ', pin: 'Винаги отгоре', through: 'Кликовете минават през прозореца (махни от менюто в трея)', 'reset-size': 'Нулирай размера', hide: 'Скрий в трея', quit: 'Затвори' },
+  winbar: { settings: 'Настройки и помощ', pin: 'Винаги отгоре', clear: 'Прозрачен фон (вкл./изкл.)', through: 'Кликовете минават през прозореца (махни от менюто в трея)', 'reset-size': 'Нулирай размера', hide: 'Скрий в трея', quit: 'Затвори' },
   demo2: { which: 'Кой вариант да избера?', cont: 'Да продължа ли?', whichShort: 'Кой вариант?', arch: 'Прегледай архитектурата', tests: 'Пусни тестовете', cache: 'Измисли план за кеша' },
 };
 
@@ -481,6 +485,10 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.18.5': [
+        ['A button for the transparent background', 'The new ◐ button on the title bar, next to "Always on top", turns the transparent background on and off with one click.'],
+        ['No more poles', 'On the transparent background the clock and the weather under it simply float above the desks, and the neon is back in its spot above the lounge.'],
+      ],
       '2.18.4': [
         ['Clock, neon and weather on the transparent background', 'They stand on poles above the desks, next to the darts – the hands, digits and weather move just like on the wall.'],
         ['Night on the transparent background too', 'In the evening the office gets darker and the lamps, monitors and neon glow – only on the drawn parts, the desktop around it stays clean.'],
@@ -553,7 +561,7 @@ const T_EN = {
   },
   tokensHint: 'Coins: earned while your agents work – spend them in the shop (B)',
   lang: 'Language: English – switch to български',
-  winbar: { settings: 'Settings and help', pin: 'Always on top', through: 'Click-through (turn it off from the tray menu)', 'reset-size': 'Reset size', hide: 'Hide to tray', quit: 'Quit' },
+  winbar: { settings: 'Settings and help', pin: 'Always on top', clear: 'Transparent background (on/off)', through: 'Click-through (turn it off from the tray menu)', 'reset-size': 'Reset size', hide: 'Hide to tray', quit: 'Quit' },
   demo2: { which: 'Which option should I pick?', cont: 'Shall I continue?', whichShort: 'Which option?', arch: 'Review the architecture', tests: 'Run the tests', cache: 'Plan the cache' },
   // имена на предметите (catalog.js пази българските; id-тата са записът и не се пипат)
   items: {

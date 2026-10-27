@@ -402,6 +402,7 @@ ipcMain.on('action', (_e, act) => {
   else if (act === 'quit') { quitting = true; app.quit(); }
   else if (act === 'lang:en' || act === 'lang:bg') setLang(act.slice(5));
   else if (act === 'pin') { settings.onTop = !settings.onTop; applyOnTop(); saveSettings(); refreshTray(); }
+  else if (act === 'clear') { if (process.platform !== 'linux') applyDesktop('clear', !settings.clear); }
   else if (act === 'through') { settings.through = true; applyThrough(); saveSettings(); refreshTray(); }
   else if (act === 'settings') win.webContents.send('open-help'); // ⚙ в лентата: настройките в прозореца
   else if (act === 'reset-size') resetSize();

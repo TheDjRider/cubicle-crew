@@ -1133,15 +1133,14 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   drawPoster(g, lo.cooler.x - 1, 10, decor.posters.kinds[1 + (posters.length % 2)]);
   if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c, decor.neon.style);
 
-  // прозрачен фон: стената я няма – часовникът, метеостанцията и неонът стоят на стойки вляво от дартса
+  // прозрачен фон: стената я няма – часовникът и метеостанцията под него висят във въздуха вляво от дартса,
+  // неонът – на мястото си над зоната за почивка
   let clearProps = null;
   if (CFG.FIXED_ROOM) {
-    const ck = { x: dt.x - 22, y: 12, r: 7 };
-    const nh = decor.neon ? neonH(decor.neon.style) : 0;
+    const ck = { x: dt.x - 22, y: 12, r: 7 }, dg = { x: ck.x - 10, y: ck.y + 9, w: 21, h: 7 };
     clearProps = {
-      clock: ck, digital: { x: ck.x - 10, y: ck.y + 9, w: 21, h: 7 },
-      plaque: { cx: ck.x - 36, y: 16 },
-      neon: decor.neon ? { x: ck.x - 82, y: 9, h: nh, c: decor.neon.c, style: decor.neon.style } : null,
+      clock: ck, digital: dg, plaque: { cx: ck.x, y: dg.y + dg.h + 3 },
+      neon: decor.neon ? { x: lo.x + lo.w - 26, y: 12, c: decor.neon.c, style: decor.neon.style } : null,
     };
   }
 
@@ -1254,7 +1253,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, massage, season, shredder, fountain, neon: clearProps?.neon ? { x: clearProps.neon.x + 11, y: clearProps.neon.y + clearProps.neon.h / 2, c: decor.neon.c } : decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, massage, season, shredder, fountain, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0, dartboard: { img: dartImg, x: dt.x, y: dt.y }, // dartboard – за прозрачния фон (там стената я няма)
     decor, seed, clearProps,
   };
@@ -1282,28 +1281,17 @@ export function drawClearFloor(ctx, room) {
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(mask, 0, 0);
     g.globalCompositeOperation = 'source-over';
-    // стената я няма: дъската за дартс, часовникът, метеостанцията и неонът стоят на стойки до задния ръб на пода
-    if (db) { floorShadow(g, db.x + Math.floor(db.img.width / 2), WH, 16, 4); stand(g, db.x + Math.floor(db.img.width / 2), db.y + db.img.height - 2); g.drawImage(db.img, db.x, db.y); }
+    // стената я няма: дъската за дартс, часовникът и неонът висят във въздуха на старите си места
+    if (db) g.drawImage(db.img, db.x, db.y);
     if (cp) {
-      const { clock: ck, digital: dg, plaque: pq, neon: ne } = cp;
-      floorShadow(g, ck.x, WH, 16, 4); stand(g, ck.x, dg.y + dg.h);
+      const { clock: ck, digital: dg, neon: ne } = cp;
       drawClockFace(g, ck);
       R(g, '#1a1420', dg.x, dg.y, dg.w, dg.h); R(g, '#0e1a16', dg.x + 1, dg.y + 1, dg.w - 2, dg.h - 2); R(g, '#3a3248', dg.x, dg.y + dg.h, dg.w, 1);
-      floorShadow(g, pq.cx, WH, 12, 3); stand(g, pq.cx, pq.y + 8, true);
-      if (ne) { floorShadow(g, ne.x + 11, WH, 16, 4); stand(g, ne.x + 11, ne.y + ne.h - 1); drawNeon(g, ne.x, ne.y, ne.c, ne.style); }
+      if (ne) drawNeon(g, ne.x, ne.y, ne.c, ne.style);
     }
     room.clearBg = c;
   }
   ctx.drawImage(room.clearBg, 0, 0);
-}
-
-/** Стойка до задния ръб на пода (CFG.WALL_H + 3): два крака или (one) един прът. */
-function stand(g, cx, y0, one = false) {
-  const y1 = CFG.WALL_H + 3, h = y1 - y0;
-  if (h <= 0) return;
-  if (one) { R(g, '#2a2030', cx - 1, y0, 2, h); R(g, '#4a3e52', cx - 1, y0, 1, h); R(g, '#2a2030', cx - 3, y1 - 1, 6, 1); return; }
-  R(g, '#2a2030', cx - 4, y0, 2, h); R(g, '#2a2030', cx + 3, y0, 2, h);
-  R(g, '#4a3e52', cx - 4, y0, 1, h); R(g, '#4a3e52', cx + 3, y0, 1, h);
 }
 
 /** Прозрачен фон, всеки кадър: стрелките и цифрите на часовника и метеостанцията (room.wxPlaque – за клика). */
