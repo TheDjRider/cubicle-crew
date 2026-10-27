@@ -5,6 +5,12 @@
 //  board   – коя страница е на дъската: 0 живата, 1 днес, 2 – 7 дни, 3 – 30 дни (прожекционният екран, board.js)
 //  lights  – лампите на тавана нощем (ключът до вратата); изключени = старата тъмна „пещера“
 //  lamp    – лампата и неонът в зоната за почивка (вторият ключ, под първия)
+//  saver   – пестене на батерията: най-много 15 кадъра/s, без частици (искри, пара, прашинки);
+//            без изричен избор следва захранването – включва се само, докато лаптопът е на батерия (navigator.getBattery)
+//  atmos   – атмосфера: 'full' (по подразбиране) | 'soft' | 'off' – колко силно часът оцветява и затъмнява стаята (light.js)
+//  calm    – спокоен офис: без разговори, общи радости и редки случки (life.js); любимците остават
+//  gl      – „Премиум осветление (GPU)“: WebGL2 рендерът в gl/ (main.js syncGl; ?gl го налага); по подразбиране изключено
+//  perf    – малък брояч долу вляво: кадри/s, мс на кадър и ~% от едно ядро (за доверие: колко струва)
 // ?overlay включва private по подразбиране (стрийм); Electron сменя focus/private от менюто в трея (IPC 'pref').
 import { PARAMS } from './config.js';
 
@@ -14,12 +20,20 @@ let state = { ...DEF };
 try { state = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* без storage – по подразбиране */ }
 if (PARAMS.focus) state.focus = true;
 const listeners = [];
+let onBattery = false;
 
 export const prefs = {
   get focus() { return !!state.focus; },
   get private() { return !!state.private || PARAMS.lan; }, // телефонът: винаги (сървърът и без това не праща командите)
   get lights() { return state.lights !== false; },
   get lamp() { return state.lamp !== false; },
+  get saver() { return state.saver ?? onBattery; },
+  get calm() { return !!state.calm; },
+  get gl() { return !!state.gl || !!PARAMS.gl; },
+  /** Сила на светлината и цветовете по часа: 1 пълна, 0.5 лека (и винаги във „Фокус“), 0 изключена (плоско, най-ясно). */
+  get atmos() { const a = state.atmos || 'full'; return a === 'off' ? 0 : a === 'soft' || state.focus ? 0.5 : 1; },
+  get atmosKey() { return ['full', 'soft', 'off'].includes(state.atmos) ? state.atmos : 'full'; },
+  get perf() { return !!state.perf || PARAMS.debug; },
   get board() { const b = state.board | 0; return b >= 0 && b < 4 ? b : 0; },
   /** Собственото име на сесия (или null). */
   name(id) { return state.names?.[id] || null; },
@@ -37,4 +51,9 @@ export const prefs = {
   },
   onChange(fn) { listeners.push(fn); },
 };
+// захранването: при смяна известяваме само ако потребителят не е избрал изрично
+navigator.getBattery?.().then((b) => {
+  const upd = () => { const was = prefs.saver; onBattery = !b.charging; if (state.saver == null && was !== prefs.saver) for (const fn of listeners) fn('saver', prefs.saver); };
+  upd(); b.addEventListener('chargingchange', upd);
+}).catch(() => { /* няма Battery API – само ръчно */ });
 window.pixelOffice?.onPref?.((key, value) => { if (key === 'focus' || key === 'private') prefs.set(key, !!value); });

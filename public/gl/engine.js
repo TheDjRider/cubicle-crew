@@ -1,8 +1,9 @@
 // ?gl – собствен малък WebGL2 рендер: същият пикселен кадър (албедо), осветен на логическата резолюция
 // (G-буфер от силуетите -> точкови светлини със сенки, слънце/луна през прозорците, снопове, отражения по пода),
 // после bloom и цветова корекция в пълната резолюция. Без библиотеки; при липса на WebGL2 / загубен контекст -> 2D.
+// Включва се и изключва в движение (prefs.gl, main.js syncGl): #c остава за събитията, офисът рисува в this.buf.
 import { VS, GEO, LIGHT, REFLECT, BRIGHT, BLUR, FINAL } from './shaders.js';
-import { sceneParams, drawEmissive, drawHint } from './scene.js';
+import { sceneParams, drawEmissive, drawHint, drawKinds } from './scene.js';
 
 const MAXL = 40;
 
@@ -28,7 +29,7 @@ export class GLView {
     // софтуерен WebGL (SwiftShader, WARP, llvmpipe) е ~100 мс/кадър – тогава по-добре обичайният 2D
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
     const name = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
-    if (/swiftshader|basic render|llvmpipe|software/i.test(name) && !/[?&]glsoft/.test(location.search)) { console.info('gl: software renderer, 2D'); return; }
+    if (/swiftshader|basic render|llvmpipe|software/i.test(name) && !/[?&]glsoft/.test(location.search)) { this.why = 'software'; return; }
     this.hdr = !!gl.getExtension('EXT_color_buffer_float');
     const vs = this.shader(gl.VERTEX_SHADER, VS);
     const mk = (fs) => this.program(vs, this.shader(gl.FRAGMENT_SHADER, fs));
@@ -42,16 +43,23 @@ export class GLView {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     this.tex = {};
-    for (const k of ['alb', 'bg', 'sky', 'emi', 'hint', 'ovl']) this.tex[k] = this.texture(gl.RGBA8, 1, 1, gl.NEAREST);
-    // помощни платна (2D): небето, светещото, подсказките за повърхностите
+    for (const k of ['alb', 'bg', 'sky', 'emi', 'hint', 'ovl', 'kind']) this.tex[k] = this.texture(gl.RGBA8, 1, 1, gl.NEAREST);
+    // помощни платна (2D): албедото (офисът рисува тук, с прозрачност), небето, светещото, подсказките, хората/кръга
+    this.buf = document.createElement('canvas');
+    this.bctx = this.buf.getContext('2d', { alpha: true });
+    this.kind = document.createElement('canvas');
+    this.kindTmp = document.createElement('canvas');
     this.sky = document.createElement('canvas');
     this.emi = document.createElement('canvas');
     this.hint = document.createElement('canvas');
     this.W = 0; this.H = 0; this.layoutKey = null;
     this.lp = new Float32Array(MAXL * 4); this.lc = new Float32Array(MAXL * 4);
     this.ms = 0; // последното време за кадър (CPU страна, мс) – за ?debug
-    c.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.lost = true; this.onLost?.(); });
+    c.addEventListener('webglcontextlost', (e) => { e.preventDefault(); if (this.lost) return; this.lost = true; this.onLost?.(); });
     this.dbg = { sun: 1, geo: 2, norm: 3 }[mode] || 0;
+    // колко струва кадър на видеокартата (EXT_disjoint_timer_query_webgl2, ако го има) – main.js пада на 2D, ако е скъпо
+    this.timer = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    this.queries = []; this.cost = 0;
     this.ok = true;
   }
 
@@ -105,7 +113,7 @@ export class GLView {
     if (c.width !== dw || c.height !== dh) { c.width = dw; c.height = dh; }
     if (W === this.W && H === this.H) return;
     this.W = W; this.H = H;
-    for (const cv of [this.sky, this.emi, this.hint]) { cv.width = W; cv.height = H; }
+    for (const cv of [this.buf, this.kind, this.kindTmp, this.sky, this.emi, this.hint]) { cv.width = W; cv.height = H; }
     const gl = this.gl;
     for (const k of ['geo', 'litT', 'scene', 'b1', 'b1t', 'b2', 'b2t']) if (this[k]) { gl.deleteTexture(this[k].t); gl.deleteFramebuffer(this[k].fb); }
     this.geo = this.target(W, H, gl.NEAREST, false);
@@ -139,10 +147,11 @@ export class GLView {
       this.upload(this.tex.hint, this.hint);
     }
     this.upload(this.tex.alb, ctx.canvas);
+    this.upload(this.tex.kind, this.kind);
     this.upload(this.tex.sky, this.sky);
     drawEmissive(this.emi, office, now, occupant);
     this.upload(this.tex.emi, this.emi);
-    this.params = sceneParams(office, tod, lit, now, occupant, this.sky);
+    this.params = sceneParams(office, tod, lit, now, occupant, this.atmos ?? 1);
     ctx.clearRect(0, 0, room.W, room.H);
     this.cpu = performance.now() - t0;
   }
@@ -153,6 +162,7 @@ export class GLView {
     const t0 = performance.now();
     const gl = this.gl, P = this.params, W = this.W, H = this.H;
     this.upload(this.tex.ovl, ctx.canvas);
+    this.measure(true);
     gl.bindVertexArray(this.vao);
     const bindT = (prog, name, unit, t) => { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(prog.u[name], unit); };
     const pass = (prog, tgt, w, h) => {
@@ -174,7 +184,7 @@ export class GLView {
     p = this.p.light;
     pass(p, this.litT, W, H);
     bindT(p, 'uAlb', 0, this.tex.alb); bindT(p, 'uGeo', 1, this.geo.t); bindT(p, 'uBg', 2, this.tex.bg);
-    bindT(p, 'uSky', 3, this.tex.sky); bindT(p, 'uEmi', 4, this.tex.emi); bindT(p, 'uHint', 5, this.tex.hint);
+    bindT(p, 'uSky', 3, this.tex.sky); bindT(p, 'uEmi', 4, this.tex.emi); bindT(p, 'uHint', 5, this.tex.hint); bindT(p, 'uKind', 6, this.tex.kind);
     const n = Math.min(MAXL, P.lights.length);
     this.lp.fill(0); this.lc.fill(0);
     for (let i = 0; i < n; i++) { const l = P.lights[i]; this.lp.set([l.x, l.y, l.z, l.r], i * 4); this.lc.set([l.c[0] * l.i, l.c[1] * l.i, l.c[2] * l.i, l.sh ? 1 : 0], i * 4); }
@@ -227,8 +237,30 @@ export class GLView {
     if (p.u.uTime) gl.uniform1f(p.u.uTime, P.time);
     gl.uniform3fv(p.u.uLift, P.lift); gl.uniform3fv(p.u.uGain, P.gain);
     draw();
+    this.measure(false);
     this.ms = this.cpu + (performance.now() - t0);
+    // без таймер: оценка по процесорното време (по-груба, но все пак сигнал)
+    if (!this.timer) this.cost = this.cost * 0.9 + this.ms * 0.1;
   }
+
+  /** Заявка за времето на видеокартата: по една на кадър, резултатът идва след няколко кадъра. */
+  measure(begin) {
+    const gl = this.gl, T = this.timer;
+    if (!T) return;
+    if (begin) {
+      while (this.queries.length && gl.getQueryParameter(this.queries[0], gl.QUERY_RESULT_AVAILABLE)) {
+        const q = this.queries.shift();
+        if (!gl.getParameter(T.GPU_DISJOINT_EXT)) this.cost = this.cost * 0.85 + (gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6) * 0.15;
+        gl.deleteQuery(q);
+      }
+      if (this.queries.length > 4) return;
+      this.q = gl.createQuery();
+      gl.beginQuery(T.TIME_ELAPSED_EXT, this.q);
+    } else if (this.q) { gl.endQuery(T.TIME_ELAPSED_EXT); this.queries.push(this.q); this.q = null; }
+  }
+
+  /** Хората (r), кръгът „чака“ (g) и зоната около чакащия (b) – в същия ред по дълбочина като офиса. */
+  kinds(items, office, now) { drawKinds(this.kind, this.kindTmp, items, office, now); }
 
   /** Сутрешният екран / лентата рисуват в 2D платното – тогава GL платното се скрива. */
   show(on) {
@@ -238,8 +270,11 @@ export class GLView {
     this.src.style.opacity = on ? '0' : '';
   }
 
+  /** Изключване (настройката, пестене, загубен контекст): махаме платното, #c се вижда пак, видеопаметта се освобождава. */
   destroy() {
     this.canvas.remove();
     this.src.style.opacity = '';
+    this.shown = undefined;
+    if (!this.lost) { this.lost = true; this.gl.getExtension('WEBGL_lose_context')?.loseContext(); }
   }
 }

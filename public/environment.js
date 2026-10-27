@@ -91,6 +91,7 @@ function prop(name, w, h, fallback, vari = null) {
     const dx = an ? an[0] : Math.round((w - tw) / 2), dy = an ? an[1] : h - th;
     ctx.drawImage(TILES.img, t.x ?? t[0], t.y ?? t[1], tw, th, dx, dy, tw, th);
   } else fallback(ctx);
+  c.propName = name; // за кликовете по предметите (poke.js)
   return c;
 }
 function patternTile(name) {
@@ -857,9 +858,11 @@ export function drawAquariumFish(ctx, aq, t) {
   }
   const lift = feeding ? Math.sin(Math.min(1, fed / 800, (FEED_MS - fed) / 800) * Math.PI / 2) : 0;
   const fish = [['#f07a30', 0.9, 6, 0], ['#f0d040', 1.3, 10, 2.1], ['#e05a8a', 0.7, 13, 4.2]];
+  // почукано по стъклото (poke.js): рибките се стрелват – времето им за миг избързва с ~2.6 s, после плавно спира
+  const tf = aq.tapBase ? t + aq.tapBase - 2600 * Math.exp(-Math.max(0, t - aq.tapAt) / 260) : t;
   for (const [c, v, fy, ph] of fish) {
-    const k = (Math.sin(t / 1000 * v + ph) + 1) / 2, dir = Math.cos(t / 1000 * v + ph) > 0 ? 1 : -1;
-    const x = Math.round(x0 + 3 + k * (tk.w - 9)), y = Math.round(y0 + fy - lift * (fy - 3) + Math.sin(t / 400 + ph) * 1);
+    const k = (Math.sin(tf / 1000 * v + ph) + 1) / 2, dir = Math.cos(tf / 1000 * v + ph) > 0 ? 1 : -1;
+    const x = Math.round(x0 + 3 + k * (tk.w - 9)), y = Math.round(y0 + fy - lift * (fy - 3) + Math.sin(tf / 400 + ph) * 1);
     R(ctx, c, x, y, 3, 2); R(ctx, shade(c, 0.75), dir > 0 ? x - 1 : x + 3, y, 1, 2); R(ctx, '#1d1626', dir > 0 ? x + 2 : x, y, 1, 1);
   }
   // мехурчета
@@ -885,6 +888,13 @@ export function drawArcadeScreen(ctx, ar, t) {
   for (let i = 0; i < 4; i++) R(ctx, ['#e04a6b', '#4ac26b', '#e0c24a', '#4a8fe0'][i], x0 + 1 + i * 2 + (k % 2), y0 + 1, 1, 1);
   const px = x0 + 1 + (Math.floor(t / 300) % (s.w - 3));
   R(ctx, '#ffffff', px, y0 + s.h - 2, 3, 1);
+  // клик по аркадата (poke.js): „монета“ – екранът премигва в цветове и пише 1UP
+  const pk = ar.pokeAt ? t - ar.pokeAt : Infinity;
+  if (pk >= 0 && pk < 1500) {
+    const cols = ['#e04a6b', '#e0c24a', '#4ac26b', '#4a8fe0'];
+    for (let i = 0; i < s.h; i++) R(ctx, cols[(i + Math.floor(pk / 80)) % 4], x0, y0 + i, s.w, 1);
+    if (Math.floor(pk / 200) % 2) { R(ctx, '#101830', x0 + 1, y0 + 2, s.w - 2, 4); R(ctx, '#ffffff', x0 + 2, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 4, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 5, y0 + 4, 1, 1); R(ctx, '#ffffff', x0 + 6, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 8, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 9 > x0 + s.w - 2 ? x0 + 8 : x0 + 9, y0 + 3, 1, 1); }
+  }
   R(ctx, '#f0d040', x0 + ((k * 3) % (s.w - 1)), y0 + 2 + (k % (s.h - 4)), 1, 1);
 }
 // ---------- кътът на любимците: играчки (разхвърляни), купички с храна (по една на любимец), фонтан за вода ----------
@@ -1134,20 +1144,21 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c, decor.neon.style);
 
   // прозрачен фон: стената я няма – часовникът и метеостанцията под него висят във въздуха вляво от дартса,
-  // неонът – на мястото си над зоната за почивка
+  // неонът – вляво от часовника, под лентата на прозореца (горе вдясно стоят бутоните ▲ ◐ ⤡ ⚙ – там се криеше)
   let clearProps = null;
   if (CFG.FIXED_ROOM) {
     const ck = { x: dt.x - 22, y: 12, r: 7 }, dg = { x: ck.x - 10, y: ck.y + 9, w: 21, h: 7 };
     clearProps = {
       clock: ck, digital: dg, plaque: { cx: ck.x, y: dg.y + dg.h + 3 },
-      neon: decor.neon ? { x: lo.x + lo.w - 26, y: 12, c: decor.neon.c, style: decor.neon.style } : null,
+      neon: decor.neon ? { x: dg.x - 30, y: 15, c: decor.neon.c, style: decor.neon.style } : null,
     };
   }
 
   // ---------- мебели като отделни обекти (сортират се по дълбочина) ----------
   const objects = [];
   // sh = сянката на пода под предмета: { w, h, cx? } (cx – отместване на центъра от левия ръб), null = без сянка
-  const add = (img, x, base, key = base, sh = { w: img.width + 2, h: 5 }) => objects.push({ img, x: Math.round(x), y: Math.round(base - img.height), key, sh });
+  // name = името на предмета (prop) – по него poke.js знае какво е щракнато
+  const add = (img, x, base, key = base, sh = { w: img.width + 2, h: 5 }) => { const o = { img, x: Math.round(x), y: Math.round(base - img.height), key, sh, name: img.propName }; objects.push(o); return o; };
   const bs = lo.bookshelf;
   add(prop('bookshelf', bs.w, bs.h, (c) => drawBookshelf(c, bs.w, bs.h)), bs.x, bs.base);
   const ct = lo.counter;
@@ -1253,7 +1264,9 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, massage, season, shredder, fountain, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, massage, season, shredder, fountain,
+    // сиянието на неона: където е табелата (на прозрачния фон – до часовника)
+    neon: decor.neon ? { x: (clearProps?.neon?.x ?? lo.x + lo.w - 26) + 11, y: (clearProps?.neon?.y ?? 12) + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0, dartboard: { img: dartImg, x: dt.x, y: dt.y }, // dartboard – за прозрачния фон (там стената я няма)
     decor, seed, clearProps,
   };
@@ -1328,7 +1341,7 @@ export function drawSky(ctx, room, tod, t) {
     // луна / слънце
     if (tod.moon != null && tod.night > 0.3 && cover < 0.75) {
       const mx = Math.round(sky.x0 + tod.moon * span), my = Math.round(w.y + 5 + Math.abs(tod.moon - 0.5) * 10);
-      ctx.fillStyle = rgba('#f0ecd8', 0.15); ctx.fillRect(mx - 4, my - 4, 9, 9);
+      ctx.fillStyle = rgba('#f0ecd8', 0.12); ctx.fillRect(mx - 5, my - 2, 11, 5); ctx.fillRect(mx - 2, my - 5, 5, 11); ctx.fillRect(mx - 4, my - 4, 9, 9); // кръгъл ореол на стъпала
       R(ctx, '#f0ecd8', mx - 2, my - 3, 5, 7); R(ctx, '#f0ecd8', mx - 3, my - 2, 7, 5);
       R(ctx, '#c8c4b0', mx, my - 1, 2, 2); R(ctx, '#c8c4b0', mx - 2, my + 1, 1, 1);
     }
@@ -1336,7 +1349,7 @@ export function drawSky(ctx, room, tod, t) {
       const sx = Math.round(sky.x0 + tod.sun * span);
       const sy = Math.round(w.y + 3 + Math.pow(Math.abs(tod.sun - 0.5) * 2, 2) * 15);
       const sc = mix('#fff6c0', '#ffa860', tod.warm);
-      ctx.fillStyle = rgba(sc, 0.25); ctx.fillRect(sx - 5, sy - 5, 11, 11);
+      ctx.fillStyle = rgba(sc, 0.2); ctx.fillRect(sx - 6, sy - 2, 13, 5); ctx.fillRect(sx - 2, sy - 6, 5, 13); ctx.fillRect(sx - 5, sy - 4, 11, 9); ctx.fillRect(sx - 4, sy - 5, 9, 11);
       R(ctx, sc, sx - 2, sy - 3, 5, 7); R(ctx, sc, sx - 3, sy - 2, 7, 5);
     }
     // облаци
@@ -1406,34 +1419,6 @@ function drawMountains(ctx, w, sky, tod) {
     if (hh > 11 * k) R(ctx, snow, x, w.y + w.h - hh, 1, Math.min(Math.round(2 * k), Math.round(hh - 11 * k)));
   }
   R(ctx, mix('#2e5a34', '#0c1410', tod.night * 0.7), w.x, w.y + w.h - Math.round(2 * k), w.w, Math.round(2 * k));
-}
-
-/** Слънчеви снопове от прозорците върху пода (adds light). */
-export function drawShafts(ctx, room, tod, t) {
-  const a = tod.daylight * 0.16 * (1 - tod.night * 0.5) * (tod.sunny ?? 1);
-  if (a < 0.01) return;
-  const color = mix('#fff2c8', '#ffa860', tod.warm);
-  const skew = Math.round((tod.h - 12.5) * -5);
-  const len = 46 + Math.round(tod.warm * 20);
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  for (const w of room.windows) {
-    const y0 = w.y + w.h;
-    const gr = ctx.createLinearGradient(0, y0, 0, CFG.WALL_H + len);
-    gr.addColorStop(0, rgba(color, a * 0.8));
-    gr.addColorStop(0.35, rgba(color, a));
-    gr.addColorStop(1, rgba(color, 0));
-    ctx.fillStyle = gr;
-    ctx.beginPath();
-    ctx.moveTo(w.x + 2, y0 + 2);
-    ctx.lineTo(w.x + w.w - 2, y0 + 2);
-    ctx.lineTo(w.x + w.w - 2 + skew, CFG.WALL_H + len);
-    ctx.lineTo(w.x + 2 + skew, CFG.WALL_H + len);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.restore();
-  void t;
 }
 
 const ICONS = {
@@ -1514,35 +1499,9 @@ export function drawWallDynamic(ctx, room, date, stats, t) {
   void t;
 }
 
-/** Цялостен оттенък според часа (multiply). lit 0..1 = лампите на тавана: стаята е по-светла и топла,
- *  стъклата на прозорците остават с нощния оттенък (навън си е тъмно). */
-export function drawTint(ctx, room, tod, lit = 0) {
-  if (tod.tint === '#ffffff') return;
-  ctx.save();
-  ctx.globalCompositeOperation = 'multiply';
-  // лампите не изсветляват всичко до бяло: стаята остава вечерна, светлите петна идват от lightGlows
-  const k = lit * nightK(tod) * 0.5;
-  if (k > 0.01) {
-    ctx.fillStyle = mix(tod.tint, '#f4dcc4', k);
-    ctx.beginPath(); ctx.rect(0, 0, room.W, room.H);
-    for (const w of room.windows) ctx.rect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
-    ctx.fill('evenodd');
-    ctx.fillStyle = tod.tint;
-    for (const w of room.windows) ctx.fillRect(w.x + 2, w.y + 2, w.w - 4, w.h - 4);
-  } else { ctx.fillStyle = tod.tint; ctx.fillRect(0, 0, room.W, room.H); }
-  ctx.restore();
-  // ъглите потъмняват вечер (по-силно без лампите) – стъпаловидна винетка
-  const n = nightK(tod);
-  if (n > 0.02) {
-    const prev = ctx.globalAlpha;
-    ctx.globalAlpha = n * (0.55 + 0.45 * (1 - lit));
-    ctx.drawImage(vignette(room.W, room.H), 0, 0);
-    ctx.globalAlpha = prev;
-  }
-}
 let vigCache = null;
 /** Винетка W x H: тъмни ъгли с плавен преход (стъпалата с дитеринг очертаваха пръстени). */
-function vignette(W, H) {
+export function vignette(W, H) {
   if (vigCache && vigCache.width === W && vigCache.height === H) return vigCache;
   const c = makeCanvas(W, H), g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {

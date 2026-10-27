@@ -1,18 +1,22 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES, PARAMS } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawClearFloor, drawClearDynamic, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawFountainWater, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
+import { buildRoom, buildPod, drawClearFloor, drawClearDynamic, drawSky, drawWallDynamic, vignette, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawFountainWater, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
 import { flashAt } from './weather.js';
+import { gradeOf, applyGrade, lightCanvas, sunPatches, drawSunPatches, drawSunBeams, beamPoint, drawWetReflections } from './light.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
 import { resolveDecor, AVATAR, SLOTS, PET_SLOTS } from './catalog.js';
 import { drawScreen } from './screens.js';
 import { Actor, Cat, Dog, DART_CYCLE, DART_RELEASE } from './characters.js';
+import { Life } from './life.js';
 import { avatarLook } from './sprites.js';
 import { prefs } from './prefs.js';
 import { drawBoardScreen, boardGlow, boardMoving, BOARD_PAGES } from './board.js';
-import { rgba } from './palette.js';
+import { rgba, mix } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
+import { Pokes } from './poke.js';
+import { sfx } from './sound.js';
 
 const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts', 'arcade', 'aquarium', 'massage']);
 // чашата на бюрото = екипът на седящия (под-агентските бюра са общи); без екип (оркестраторът чака) – бяла
@@ -51,7 +55,14 @@ export class Office {
     this.board = { page: prefs.board, prev: prefs.board, at: -1e9 };
     this.boardStats = null;
     this.boardFlips = [];            // кога да се смени слайдът (след като водещият натисне дистанционното)
+    this.pokes = new Pokes(this);    // клик по предметите: малка анимация + звук (poke.js)
+    this.life = new Life(this);      // малките истории: разговори, радост, любимци с характер, редки случки (life.js)
   }
+
+  /** Клик върху агент: почиващият ти маха (life.js). */
+  greet(a) { this.life.greet(a); }
+  /** Нов инструмент (model 'tool_start'): торта при юбилей, рядка разходка до библиотеката. */
+  onTool(agent, e) { this.life.onTool(agent, e); }
 
   /** Клик върху дъската: някой отива до екрана и сменя слайда с дистанционното (без хора – веднага). */
   boardClick(now = performance.now()) {
@@ -174,7 +185,20 @@ export class Office {
   }
 
   /** Галене: любимецът сяда, над него – сърчица. */
-  petPet(p, now = performance.now()) { p.pet(now); this.fx.hearts(p.x, p.y - 16); }
+  petPet(p, now = performance.now()) { p.pet(now); this.fx.hearts(p.x, p.y - 16); sfx(p.kind === 'dog' ? 'woof' : 'purr', (p.x / this.room.W) * 1.4 - 0.7); }
+
+  /** Лакомство в купичката bowl (обект от room.objects): най-близкият свободен любимец идва да яде. */
+  feedPet(bowl) {
+    const fed = this.pets.filter((p) => p.placed && !p.food && !p.hop);
+    if (!fed.length) return false;
+    const bx = bowl.x - 4, by = bowl.y + bowl.img.height + 1; // отляво на купичката (вдясно е фонтанчето), с глава към нея
+    const dist = (a) => Math.hypot(a.x - bx, a.y - by) + (a.busy ? 1e4 : 0); // свободните първо
+    const p = fed.sort((a, b) => dist(a) - dist(b))[0];
+    if (p.busy) { p.job?.onLeave?.(p, performance.now()); p.job = null; p.path = []; p.carry = null; } // лакомството е по-важно от задачата (life.js)
+    p.feed(bx, by);
+    this.fx.sparkle(bowl.x + bowl.img.width / 2, bowl.y, '#e0a040', 6);
+    return true;
+  }
 
   /** Любимецът под мишката (най-предният). */
   petAt(x, y) {
@@ -334,7 +358,9 @@ export class Office {
       case 'lounge': return lo.spots.extra[loc.i % lo.spots.extra.length];
       case 'door': return { x: L.door.cx, y: L.door.floorY };
       case 'pace': { const p = L.pods[a.pod]; return p && { x: p.cx, y: p.aisleY }; }
-      case 'visit': { const t = this.actors.get(loc.target); const p = t && L.pods[t.pod]; return p ? { x: p.cx - 15, y: p.aisleY } : this.locPoint({ type: 'seat' }, a); }
+      case 'visit': { const t = this.actors.get(loc.target); const p = t && L.pods[t.pod]; return p ? { x: p.cx - 15 - (loc.k || 0) * 8, y: p.aisleY } : this.locPoint({ type: 'seat' }, a); }
+      case 'books': return { x: lo.bookshelf.x + 15, y: lo.bookshelf.base + 11 };
+      case 'peek': { const t = this.actors.get(loc.target); const p = t && L.pods[t.pod]; return p ? { x: p.cx - 13, y: p.aisleY } : this.locPoint({ type: 'seat' }, a); }
       default: return null;
     }
   }
@@ -348,7 +374,8 @@ export class Office {
       case 'lounge': { const s = lo.spots.extra[loc.i % lo.spots.extra.length]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       // вратата е на стената: излиза се направо на горната пътека под нея
       case 'door': return { pts: [{ x: L.door.cx, y: L.door.floorY }, { x: L.door.cx, y: ln.topY }], lane: 'row', y: ln.topY };
-      case 'visit': { const pt = this.locPoint(loc, a); return { pts: [pt], lane: 'row', y: pt.y }; }
+      case 'visit': case 'peek': { const pt = this.locPoint(loc, a); return { pts: [pt], lane: 'row', y: pt.y }; }
+      case 'books': { const s = this.locPoint(loc, a); return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       case 'coffee': case 'cooler': case 'arcade': case 'aquarium': case 'massage': { const s = loc.type === 'aquarium' && this.room?.aquarium?.low ? lo.spots.aquaLow : lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       case 'darts': { const s = lo.spots.darts; return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'board': { const s = this.locPoint(loc, a); return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
@@ -489,14 +516,32 @@ export class Office {
   leave(agent) {
     const a = this.actors.get(agent.id);
     if (!a) { this.model.remove(agent.id); return; }
-    if (agent.subagent && agent.done && !prefs.focus) this.fx.confetti(a.x, a.y - 30, 26);
     a.leavingNow = true;
+    const lead = agent.subagent && agent.done && this.actors.get(agent.parent);
+    if (lead && lead.isAtDesk(this.L) && a.isAtDesk(this.L) && lead.vstate !== 'waiting') {
+      const k = this.live().filter((x) => x.loc.handback && x.loc.target === lead.id).length;
+      this.route(a, { type: 'visit', target: lead.id, carry: true, handback: true, k });
+      return;
+    }
+    if (agent.subagent && agent.done && !prefs.focus) this.fx.confetti(a.x, a.y - 30, 26);
     this.route(a, { type: 'door', exit: true });
   }
 
   celebrate(agent) {
     const a = this.actors.get(agent.id);
     if (a && !prefs.focus) this.fx.confetti(a.x, a.y - 30, 46);
+    if (a) this.life.celebrate(a);
+  }
+
+  /** Под-агентът стигна оркестратора: подава листа (той го чете), малко конфети, после към вратата. */
+  handbackTick(a, now) {
+    const lead = this.actors.get(a.loc.target);
+    if (!lead) { if (a.mode !== 'walk') this.route(a, { type: 'door', exit: true }); return; }
+    if (a.mode !== 'idleSpot') return;
+    if (!a.handed) {
+      a.handed = true; lead.receivedAt = now;
+      if (!prefs.focus) this.fx.confetti(a.x + 8, a.y - 26, 18);
+    } else if (now - a.spotSince > 1300) this.route(a, { type: 'door', exit: true });
   }
 
   /** "+N" токени над агента (няма го – над дъската). */
@@ -515,7 +560,10 @@ export class Office {
     if (ag.leaving || a.leavingNow) return;
     if (a.mode === 'walk') {
       // ако е тръгнал към почивка, а вече има работа – връща се
-      if (a.seat && ag.state !== 'idle' && !['seat', 'pace', 'visit', 'transit', 'door', 'board'].includes(a.loc.type)) this.route(a, { type: 'seat' });
+      if (a.seat && ag.state !== 'idle' && !['seat', 'pace', 'visit', 'transit', 'door', 'board', 'books', 'peek'].includes(a.loc.type)) this.route(a, { type: 'seat' });
+      if (a.loc.type === 'peek' && !this.actors.has(a.loc.target)) this.route(a, { type: 'seat' });
+      // към библиотеката, а вече пише/пуска команди – обратно (разходката не бива да крие работата)
+      if (a.loc.type === 'books' && !['reading', 'thinking'].includes(ag.state)) this.route(a, { type: 'seat' });
       if (a.loc.type === 'visit' && !this.actors.has(a.loc.target)) this.route(a, { type: 'seat' });
       return;
     }
@@ -528,9 +576,21 @@ export class Office {
     }
     const st = ag.state;
     const lt = now - ag.stateSince;
+    // до библиотеката (WebFetch/WebSearch): чете, докато още търси (поне 2.5 s, най-много 9 s)
+    if (a.loc.type === 'books' && a.seat) {
+      const here = now - a.spotSince;
+      if ((st !== 'reading' && here > 2500) || here > 9000 || st === 'waiting') this.route(a, { type: 'seat' });
+      return;
+    }
+    // наднича в екрана на съсед, докато мисли
+    if (a.loc.type === 'peek') {
+      const t = this.actors.get(a.loc.target);
+      if (st !== 'thinking' || now - a.spotSince > 4500 || !t || !t.isAtDesk(this.L)) this.route(a, { type: 'seat' });
+      return;
+    }
     if (!a.seat) {
       // без бюро: работи с лаптоп на дивана (или прав в зоната за почивка), почива като всички
-      if (['seat', 'pace', 'transit', 'visit'].includes(a.loc.type)) this.route(a, st === 'idle' ? this.freeLoungeSpot(a) : this.workSpot(a));
+      if (['seat', 'pace', 'transit', 'visit', 'books', 'peek'].includes(a.loc.type)) this.route(a, st === 'idle' ? this.freeLoungeSpot(a) : this.workSpot(a));
       else if (st === 'idle') { if (a.sofaAct === 'laptop') a.sofaAct = prefs.focus ? 'rest' : Math.random() < 0.7 ? 'game' : 'doze'; this.leisure(a, now); }
       else if (a.loc.type === 'sofa') { if (a.sofaAct !== 'laptop') { a.sofaAct = 'laptop'; a.spotSince = now; } }
       else if (a.loc.type !== 'lounge') this.route(a, this.workSpot(a));
@@ -541,6 +601,12 @@ export class Office {
         const spot = this.freeLoungeSpot(a);
         if (spot) this.route(a, spot);
       } else if (st === 'thinking' && lt > 6000 && a.mode === 'seated') {
+        // понякога вместо да крачи – отива да надникне в екрана на съсед, който работи
+        const L = this.L, me = L.pods[a.pod];
+        const nb = !prefs.focus && Math.random() < 0.35 && this.live().filter((x) => x !== a && x.isAtDesk(L) && ['typing', 'running', 'reading'].includes(x.vstate) &&
+          !this.live().some((y) => y.loc.type === 'peek' && y.loc.target === x.id) && Math.abs(L.pods[x.pod].y - me.y) < 50)
+          .sort((p, q) => Math.abs(L.pods[p.pod].x - me.x) - Math.abs(L.pods[q.pod].x - me.x))[0];
+        if (nb && now - (a.lastPeek || -1e9) > 30000) { a.lastPeek = now; a.peekDir = 'r'; this.route(a, { type: 'peek', target: nb.id }); return; }
         a.paceDir = Math.random() < 0.5 ? 1 : -1;
         this.route(a, { type: 'pace' });
         a.loc.x0 = this.L.pods[a.pod].cx;
@@ -628,22 +694,38 @@ export class Office {
     // водещият е отклонен другаде (напр. загуби бюрото си) – кликовете не се губят
     for (const a of this.actors.values()) if (a.boardQueue && a.loc.type !== 'board' && a.pendingLoc?.type !== 'board') { for (; a.boardQueue > 0; a.boardQueue--) this.nextBoard(now); }
     for (const a of [...this.actors.values()]) {
+      if (a.loc.handback) this.handbackTick(a, now);
       this.decide(a, now);
       a.update(dt, now);
       if (a.mode === 'gone') { this.actors.delete(a.id); this.model.remove(a.id); this.syncAvatar(); continue; }
       this.emitParticles(a, now, dt);
     }
     // вратата се отваря, ако някой е до нея
-    const nearDoor = [...this.actors.values()].some((a) => Math.abs(a.x - L.door.cx) < 10 && a.y < L.door.floorY + 14 && a.mode !== 'seated');
+    const nearDoor = now < this.pokes.doorUntil || [...this.actors.values()].some((a) => Math.abs(a.x - L.door.cx) < 10 && a.y < L.door.floorY + 14 && a.mode !== 'seated') || this.life.nearDoor();
     this.room.doorOpen = clamp(this.room.doorOpen + (nearDoor ? dt * 4 : -dt * 2.5), 0, 1);
     // кучето понякога отива при някого, който почива (стои на място в зоната за почивка)
     const people = this.pets.some((p) => p.kind === 'dog') ? [...this.actors.values()].filter((a) => a.mode === 'idleSpot' && LOUNGE.has(a.loc.type)) : [];
-    for (const c of this.pets) { c.avoid = this.room.massage; c.update(dt, now, L, people); } // любимците не застават в масажния стол
+    const walkers = this.pets.length ? [...this.actors.values()].filter((a) => a.mode === 'walk') : [];
+    for (const c of this.pets) {
+      c.avoid = this.room.massage; c.update(dt, now, L, people, walkers);
+      if (c.ate) { c.ate = false; this.fx.hearts(c.x, c.y - 16); sfx('munch', (c.x / this.room.W) * 1.4 - 0.7); } // хапна лакомството
+    } // любимците не застават в масажния стол
+    this.life.update(dt, now);
     // прашинки в слънчевите снопове
     if (!prefs.focus && this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
-      const w = this.room.windows[Math.floor(Math.random() * this.room.windows.length)];
-      this.fx.dust(w.x + Math.random() * w.w, CFG.WALL_H + Math.random() * 40);
+      const pt = beamPoint(this.sun);
+      if (pt) this.fx.dust(pt.x, pt.y);
     }
+    // кафемашината от време на време пуска пара (прясно кафе), и без никого до нея
+    if (!prefs.focus && L.lounge?.counter) {
+      this.coffeeT = (this.coffeeT ?? 6) - dt;
+      if (this.coffeeT <= 0) { this.coffeeT = 18 + Math.random() * 22; this.coffeePuff = 2.6; }
+      if (this.coffeePuff > 0) {
+        this.coffeePuff -= dt; this.coffeeP = (this.coffeeP ?? 0) - dt;
+        if (this.coffeeP <= 0) { this.coffeeP = 0.2; const c = L.lounge.counter; this.fx.steam(c.x + 9, c.base - 28); }
+      }
+    }
+    this.pokes.update(now);
     if (!this._lastTeams || now - this._lastTeams > 1000) { this._lastTeams = now; this.manageTeams(now); this.ensureLayout(); }
   }
 
@@ -654,7 +736,9 @@ export class Office {
       if (a.mode === 'walk' || a.mode === 'pace' || a.alpha !== a.fadeTo) return true;
       if (a.pod >= 0 && (a.vstate === 'typing' || a.vstate === 'running')) return true; // пози по 75–110 мс
     }
+    if (this.pokes.active(performance.now())) return true; // побутнат предмет (кафе, принтер, прозорец…)
     if (performance.now() - this.lights.at < 900 || boardMoving(this.board, performance.now())) return true; // лампите примигват, екранът се движи
+    if (this.life.animating(performance.now())) return true; // птичка лети, куриер ходи, котка скача
     const d = this.room.doorOpen;
     return (d > 0 && d < 1) || this.darts.flying.length > 0 || this.fx.list.some((p) => p.layer === 'top') ||
       (this.room.shredder && performance.now() - this.room.shredder.chewAt < 4000); // мелачката дъвчи (пълни кадри и след частиците)
@@ -673,6 +757,15 @@ export class Office {
       if (fx.spark <= 0) { fx.spark = st === 'running' ? 0.08 : 0.13; this.fx.spark(p.x + POD.keyboard.x + 2 + Math.random() * 12, p.y + POD.keyboard.y, Math.random() < 0.5 ? '#ffffff' : col); }
       fx.glyph -= dt;
       if (fx.glyph <= 0) { fx.glyph = 0.9 + Math.random() * 0.8; this.fx.glyph(p.x + POD.screen.x + 4 + Math.random() * 10, p.y + POD.screen.y - 4, col); }
+    }
+    // пара от чашата на бюрото: кратка струйка на случаен интервал (всеки по свое време, не в синхрон)
+    if (atDesk) {
+      fx.mug = (fx.mug ?? 2 + Math.random() * 10) - dt;
+      if (fx.mug <= 0) { fx.mug = 8 + Math.random() * 12; fx.mugPuff = 1.6; }
+      if (fx.mugPuff > 0) {
+        fx.mugPuff -= dt; fx.mugT = (fx.mugT ?? 0) - dt;
+        if (fx.mugT <= 0) { fx.mugT = 0.26; this.fx.steam(p.x + DESK_MUG.x, p.y + DESK_MUG.y - 2); }
+      }
     }
     if (a.loc.type === 'darts' && a.mode === 'idleSpot') this.throwDart(a, now);
     // храни рибките: люспичките тръгват, щом ръката се протегне (позата в characters.js)
@@ -722,16 +815,19 @@ export class Office {
       // ?gl: стъклото в албедото остава прозрачно – небето е отделна текстура (свети само и оцветява светлината отвън)
       if (this.gl) { ctx.clearRect(0, 0, room.W, room.H); drawSky(this.gl.skyCtx(), room, tod, now); }
       else drawSky(ctx, room, tod, now);
+      this.life.drawOutside(ctx, now); // птичката на перваза – зад рамката на прозореца
       ctx.drawImage(room.bg, 0, 0);
       const st = this.model.stats();
       drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
       drawBoardScreen(ctx, room, this.board, this.boardStats, now);
+      this.pokes.drawWall(ctx, room, tod, now); // отворени прозорци, кукувицата
       drawLightFixtures(ctx, room, this.lights.on, prefs.lamp);
     }
     const lit = this.lightLevel(now);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
-    if (!clear && !this.gl) drawShafts(ctx, room, tod, now); // ?gl: сноповете са обемни в шейдъра
+    this.sun = clear ? null : sunPatches(room, tod); // слънчевите петна (и за прашинките в update)
+    if (!clear && !this.gl) drawWetReflections(ctx, room, tod, now); // ?gl: отраженията са в шейдъра
     this.drawLinks(ctx, now);
     for (const a of this.actors.values()) {
       if (a.vstate === 'waiting' && a.isAtDesk(L)) {
@@ -753,15 +849,18 @@ export class Office {
     for (const a of this.actors.values()) if (a.isAtDesk(L)) occupant.set(a.pod, a);
     L.pods.forEach((p, i) => {
       const img = this.podImgs[i];
-      items.push({ key: p.y + POD.depthChair, fn: () => ctx.drawImage(img.back, p.x, p.y) });
-      items.push({ key: p.y + POD.depthDesk, fn: () => this.drawPodFront(ctx, p, img, occupant.get(i), now) });
+      // img/x/y/actor: само за ?gl (маската на хората и кръга „чака“ в gl/scene.js drawKinds) – 2D не ги чете
+      items.push({ key: p.y + POD.depthChair, img: img.back, x: p.x, y: p.y, fn: () => ctx.drawImage(img.back, p.x, p.y) });
+      items.push({ key: p.y + POD.depthDesk, img: img.front, x: p.x, y: p.y, fn: () => this.drawPodFront(ctx, p, img, occupant.get(i), now) });
     });
-    for (const o of room.objects) items.push({ key: o.key, fn: () => (o.sway ? drawSway(ctx, o, now) : ctx.drawImage(o.img, o.x, o.y)) });
+    for (const o of room.objects) items.push({ key: o.key, img: o.img, x: o.x, y: o.y, fn: () => (o.sway ? drawSway(ctx, o, now, this.pokes.rustle(o, now)) : drawPoked(ctx, o, this.pokes.offset(o, now))) });
+    this.pokes.items(items, ctx, now);
     for (const a of this.actors.values()) {
       const k = a.depth(L);
-      items.push({ key: k, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
+      items.push({ key: k, actor: a, seated: occupant.get(a.pod) === a, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
     }
-    for (const c of this.pets) items.push({ key: c.y, fn: () => c.draw(ctx, now) });
+    for (const c of this.pets) items.push({ key: c.keyOverride ?? c.y, fn: () => c.draw(ctx, now) }); // котката на бюрото – над плота
+    this.life.items((key, fn) => items.push({ key, fn }), ctx, now);
     if (room.aquarium) items.push({ key: room.aquarium.key + 0.5, fn: () => drawAquariumFish(ctx, room.aquarium, now) });
     if (room.arcade) items.push({ key: room.arcade.key + 0.5, fn: () => drawArcadeScreen(ctx, room.arcade, now) });
     if (room.massage) { const on = this.live().some((x) => x.loc.type === 'massage' && x.mode === 'idleSpot'); items.push({ key: room.massage.key + 3, fn: () => drawMassageLed(ctx, room.massage, now, on) }); }
@@ -769,8 +868,10 @@ export class Office {
     if (room.shredder) items.push({ key: room.shredder.base + 0.5, fn: () => drawShredderChew(ctx, room.shredder, now) });
     items.forEach((it, i) => { it.i = i; });
     items.sort((a, b) => a.key - b.key || a.i - b.i);
+    this.gl?.kinds(items, this, now);
     for (const it of items) it.fn();
 
+    this.fx.draw(ctx, 'over'); // пара от чашите, прашинки – над мебелите, но под светлината
     this.drawDarts(ctx, now, 'air');
     // ?gl: кадърът дотук е албедото – светлините, сенките и bloom-ът са в gl/engine.js; отгоре остава само горният слой
     if (this.gl) this.gl.lit(ctx, this, tod, lit, now, occupant);
@@ -779,6 +880,7 @@ export class Office {
     // 7) частици и икони отгоре
     this.fx.draw(ctx, 'top');
     for (const a of this.actors.values()) a.drawOverlay(ctx, now);
+    this.life.drawOverlay(ctx, now);
     if (this.focusId && this.actors.has(this.focusId)) this.drawFocus(ctx, this.actors.get(this.focusId), now);
   }
 
@@ -798,18 +900,117 @@ export class Office {
 
   /** Оттенъкът за часа, светкавицата и светлините (multiply/lighter – върху прозрачен фон биха оцветили празното). */
   drawLight(ctx, room, tod, lit, now, occupant) {
-    // 5) нощен/вечерен оттенък
-    drawTint(ctx, room, tod, lit);
+    const W = room.W, H = room.H, clear = PARAMS.clear;
+    // 5) степенуване за часа (light.js): обезцветяване + оттенък, после умножение по картата на светлината
+    const G = gradeOf(tod, lit, prefs.atmos);
+    if (clear) G.amb = mix(G.amb, '#ffffff', 0.6 * (1 - G.n)); // прозрачен фон: без слънчеви петна за контраст – денем не притъмнява
+    applyGrade(ctx, W, H, G);
+    const lm = lightCanvas(W, H), g = lm.getContext('2d');
+    // картата се преизчислява ~10 пъти в секунда (светлината се мени бавно) – по-малко работа за процесора;
+    // всеки кадър само докато лампите примигват при включване
+    const fresh = lm === this.lmCanvas && now - this.lmAt < 100 && now >= this.lmAt && performance.now() - this.lights.at > 900;
+    if (!fresh) {
+    this.lmCanvas = lm; this.lmAt = now;
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = G.amb; g.fillRect(0, 0, W, H);
+    // стъклата: навън не зависи от лампите в стаята – само леко по часа
+    // (летвите на рамката са вътре в стаята – остават с околната светлина)
+    if (!clear) for (const w of room.windows) {
+      g.fillStyle = mix(G.amb, '#ffffff', 0.6 + 0.4 * tod.daylight); g.fillRect(w.x + 1, w.y + 1, w.w - 2, w.h - 2);
+      g.fillStyle = G.amb;
+      const mx = w.x + Math.floor(w.w / 2);
+      g.fillRect(mx - 1, w.y + 1, 2, w.h - 2);
+      if (w.h >= 36) for (const by of [Math.round(w.h * 0.34), Math.round(w.h * 0.67)]) g.fillRect(w.x + 1, w.y + by, w.w - 2, 2);
+      else g.fillRect(w.x + 1, w.y + Math.floor(w.h / 2) - 1, w.w - 2, 2);
+    }
+    g.globalCompositeOperation = 'lighter';
+    this.lightSources(g, room, tod, G, now, occupant);
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(lm, 0, 0);
+    ctx.restore();
+    // ъглите потъмняват вечер (по-силно без лампите)
+    if (G.n > 0.02) { const pa = ctx.globalAlpha; ctx.globalAlpha = G.n * (0.25 + 0.3 * (1 - lit)); ctx.drawImage(vignette(W, H), 0, 0); ctx.globalAlpha = pa; }
     // светкавица при буря – цялата стая проблясва за миг
     const fl = flashAt(tod.wx, now);
-    if (fl) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(170,180,230,${0.09 * fl})`; ctx.fillRect(0, 0, room.W, room.H); ctx.restore(); }
-    // 6) светлини
+    if (fl) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(170,180,230,${0.09 * fl})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+    // 6) ореол (адитивно) – по-слаб от преди: самата светлина вече е в картата
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
+    if (this.sun && G.sun > 0.02) {
+      drawSunBeams(ctx, this.sun, G.sunC, 0.07 * G.sun);
+      drawSunPatches(ctx, this.sun, G.sunC, 0.26 * G.sun);
+    }
+    ctx.globalAlpha = 0.6;
     lightGlows(ctx, room, tod, lit, now);
     boardGlow(ctx, room, this.board, now, tod.night);
     this.drawGlows(ctx, now, tod, occupant);
     ctx.restore();
+  }
+
+  /** Картата на светлината (адитивно върху околната): дневна светлина и слънце от прозорците, лунна светлина,
+   *  лампите на тавана, мониторите (в цвета на състоянието – по лицето, ръцете и бюрото), настолните лампи… */
+  lightSources(g, room, tod, G, now, occupant) {
+    const L = this.L, n = G.n, dark = n * (1 - G.lit * 0.55), clear = PARAMS.clear;
+    if (!clear) for (const w of room.windows) {
+      const cx = w.x + w.w / 2;
+      // разсеяна дневна светлина пред прозореца + студена лунна нощем (най-видима при изгасени лампи)
+      glowE(g, cx, CFG.WALL_H + 4, w.w * 1.15, 30, '#fff4e4', 0.2 * tod.daylight);
+      glowE(g, cx, CFG.WALL_H + 8, w.w * 0.9, 24, '#5a6cb4', 0.42 * dark * (1 - (tod.cover || 0) * 0.6));
+    }
+    if (this.sun) drawSunPatches(g, this.sun, G.sunC, 0.6 * G.sun);
+    // таванните лампи: петно на пода под всяка, конус по стената (без прозорците)
+    if (G.lit > 0.01) {
+      for (const x of room.ceil || []) glowE(g, x, CFG.WALL_H + 34, 80, 40, '#ffe0bc', 0.55 * G.lit);
+      g.save();
+      g.beginPath(); g.rect(0, 0, room.W, CFG.WALL_H);
+      if (!clear) for (const w of room.windows) g.rect(w.x - 2, w.y - 2, w.w + 4, w.h + 4);
+      g.clip('evenodd');
+      for (const x of room.ceil || []) glowE(g, x, 14, 24, 30, '#ffe8cc', 0.4 * G.lit);
+      g.restore();
+    }
+    // мониторите: светлина в цвета на състоянието към лицето и ръцете (вляво от екрана) и по бюрото
+    for (const p of L.pods) {
+      const a = occupant.get(p.i);
+      const owner = a || [...this.actors.values()].find((x) => x.pod === p.i);
+      if (!owner) continue;
+      const st = a ? a.vstate : 'idle';
+      const col = STATES[st].color;
+      const k = (st === 'idle' ? 0.5 : 1) * (0.93 + 0.07 * Math.sin(now / 90 + p.i));
+      const sx = p.x + POD.screen.x + POD.screen.w / 2, sy = p.y + POD.screen.y + POD.screen.h / 2;
+      glow(g, sx, sy, 26, col, 0.5 * n * k);
+      if (a) glowE(g, p.x + 30, p.y + 20, 16, 13, col, 0.55 * n * k);  // лице и ръце
+      glowE(g, sx - 6, p.y + POD.desk.y + 3, 24, 6, col, 0.4 * n * k); // по плота
+      const bx = p.x + POD.bulb.x, by = p.y + POD.bulb.y;
+      if (st === 'waiting') {
+        const on = Math.floor(now / 320) % 2 === 0;
+        glow(g, bx, by + 4, 30, STATES.waiting.color, (on ? 0.7 : 0.25) * (0.3 + n));
+      } else if (a) {
+        // настолната лампа: топъл конус надолу към плота
+        glowE(g, bx + 6, by + 9, 28, 14, '#ffc674', 0.8 * n);
+        glow(g, bx, by + 2, 10, '#ffd898', 0.6 * n);
+      }
+    }
+    // хората: мека запълваща светлина, за да не падат под ~60 % яркост нощем – цветът на ризата е състоянието
+    for (const a of this.actors.values()) if (a.alpha > 0.05) glowE(g, a.x, a.y - 15, 13, 19, '#e6e2f2', 0.5 * n * (1 - G.lit * 0.6));
+    const lo = L.lounge;
+    for (const a of this.actors.values()) {
+      if (a.loc.type === 'sofa' && a.mode === 'idleSpot' && a.sofaAct === 'game') glow(g, a.x, a.y - 16, 12, '#6ae08a', 0.5 * n);
+    }
+    if (prefs.lamp && room.lampGlow) {
+      glow(g, room.lampGlow.x, room.lampGlow.y + 6, 40, '#ffd08a', 0.75 * n);
+      glowE(g, room.lampGlow.x, lo.floorLamp.base, 52, 18, '#ffcc84', 0.7 * n);
+    }
+    if (room.neon && prefs.lamp) glow(g, room.neon.x, room.neon.y + 6, 30, room.neon.c, 0.45 * n * neonFlicker(now));
+    if (room.aquarium) glow(g, room.aquarium.x + 14, room.aquarium.y + 14, 28, '#4ab8f0', 0.45 * n);
+    if (room.arcade) glow(g, room.arcade.x + 9, room.arcade.y + 14, 22, '#a06ae0', 0.45 * n);
+    const se = room.season;
+    if (se?.style === 'pumpkins') glow(g, se.x + 9, se.base - 7, 20, '#ffb040', 0.55 * n);
+    else if (se?.style === 'tree') glow(g, se.x + 15, se.base - 17, 24, '#ffd860', 0.45 * n);
+    glow(g, lo.counter.x + 14, lo.counter.base - 34, 12, '#6ae0ff', 0.35 * n);
+    glow(g, L.door.x + 12, L.door.y - 4, 16, '#4ac26b', 0.45 * n);
+    if (room.board && this.board?.page) glow(g, room.board.x + room.board.w / 2, room.board.y + room.board.h / 2, room.board.w * 0.75, '#e8f0ff', 0.5 * n);
   }
 
   /** Купчина листове в десния ъгъл на бюрото: колко е пълен контекстът на агента (жълто > 60%, червено > 85%). */
@@ -841,6 +1042,7 @@ export class Office {
       drawMug(ctx, p.x + DESK_MUG.x, p.y + DESK_MUG.y, t != null ? TEAM_MUGS[t] : NO_TEAM_MUG);
     }
     if (who) this.drawPaperStack(ctx, p, who, now);
+    this.life.drawCake(ctx, p, who, now);
     const s = POD.screen;
     if (a) {
       const fade = clamp((now - a.vstateAt) / CFG.CROSSFADE_MS, 0, 1);
@@ -904,6 +1106,7 @@ export class Office {
     const shred = room.shredder;
     if (shred && now - shred.chewAt > 0 && now - shred.chewAt < 4000) glow(ctx, shred.x + 9, shred.base - 27, 10, '#e0a44a', 0.35 * (0.9 + 0.1 * Math.sin(now / 90)));
     glow(ctx, lo.counter.x + 14, lo.counter.base - 36, 6, '#6ae0ff', 0.3);
+    this.life.glows(ctx, now, glow, night);
     // зелената табела над вратата
     glow(ctx, L.door.x + 12, L.door.y - 6, 10, '#4ac26b', 0.15 + 0.35 * night);
   }
@@ -983,11 +1186,17 @@ export function neonFlicker(now) {
 
 /** Растение: на всеки 9–15 s върхът (горните ~40%) се полюшва 1 px за около секунда, всяко по свое време. */
 const SWAY = [1, 1, 0, -1, -1, 0, 1, 0];
-function drawSway(ctx, o, now) {
+function drawSway(ctx, o, now, rustle = 0) {
   const per = 9000 + (o.x * 131) % 6000, t = (now + o.x * 977) % per;
-  const i = Math.floor(t / 160), off = i < SWAY.length && !prefs.focus ? SWAY[i] : 0;
+  const i = Math.floor(t / 160), off = rustle || (i < SWAY.length && !prefs.focus ? SWAY[i] : 0);
   if (!off) { ctx.drawImage(o.img, o.x, o.y); return; }
   const h = o.img.height, w = o.img.width, cut = Math.round(h * 0.4);
   ctx.drawImage(o.img, 0, cut, w, h - cut, o.x, o.y + cut, w, h - cut);
   ctx.drawImage(o.img, 0, 0, w, cut, o.x + off, o.y, w, cut);
+}
+
+/** Предмет, побутнат с мишката: разклатен/подскочил с d = {x, y} (poke.js), иначе на мястото си. */
+function drawPoked(ctx, o, d) {
+  if (!d) ctx.drawImage(o.img, o.x, o.y);
+  else ctx.drawImage(o.img, o.x + d.x, o.y + d.y);
 }

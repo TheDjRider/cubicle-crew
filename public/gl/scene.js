@@ -17,7 +17,8 @@ const WARM = lin('#ffd49a'), TUBE = lin('#ffe6c4'), LAMP = lin('#ffc878');
 /** Точка на екрана (sx, sy), чиято „стъпка“ на пода е на дълбочина d -> позиция в света. */
 const at = (sx, sy, d) => ({ x: sx, y: d, z: Math.max(0, d - sy) });
 
-export function sceneParams(office, tod, lit, now, occupant, sky) {
+/** atmos: prefs.atmos (1 пълна, 0.5 лека, 0 изключена) – колко силно часът и лампите оцветяват и затъмняват стаята. */
+export function sceneParams(office, tod, lit, now, occupant, atmos = 1) {
   const room = office.room, L = office.L, lo = L.lounge, WH = CFG.WALL_H;
   const n0 = nightK(tod), day = tod.daylight, warm = tod.warm, sunny = tod.sunny ?? 1, cover = tod.cover || 0;
   // мрачно (облаци, дъжд) -> хората палят лампите и денем: уютният контраст топло вътре / сиво навън
@@ -43,7 +44,8 @@ export function sceneParams(office, tod, lit, now, occupant, sky) {
     const sx = p.x + POD.screen.x + POD.screen.w / 2, sy = p.y + POD.screen.y + POD.screen.h / 2;
     add(at(sx, sy, p.y + 46), 46, lin(STATES[st].color), (0.55 + 1.1 * n) * flick * (st === 'idle' ? 0.45 : 1));
     const bx = p.x + POD.bulb.x, by = p.y + POD.bulb.y;
-    if (st === 'waiting') add(at(bx, by, p.y + 44), 52, lin(STATES.waiting.color), Math.floor(now / 320) % 2 === 0 ? 1.6 : 0.35);
+    // „чака“: малка, постоянна светлина – сигналът е самият кръг, екранът и иконата (остри, без ореол)
+    if (st === 'waiting') add(at(bx, by, p.y + 44), 26, lin(STATES.waiting.color), 0.5);
     else if (a) add(at(bx + 2, by + 2, p.y + 44), 56, LAMP, 0.15 + 1.05 * n, true);
   }
 
@@ -94,19 +96,25 @@ export function sceneParams(office, tod, lit, now, occupant, sky) {
   const lift = [0.012 * n * 0.2, 0.012 * n * 0.5, 0.03 * n], gain = mixv([1.02, 1.0, 0.97], [1.06, 0.97, 0.86], warm);
   const g2 = mixv(gain, [0.97, 0.98, 1.04], n);
   const skyLum = 0.299 * rgb(tod.skyBottom)[0] + 0.587 * rgb(tod.skyBottom)[1] + 0.114 * rgb(tod.skyBottom)[2];
-  void sky;
-  return {
+  // „чака“ е най-силният сигнал: докато някой чака, другите светлини и ореолът са по-тихи
+  const waiting = [...office.actors.values()].some((a) => a.vstate === 'waiting');
+  const quiet = waiting ? 0.6 : 1;
+  // атмосфера: 'soft' / 'off' (и „Фокус“) -> по-равна светлина, по-слаба корекция и ореол
+  const A = Math.max(0, Math.min(1, atmos));
+  const flat = (v, k) => v.map((x) => x + (k - x) * (1 - A));
+  for (const l of lights) l.i *= 0.35 + 0.65 * A;
+  const P = {
     wall: WH, lights: lights.sort((a, b) => b.i - a.i).slice(0, 40),
     ambSky, ambGround, sunDir, sunCol, skyLum,
     rim: mixv(scale(mixv(skyC, [1, 1, 1], 0.3), 0.9 * day), sunCol, 0.25).map((v, i) => v + lin('#ffd49a')[i] * 0.25 * n * lit),
     objFill: scale(mixv(lin('#8088c0'), lin('#ffd8a8'), 0.4 * lit), 0.2 * n0),
     spread: skyMod > 2 ? 0.2 : 0.035,
     shaft: skyMod > 2 ? 0.004 : 0.012 * (tod.sun != null ? 1 : 0.7), skyMod,
-    emiK: 0.9 + 1.4 * n,
+    emiK: (0.9 + 1.4 * n) * quiet,
     flash: flashAt(tod.wx, now) * 0.35,
-    refl: 0.35 + 0.35 * n + 0.4 * gloom,
+    refl: 0.1 + 0.08 * gloom, // едва доловими (само светлото – прозорци, лампи)
     thresh: 0.85,
-    bloom: 0.55 + 0.45 * n,
+    bloom: (0.45 + 0.35 * n) * quiet,
     expo: 1.08,
     sat: 1.06 + 0.04 * warm - 0.08 * n - 0.1 * gloom,
     contrast: 1.03 + 0.05 * n,
@@ -114,6 +122,14 @@ export function sceneParams(office, tod, lit, now, occupant, sky) {
     lift, gain: g2,
     time: now / 1000,
   };
+  if (A < 1) {
+    P.ambSky = flat(P.ambSky, 0.92); P.ambGround = flat(P.ambGround, 0.8);
+    P.sunCol = scale(P.sunCol, A); P.shaft *= A; P.rim = scale(P.rim, A); P.refl *= A;
+    P.bloom *= 0.25 + 0.75 * A; P.vig *= A;
+    P.sat = 1 + (P.sat - 1) * A; P.contrast = 1 + (P.contrast - 1) * A;
+    P.lift = scale(P.lift, A); P.gain = flat(P.gain, 1);
+  }
+  return P;
 }
 
 function norm(v) { const l = Math.hypot(...v); return v.map((x) => x / l); }
@@ -142,15 +158,56 @@ export function drawEmissive(cv, office, now, occupant) {
   if (room.digital) full(room.digital.x + 1, room.digital.y + 1, room.digital.w - 2, room.digital.h - 2, 0.7);
   for (const x of room.ceil || []) bright(x - 9, 0, 18, 3, office.lightLevel(now));
   if (room.season) bright(room.season.x, room.season.base - 36, 30, 36, 0.7);
-  // линиите родител–дете и кръгът „чака“ – в цвета на състоянието, да се четат и на тъмно
-  g.save(); office.drawLinks(g, now); g.restore();
+  // линиите родител–дете и кръгът „чака“ са в drawKinds (без светлина, скрити зад бюрата като в 2D)
+}
+
+/**
+ * Маска за хората и сигналите, в същия ред по дълбочина като офиса (items от office.render):
+ *  r – човек (мек, равен светлина, без контражур/ореол – лицата не светят, ризата = състоянието остава вярна)
+ *  g – кръгът „чака“ и линиите родител–дете: както в 2D, без светлина (стойността = колко е непрозрачен)
+ *  b – зоната около чакащ агент: без ореол (сигналът остава остър)
+ * Предмет, нарисуван по-късно (бюро, мебел), изтрива отдолу (destination-out) – кръгът минава зад бюрото.
+ */
+export function drawKinds(cv, tmp, items, office, now) {
+  const g = cv.getContext('2d'), t = tmp.getContext('2d'), L = office.L, W = cv.width, H = cv.height;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+  t.setTransform(1, 0, 0, 1, 0, 0); t.imageSmoothingEnabled = false;
+  const tint = (fill, x, y, w, h) => { t.globalCompositeOperation = 'source-in'; t.fillStyle = fill; t.fillRect(x, y, w, h); t.globalCompositeOperation = 'source-over'; };
+  // сигналите по пода
+  t.clearRect(0, 0, W, H);
+  office.drawLinks(t, now);
+  tint('rgb(0,255,0)', 0, 0, W, H);
+  g.globalCompositeOperation = 'lighter';
+  g.drawImage(tmp, 0, 0);
   for (const a of office.actors.values()) {
     if (a.vstate === 'waiting' && a.isAtDesk(L)) {
       const p = L.pods[a.pod], k = (now % 1100) / 1100;
-      g.strokeStyle = `rgba(255,0,0,${0.9 * (1 - k)})`; g.lineWidth = 1;
+      g.strokeStyle = `rgb(0,${Math.round(255 * 0.75 * (1 - k))},0)`; g.lineWidth = 1;
       g.beginPath(); g.ellipse(p.x + 36, p.y + 46, 30 + k * 10, 10 + k * 4, 0, 0, Math.PI * 2); g.stroke();
     }
   }
+  // предметите и хората по дълбочина
+  for (const it of items) {
+    if (it.actor) {
+      const a = it.actor, x = Math.round(a.x) - 14, y = Math.round(a.y) - 34;
+      t.clearRect(x, y, 30, 38);
+      a.draw(t, now, 'body');
+      if (!it.seated) a.draw(t, now, 'front');
+      tint('rgb(255,0,0)', x, y, 30, 38);
+      g.globalCompositeOperation = 'lighter';
+      g.drawImage(tmp, x, y, 30, 38, x, y, 30, 38);
+    } else if (it.img) {
+      g.globalCompositeOperation = 'destination-out';
+      g.drawImage(it.img, it.x, it.y);
+    }
+  }
+  // зоната около чакащия – последна, за да не я изтрие бюрото
+  g.globalCompositeOperation = 'lighter';
+  g.fillStyle = 'rgb(0,0,255)';
+  for (const a of office.actors.values()) if (a.vstate === 'waiting') {
+    if (a.isAtDesk(L)) { const p = L.pods[a.pod]; g.fillRect(p.x - 4, p.y - 8, 80, 72); } else g.fillRect(Math.round(a.x) - 16, Math.round(a.y) - 40, 32, 46);
+  }
+  g.globalCompositeOperation = 'source-over';
 }
 
 /** Статично (при нова подредба): r = хоризонтални повърхности (плотове), b = лъскавина на пода (килимите – матови). */

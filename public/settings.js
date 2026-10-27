@@ -2,9 +2,9 @@
 // Разделите са по смисъл: как изглежда, кога те вика, какво вижда/праща, прозорецът, споделяне, помощ.
 // Всеки раздел има цвят от езика на състоянията и пикселна иконка 9x9 (рисува се тук, без файлове).
 // Отметките носят същите data-* като досега – ui.onHelpChange() ги прилага.
-import { T, LANG, STATES, STATE_ORDER } from './config.js';
+import { T, LANG, STATES, STATE_ORDER, PARAMS } from './config.js';
 import { prefs } from './prefs.js';
-import { soundOn } from './sound.js';
+import { soundOn, audioPrefs } from './sound.js';
 import { qrCanvas } from './qr.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -76,11 +76,28 @@ function sections(ui) {
     sw('id="opt-legend" data-legend', !ui.legend.hidden, H.legend, H.legendHint) +
     sw('id="pref-lights" data-pref="lights"', prefs.lights, H.lights, H.lightsHint) +
     sw('id="pref-lamp" data-pref="lamp"', prefs.lamp, H.lamp, H.lampHint) +
-    `<div class="row"><b>${H.lang}</b><div class="seg">${card('lang', 'bg', LANG === 'bg', 'Български')}${card('lang', 'en', LANG === 'en', 'English')}</div></div>`;
+    sw('id="pref-calm" data-pref="calm"', prefs.calm, H.calm, H.calmHint) +
+    // премиум осветление: без подходяща видеокарта (ui.glOff) – изключено, с бележка вместо обяснението
+    (PARAMS.clear ? '' : sw(`id="pref-gl" data-pref="gl"${ui.glOff ? ' disabled' : ''}`, prefs.gl && !ui.glOff, H.gl, ui.glOff ? H.glOff : H.glHint)) +
+    `<div class="row"><b>${H.atmos}</b><div class="seg">${['full', 'soft', 'off'].map((k) => card('atmos', k, prefs.atmosKey === k, H.atmosOpt[k])).join('')}</div></div><small class="dim">${H.atmosHint}</small>` +
+    `<div class="row"><b>${H.lang}</b><div class="seg">${card('lang', 'bg', LANG === 'bg', 'Български')}${card('lang', 'en', LANG === 'en', 'English')}</div></div>` +
+    // леко за машината: пестене на батерията + брояч на кадрите (колко струва офисът)
+    `<h4>${H.perfTitle}</h4>` +
+    sw('id="pref-saver" data-pref="saver"', prefs.saver, H.saver, H.saverHint) +
+    sw('id="pref-perf" data-pref="perf"', prefs.perf, H.perf, H.perfHint);
   // кога те вика
+  // звуците на офиса (синтезирани, без файлове): клик по предметите, фон, lofi и общата им сила
+  const vol = Math.round(audioPrefs.vol * 100);
+  const office = `<h4>${H.sfxTitle}</h4>` +
+    sw('id="aud-sfx" data-audio="sfx"', audioPrefs.sfx, H.sfx, H.sfxHint) +
+    sw('id="aud-amb" data-audio="ambient"', audioPrefs.ambient, H.ambient, H.ambientHint) +
+    sw('id="aud-lofi" data-audio="lofi"', audioPrefs.lofi, H.lofi, H.lofiHint) +
+    `<label class="opt"><span><b>${H.volume} <output>${vol}%</output></b><small>${H.volumeHint}</small></span>` +
+    `<input type="range" class="range" min="0" max="100" step="5" value="${vol}" data-audiorange="vol"></label>`;
   out.alerts = (!demo ? sw('id="opt-sound" data-sound', soundOn(), H.sound, H.soundHint) : '') +
     (D ? sw('id="desk-notify" data-desk="notify"', D.notify, H.notify, H.notifyHint) + sw('id="desk-autohide" data-desk="autoHide"', D.autoHide, H.autoHide, H.autoHideHint) : '') +
-    (!demo ? sw('id="opt-perm" data-hook', !!ui.hook?.installed, H.perm, H.permHint) + (ui.hookErr ? `<p class="err">${ui.hookErr}</p>` : '') : '');
+    (!demo ? sw('id="opt-perm" data-hook', !!ui.hook?.installed, H.perm, H.permHint) + (ui.hookErr ? `<p class="err">${ui.hookErr}</p>` : '') : '') +
+    office;
   // какво вижда и какво излиза от компютъра
   const N = ui.lan?.ok ? ui.lan : null;
   out.privacy = sw('id="pref-private" data-pref="private"', prefs.private, H.private, H.privateHint) +

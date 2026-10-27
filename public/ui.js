@@ -3,7 +3,8 @@
 import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petTitle } from './config.js';
 import { shortDetail, fmtDuration, danger, fmtUsd, shortModel } from './util.js';
 import { coinUrl } from './tokens.js';
-import { soundOn, setSound } from './sound.js';
+import { soundOn, setSound, sfx, audioPrefs, toggleMute } from './sound.js';
+import { TREAT_PRICE } from './catalog.js';
 import { prefs } from './prefs.js';
 import { boardData, demoBoardData, PAGE_DAYS } from './board.js';
 import { settingsHtml } from './settings.js';
@@ -35,6 +36,16 @@ function bellUrl(on) {
   c.width = 9; c.height = 9;
   BELL.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
   if (!on) { g.fillStyle = '#e04a6b'; for (let i = 0; i < 9; i++) g.fillRect(i, 8 - i, 1, 1); }
+  return c.toDataURL();
+}
+// високоговорител 9x9 за „Тишина“: звучи – с вълни; тихо – червен кръст
+const SPK = ['...a.....', '..aa..c..', 'aaba.c...', 'abba.c.c.', 'abba.c.c.', 'aaba.c...', '..aa..c..', '...a.....', '.........'];
+function speakerUrl(muted) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const col = muted ? { a: '#3a3a4a', b: '#8a8aa0' } : { a: '#2a6a7a', b: '#8ae0f0', c: '#8ae0f0' };
+  c.width = 9; c.height = 9;
+  SPK.forEach((row, j) => { for (let i = 0; i < 9; i++) if (col[row[i]]) { g.fillStyle = col[row[i]]; g.fillRect(i, j, 1, 1); } });
+  if (muted) { g.fillStyle = '#e04a6b'; for (let i = 0; i < 4; i++) { g.fillRect(5 + i, 2 + i, 1, 1); g.fillRect(8 - i, 2 + i, 1, 1); } }
   return c.toDataURL();
 }
 
@@ -80,6 +91,7 @@ export class UI {
       if (e.target.closest('.tok, .shopbtn')) this.onShop?.();
       else if (e.target.closest('.help')) this.toggleHelp();
       else if (e.target.closest('.statsbtn')) this.onStats?.();
+      else if (e.target.closest('.mute')) { this.mute(); }
       else if (e.target.closest('.snd')) {
         setSound(!soundOn()); this.lastHud = 0; // Electron научава новия избор от stats (sound)
       }
@@ -212,6 +224,8 @@ export class UI {
       }
       if (e.key === 'Escape') { this.focus(null); if (this.help && !this.help.hidden) this.toggleHelp(false); }
       if (e.key === '?' && !e.target?.closest?.('input, textarea')) this.toggleHelp();
+      // M (и кирилското м) – „Тишина“ на всички звуци, за бързо спиране
+      if ('mMмМ'.includes(e.key) && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target?.closest?.('input, textarea')) this.mute();
     });
   }
 
@@ -232,14 +246,37 @@ export class UI {
     this.canvas.addEventListener('click', (e) => {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
-      if (!a && this.onSwitch(m)) { this.office.toggleLights(); return; }
-      if (!a && this.onSwitch(m, 'lampSwitch')) { this.office.toggleLamp(); return; }
-      if (!a && this.onBoard(m)) { this.office.boardClick(); this.loadBoardStats(); return; }
+      const pan = (m.x / (this.office.room?.W || 356)) * 1.4 - 0.7, calm = prefs.focus; // звук при клик (не във „Фокус“)
+      if (!a && this.onSwitch(m)) { this.office.toggleLights(); sfx('click', pan, calm); return; }
+      if (!a && this.onSwitch(m, 'lampSwitch')) { this.office.toggleLamp(); sfx('click', pan, calm); return; }
+      if (!a && this.onBoard(m)) { this.office.boardClick(); this.loadBoardStats(); sfx('bloop', pan, calm); return; }
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       const pet = !a && this.office.petAt(m.x, m.y);
       if (pet) { this.office.petPet(pet); return; } // клик = погали; двоен клик = име и външен вид
+      // предмет в офиса: малка анимация + звук (poke.js); купичката – лакомство за любимец
+      const hit = !a && this.office.pokes.at(m.x, m.y);
+      if (hit) { if (hit.name === 'pet_bowl') this.treat(hit); else this.office.pokes.poke(hit); return; }
+      if (a) this.office.greet(a); // почиващият ти маха
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
+  }
+
+  /** Купичката: лакомство за монети (фиксирана цена) – най-близкият любимец идва да яде. Без любимци – само „блуп“. */
+  async treat(hit) {
+    const pk = this.office.pokes;
+    if (!this.office.pets.length || !this.onTreat || PARAMS.lan) { pk.poke(hit); sfx('bloop'); return; }
+    if (this.office.pets.every((p) => p.food)) return; // всички вече тичат към купичката
+    const r = await this.onTreat();
+    if (r?.ok) { pk.poke(hit); sfx('bloop'); this.office.feedPet(hit.o); }
+    else this.note(T.shop.errors[r?.error] || T.shop.errors.offline);
+  }
+
+  /** Подсказката за предмет, който може да се побутне. */
+  pokeTip(hit) {
+    const P = T.poke;
+    if (hit.name === 'pet_bowl') return this.office.pets.length && this.onTreat && !PARAMS.lan ? `<div class="title">${P.treat}</div><div class="dim">${P.treatHint(TREAT_PRICE)}</div>` : `<div class="dim">${P.names.pet_bowl}</div>`;
+    const key = hit.name === 'window' ? (this.office.pokes.open.has(hit.i) ? 'windowOpen' : 'window') : hit.name.startsWith('toy_') ? 'toy' : hit.name.replace(/^(plant|sofa)_.*/, '$1');
+    return `<div class="dim">${P.names[key] || P.generic}</div>`;
   }
 
   /** Мишката е върху дъската (или спуснатия екран пред нея). */
@@ -431,7 +468,13 @@ export class UI {
     // любимец: името му (може да се смени – клик отваря „Любимци“)
     const pet = !a && !html && this.office.petAt(m.x, m.y);
     if (pet) html = `<div class="title">${esc(petTitle(pet.slot, this.office.petNames, pet.look?.id))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}${pet.look?.by ? ` · ${esc(T.shop.by(pet.look.by))}` : ''}</div><div class="dim">${T.pets.tip}</div>`;
-    this.canvas.style.cursor = a || pet || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
+    // предмет: подсказка и „ръчичка“ чак след 600 ms задържане – мишката, която само минава, не вижда нищо
+    let pk = !a && !html && !pet && this.office.pokes.at(m.x, m.y);
+    if (!pk) this.pokeHover = null;
+    else if (this.pokeHover?.hit !== pk.name) this.pokeHover = { hit: pk.name, since: now };
+    if (pk && now - this.pokeHover.since < 600) pk = null;
+    if (pk) html = this.pokeTip(pk);
+    this.canvas.style.cursor = a || pet || pk || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
     this.tip.hidden = false;
@@ -465,6 +508,7 @@ export class UI {
       `<span>${T.toolCalls} <b>${s.tools}</b></span>` +
       (s.waiting ? `<span class="alert">${T.waitingYou} <b>${s.waiting}</b></span>` : '') +
       (this.conn !== 'demo' ? `<span class="snd" title="${soundOn() ? T.sound.on : T.sound.off}"><i style="background-image:url(${(this.bells ||= [bellUrl(false), bellUrl(true)])[+soundOn()]})"></i></span>` : '') +
+      (audioPrefs.any || audioPrefs.muted ? `<span class="mute${audioPrefs.muted ? ' on' : ''}" title="${audioPrefs.muted ? T.mute.off : T.mute.on}"><i style="background-image:url(${(this.spk ||= [speakerUrl(false), speakerUrl(true)])[+audioPrefs.muted]})"></i></span>` : '') +
       (this.conn !== 'demo' ? `<span class="statsbtn" title="${T.stats.open}"><i style="background-image:url(${this.barsIcon ||= barsUrl()})"></i></span>` : '') +
       (this.update?.newer ? `<span class="help upd" title="${T.help.open} · ${esc(T.help.newer(this.update.latest.version))}">?</span>` : `<span class="help" title="${T.help.open}">?</span>`) +
       `<span class="lang" title="${T.lang}">${LANG === 'bg' ? 'БГ' : 'EN'}</span>`;
@@ -549,6 +593,8 @@ export class UI {
       // плъзгачът за прозрачност: на живо, докато се влачи
       this.help.addEventListener('input', (e) => {
         const t = e.target;
+        // силата на звуците на офиса: на живо
+        if (t.dataset?.audiorange) { audioPrefs.set('vol', t.value / 100); const o = t.closest('label')?.querySelector('output'); if (o) o.textContent = `${t.value}%`; return; }
         if (!t.dataset?.deskrange) return;
         const out = t.closest('label')?.querySelector('output');
         if (out) out.textContent = `${t.value}%`;
@@ -585,13 +631,19 @@ export class UI {
     else if (!open && this.helpGrew) { this.helpGrew = false; this.bridge?.shop?.(false); }
   }
 
+  /** „Тишина“: всички звуци спират/тръгват наведнъж (HUD бутонът и клавиш M). */
+  mute() { toggleMute(); this.lastHud = 0; this.hud._html = null; this.note?.(audioPrefs.muted ? T.mute.done : T.mute.back); }
+
   /** Отметка/избор в панела -> съответната настройка (страницата, звукът, езикът или приложението). */
   onHelpChange(t) {
     const d = t.dataset || {};
     if (d.pref) prefs.set(d.pref, t.checked);
     else if (t.name === 'mode') prefs.set('focus', t.value === 'focus');
+    else if (t.name === 'atmos') prefs.set('atmos', t.value);
     else if (d.legend != null) { this.legend.hidden = !t.checked; try { localStorage.setItem('po.legend', t.checked ? '1' : '0'); } catch { /* */ } }
     else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
+    else if (d.audio) { audioPrefs.set(d.audio, t.checked); if (t.checked && d.audio === 'sfx') sfx('bloop'); }
+    else if (d.audiorange) sfx('bloop'); // пуснат плъзгач: проба на силата
     else if (t.name === 'lang') { if (PARAMS.desktop && this.bridge?.action) this.bridge.action('lang:' + t.value); else setLang(t.value); }
     else if (d.hook != null) this.setHook(t.checked);
     else if (d.lan != null) this.setLan({ enabled: t.checked });

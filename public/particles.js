@@ -4,6 +4,7 @@ import { drawText, textWidth } from './pixelfont.js';
 import { drawCoin } from './tokens.js';
 import { rgba } from './palette.js';
 import { R } from './util.js';
+import { prefs } from './prefs.js';
 
 const CONFETTI = ['#e04a6b', '#e0c24a', '#4ac26b', '#4a8fe0', '#b04ae0', '#e07a4a', '#ffffff'];
 
@@ -11,6 +12,7 @@ export class Particles {
   constructor() { this.list = []; }
 
   add(p) {
+    if (prefs.saver) return p; // пестене на батерията: без частици (сърчицата на погален любимец също)
     if (this.list.length >= CFG.MAX_PARTICLES) this.list.shift();
     p.age = 0;
     this.list.push(p);
@@ -28,10 +30,10 @@ export class Particles {
     this.add({ kind: 'glyph', layer: 'top', ch: Math.random() < 0.5 ? 'z' : 'Z', x, y, vx: 5, vy: -6, g: 0, life: 2.2, color: '#c8c8e8', wobble: 1 });
   }
   steam(x, y) {
-    this.add({ kind: 'px', layer: 'mid', x: x + Math.random() * 2, y, vx: 0, vy: -5 - Math.random() * 3, g: 0, life: 1.5, color: '#ffffff', alpha: 0.35, wobble: 1, size: 1 });
+    this.add({ kind: 'px', layer: 'over', x: x + Math.random() * 2, y, vx: 0, vy: -5 - Math.random() * 3, g: 0, life: 1.5, color: '#ffffff', alpha: 0.35, wobble: 1, size: 1 });
   }
   dust(x, y) {
-    this.add({ kind: 'px', layer: 'mid', x, y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.3) * 1.5, g: 0, life: 5 + Math.random() * 4, color: '#fff4d0', alpha: 0.5, twinkle: Math.random() * 6, size: 1 });
+    this.add({ kind: 'px', layer: 'over', x, y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.3) * 1.5, g: 0, life: 5 + Math.random() * 4, color: '#fff4d0', alpha: 0.5, twinkle: Math.random() * 6, size: 1 });
   }
   bubble(x, y) {
     this.add({ kind: 'px', layer: 'mid', x, y, vx: 0, vy: -4, g: 0, life: 1.4, color: '#d8f0ff', alpha: 0.8, size: 1 });
@@ -124,8 +126,9 @@ export class Particles {
         drawCoin(ctx, x0, y);
         ctx.globalAlpha = 1;
       } else if (p.kind === 'heart') {
+        // розово, не червеното на „чака те“ (#e04a6b) – иначе сърчицата приличат на тревога
         ctx.globalAlpha = fade;
-        R(ctx, '#e04a6b', x, y, 2, 1); R(ctx, '#e04a6b', x + 3, y, 2, 1); R(ctx, '#e04a6b', x, y + 1, 5, 1); R(ctx, '#e04a6b', x + 1, y + 2, 3, 1); R(ctx, '#e04a6b', x + 2, y + 3, 1, 1); R(ctx, '#ffb0c0', x, y, 1, 1);
+        R(ctx, '#f28cb8', x, y, 2, 1); R(ctx, '#f28cb8', x + 3, y, 2, 1); R(ctx, '#f28cb8', x, y + 1, 5, 1); R(ctx, '#f28cb8', x + 1, y + 2, 3, 1); R(ctx, '#f28cb8', x + 2, y + 3, 1, 1); R(ctx, '#ffe0ec', x, y, 1, 1);
         ctx.globalAlpha = 1;
       } else if (p.kind === 'plane') {
         const d = p.dir || 1;

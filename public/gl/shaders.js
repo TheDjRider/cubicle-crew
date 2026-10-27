@@ -82,7 +82,7 @@ void main() {
 // ---------------------------------------------------------------- 2) светлина
 export const LIGHT = COMMON + `
 #define MAXL 40
-uniform sampler2D uAlb, uGeo, uBg, uSky, uEmi, uHint;
+uniform sampler2D uAlb, uGeo, uBg, uSky, uEmi, uHint, uKind;
 uniform int uN;
 uniform vec4 uLP[MAXL];   // xyz = позиция в света, w = обхват
 uniform vec4 uLC[MAXL];   // rgb = цвят*сила (линейно), a = 1 -> хвърля сянка
@@ -146,7 +146,10 @@ void main() {
   vec4 g = geo(p);
   vec4 emi = texelFetch(uEmi, p, 0);
   vec4 hint = texelFetch(uHint, p, 0);
+  vec4 kind = texelFetch(uKind, p, 0);
   vec3 alb = lin(a.rgb);
+  bool person = kind.r > 0.5 && g.g > 0.4 && g.g < 0.6;
+  float bloomW = kind.b > 0.5 ? 0.0 : person ? 0.5 : 1.0; // 1 = може да свети/да бъде огрян от ореола
   float typ = g.g;
   vec3 P = worldOf(p, g);
   vec3 N;
@@ -154,6 +157,8 @@ void main() {
   else {
     float nx = g.b * 2.0 - 1.0, nu = g.a * 2.0 - 1.0;
     N = normalize(vec3(nx, sqrt(max(0.02, 1.0 - nx * nx - nu * nu)), nu));
+    // хората: почти плоско към нас (без релеф от яркостта – лицата иначе „светят“ по ръбовете)
+    if (person) N = normalize(vec3(nx * 0.25, 1.0, 0.35));
   }
   vec3 col;
   if (typ > 0.9) {
@@ -204,17 +209,23 @@ void main() {
       spec += li * pow(max(0.0, dot(N, Hh)), 24.0) * gloss * 1.4;
     }
     // контражур: ръбовете на силуетите (нормала настрани/нагоре) хващат светлината от прозорците зад тях
-    if (typ > 0.4 && typ < 0.6) {
+    if (typ > 0.4 && typ < 0.6 && !person) {
       float back = clamp(1.0 - N.y, 0.0, 1.0);
       float nearWin = clamp(1.0 - (P.y - uWall) / 90.0, 0.0, 1.0);
       acc += uRim * back * back * back * (0.35 + 0.65 * nearWin);
       acc += uObjFill; // хората и мебелите не потъват в тъмното (четимост нощем)
     }
-    col = alb * acc + spec;
+    if (person) {
+      // мека, почти бяла светлина (цветът на ризата = състоянието остава верен), не под ~60 % яркост, без отблясъци
+      vec3 soft = mix(vec3(lum(acc)), acc, 0.35);
+      col = alb * clamp(soft, vec3(0.6), vec3(1.05));
+    } else col = alb * acc + spec;
     // светещото: екраните, лампите, неонът (r – цялото, g – само ярките пиксели)
     float bright = smoothstep(0.42, 0.85, max(a.r, max(a.g, a.b)));
-    col += alb * uEmiK * (emi.r + emi.g * bright) * 1.6;
+    if (!person) col += alb * uEmiK * (emi.r + emi.g * bright) * 1.6;
   }
+  // кръгът „чака“ и линиите: както в 2D – без светлина
+  col = mix(col, alb, clamp(kind.g, 0.0, 1.0));
   // снопове светлина във въздуха: пробите по лъча на погледа (над видимата повърхност), огрени ли са през стъклото
   if (uShaft > 0.0) {
     float sy = float(p.y) + 0.5, acc = 0.0;
@@ -228,7 +239,7 @@ void main() {
     }
     col += uSunCol * acc * uShaft;
   }
-  o = vec4(col, 1.0);
+  o = vec4(col, bloomW);
   if (uDbg == 1) o = vec4(window(P, uSunDir) * max(0.0, dot(N, uSunDir)), 1.0);
   else if (uDbg == 2) o = vec4(g.r * 255.0 / 60.0, g.g, typ > 0.9 ? 1.0 : 0.0, 1.0);
   else if (uDbg == 3) o = vec4(N * 0.5 + 0.5, 1.0);
@@ -241,7 +252,8 @@ uniform float uRefl;
 out vec4 o;
 void main() {
   ivec2 p = ivec2(gl_FragCoord.xy);
-  vec3 c = texelFetch(uLit, p, 0).rgb;
+  vec4 l0 = texelFetch(uLit, p, 0);
+  vec3 c = l0.rgb;
   vec4 g = texelFetch(uGeo, p, 0);
   float gloss = texelFetch(uHint, p, 0).b;
   if (g.g < 0.1 && gloss > 0.01 && uRefl > 0.0) {
@@ -262,7 +274,7 @@ void main() {
       }
     }
   }
-  o = vec4(c, 1.0);
+  o = vec4(c, l0.a);
 }`;
 
 // ---------------------------------------------------------------- 4) bloom: ярката част + размазване
@@ -273,11 +285,13 @@ uniform float uThresh;
 out vec4 o;
 void main() {
   vec2 uv = gl_FragCoord.xy / (uSize);   // uSize тук = размерът на целта
+  // само пикселите с тежест 1 (хората и зоната на чакащия не светят)
   vec3 c = vec3(0.0);
-  c += texture(uSrc, uv + uTexel * vec2(-0.5, -0.5)).rgb;
-  c += texture(uSrc, uv + uTexel * vec2(0.5, -0.5)).rgb;
-  c += texture(uSrc, uv + uTexel * vec2(-0.5, 0.5)).rgb;
-  c += texture(uSrc, uv + uTexel * vec2(0.5, 0.5)).rgb;
+  vec4 s;
+  s = texture(uSrc, uv + uTexel * vec2(-0.5, -0.5)); c += s.rgb * step(0.75, s.a);
+  s = texture(uSrc, uv + uTexel * vec2(0.5, -0.5)); c += s.rgb * step(0.75, s.a);
+  s = texture(uSrc, uv + uTexel * vec2(-0.5, 0.5)); c += s.rgb * step(0.75, s.a);
+  s = texture(uSrc, uv + uTexel * vec2(0.5, 0.5)); c += s.rgb * step(0.75, s.a);
   c *= 0.25;
   float l = max(c.r, max(c.g, c.b));
   o = vec4(c * smoothstep(uThresh, uThresh + 0.5, l), 1.0);
@@ -311,8 +325,11 @@ vec3 tone(vec3 x) {
 }
 void main() {
   vec2 uv = vec2(gl_FragCoord.x / uOut.x, 1.0 - gl_FragCoord.y / uOut.y);
-  vec3 c = texture(uScene, uv).rgb;
-  vec3 b = texture(uB1, uv).rgb * 0.6 + texture(uB2, uv).rgb * 0.8;
+  vec4 sc = texture(uScene, uv);
+  vec3 c = sc.rgb;
+  // ореолът не се разлива по хората (лицата) и по зоната на чакащия
+  float spill = sc.a > 0.75 ? 1.0 : sc.a > 0.25 ? 0.12 : 0.0;
+  vec3 b = (texture(uB1, uv).rgb * 0.6 + texture(uB2, uv).rgb * 0.8) * spill;
   c += b * uBloom;
   c *= uExpo;
   c = tone(c);

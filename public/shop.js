@@ -30,6 +30,15 @@ export function petThumb(it, mode = 'sit') {
   p.draw(g, 0);
   return c;
 }
+/** Неотключено в албума: предмет с прозрачен фон -> тъмен силует; цяла картинка (стена, под, любимец на пода) -> сиво и тъмно. */
+function silhouette(c) {
+  const g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height).data;
+  let cut = false;
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 200) { cut = true; break; }
+  if (cut) { g.globalCompositeOperation = 'source-in'; g.fillStyle = '#8a83b0'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; return; } // светъл силует – чете се и на тъмния фон
+  const tmp = makeCanvas(c.width, c.height); tmp.getContext('2d').drawImage(c, 0, 0);
+  g.clearRect(0, 0, c.width, c.height); g.filter = 'grayscale(1) brightness(0.7)'; g.drawImage(tmp, 0, 0); g.filter = 'none';
+}
 /** Купичка 9x9 – златна, ако е отключено. */
 function trophy(on) {
   const c = makeCanvas(9, 9), g = c.getContext('2d');
@@ -86,7 +95,7 @@ export class Shop {
     }
     this.body = el('div', 'body', panel);
     this.foot = el('footer', null, panel, T.shop.hint);
-    this.body.addEventListener('mouseover', (e) => this.hover(e.target.closest('.card')));
+    this.body.addEventListener('mouseover', (e) => this.hover(e.target.closest('.card, .tile[data-id]')));
     this.body.addEventListener('mouseleave', () => this.hover(null));
     this.body.addEventListener('click', (e) => this.click(e.target.closest('button')));
   }
@@ -139,6 +148,7 @@ export class Shop {
     else if (tab.id === 'weather') this.renderWeather();
     else if (tab.id === 'stats') this.renderStats();
     else if (tab.id === 'pets') this.renderPets();
+    else if (tab.id === 'album') this.renderAlbum();
     else if (tab.merge) this.renderGroup(tab.groups, T.shop.tabs[tab.id]); // по един предмет на група – обща решетка
     else for (const g of tab.groups) this.renderGroup([g], T.shop.groups[g]);
     this.body.scrollTop = scroll;
@@ -188,6 +198,47 @@ export class Shop {
         const b = el('button', where.length ? 'on' : '', act, where.length ? T.shop.equipped : T.shop.equip);
         b.dataset.equip = it.id; b.dataset.slot = slots[0]; b.disabled = !!where.length;
       }
+    }
+  }
+
+  /** Албум: цялата колекция – купеното в цвят, останалото като силует с цената (и сезона). Само фиксирани цени –
+   *  нищо случайно, всичко се купува направо. Клик по силует -> разделът му в магазина; посочване -> преглед в офиса. */
+  renderAlbum() {
+    const s = this.tokens.save, A = T.shop.album, now = new Date();
+    const cats = TABS.filter((t) => t.groups.length).map((t) => ({ t, items: ITEMS.filter((it) => t.groups.includes(it.group) && it.group !== 'catslot') }));
+    const all = cats.flatMap((c) => c.items), got = all.filter((it) => owns(s, it.id)).length;
+    const tro = ACHIEVEMENTS.filter((a) => s.achievements?.[a.id]).length;
+    const bar = (n, m) => `<span class="bar"><i style="width:${Math.round((n / Math.max(1, m)) * 100)}%"></i></span>`;
+    const top = el('section', 'album-top', this.body);
+    el('div', 'big', top, `<b>${A.total(got, all.length)}</b>${bar(got, all.length)}<span class="dim">${A.trophies(tro, ACHIEVEMENTS.length)}</span>`);
+    el('p', 'hint', top, A.fair);
+    const dm = (md) => md.split('-').reverse().join('.');
+    for (const { t, items } of cats) {
+      const n = items.filter((it) => owns(s, it.id)).length;
+      const sec = el('section', 'album', this.body);
+      el('h3', null, sec, `${T.shop.tabs[t.id]} <span class="cnt">${n} / ${items.length}</span>${bar(n, items.length)}`);
+      const grid = el('div', 'tiles', sec);
+      for (const it of items) {
+        const have = owns(s, it.id), b = el('button', `tile${have ? ' got' : ''}${it.from ? ' season' : ''}`, grid);
+        b.type = 'button'; b.dataset.id = it.id; b.dataset.go = t.id;
+        const c = this.thumb(it), k = SMALL.matches ? 1 : Math.max(1, Math.round(parseFloat(c.style.width) / c.width / 2)); // половината от магазина
+        c.style.width = `${c.width * k}px`; c.style.height = `${c.height * k}px`;
+        if (!have) silhouette(c);
+        b.appendChild(c);
+        const cap = it.from ? `${dm(it.from)}–${dm(it.to)}${inSeason(it, now) ? ' ●' : ''}` : have ? '' : it.price ? `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}` : T.shop.free;
+        if (cap) el('span', 'cap', b, cap);
+        b.title = `${itemName(it)}${have ? ` · ${T.shop.owned}` : ''}${it.from ? ` · ${A.season(dm(it.from), dm(it.to))}` : ''}`;
+      }
+    }
+    // постиженията: златни купички или сиви силуети
+    const sec = el('section', 'album', this.body);
+    el('h3', null, sec, `${T.shop.tabs.trophies} <span class="cnt">${tro} / ${ACHIEVEMENTS.length}</span>${bar(tro, ACHIEVEMENTS.length)}`);
+    const grid = el('div', 'tiles', sec);
+    for (const a of ACHIEVEMENTS) {
+      const on = !!s.achievements?.[a.id], b = el('button', `tile cup${on ? ' got' : ''}`, grid);
+      b.type = 'button'; b.dataset.go = 'trophies';
+      const ic = trophy(on); ic.className = 'th'; ic.style.width = ic.style.height = '27px'; b.appendChild(ic);
+      b.title = (T.achievements[a.id] || [a.id])[0];
     }
   }
 
@@ -466,6 +517,7 @@ export class Shop {
       b.disabled = false;
       return;
     }
+    if (b.dataset.go) { this.tab = b.dataset.go; this.key = ''; this.hoverId = null; this.tokens.setPreview(null); this.render(); this.body.scrollTop = 0; return; } // албумът -> разделът
     if (b.dataset.av) { if (!b.classList.contains('on') && be.avatar) r = await be.avatar(JSON.parse(b.dataset.av)); }
     else if (b.dataset.buy) r = await be.buy(b.dataset.buy, b.dataset.slot || null);
     else if (b.dataset.remove) r = await be.equip(b.dataset.slot, null);
