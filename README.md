@@ -163,11 +163,17 @@ Everything is in the **settings panel** inside the window – the `?` button in 
 - **Thin strip instead of the office** *(app)* – one row per session: state, what it is doing, for how long. Takes the least space; click a row to jump to its terminal.
 - **Colour legend** – the list at the bottom right with the state names (key `L`).
 - **Office lights** – the ceiling lights come on in the evening. There is also a switch by the door – for colleagues who like working in a cave.
+- **Calm office** – no chats, group cheers or rare events (bird, courier). Pets, coins and "waiting for you" stay.
+- **Atmosphere** – full, soft or off: how strongly the time of day colours the room (dawn, sunset, night). Focus mode always uses soft.
+- **Premium lighting (GPU)** – off by default. Real per-pixel light with WebGL2: lamps, monitors in their state colour, moonlight, shadows, bloom. Switches instantly; falls back to the normal look on battery saver, on a slow GPU or when WebGL2 is missing. Not with the transparent background.
+- **Battery saver** – at most 15 frames per second and no particles. Unless you choose, it follows the power source (on while the laptop runs on battery).
+- **Frame counter** – a small fps / ms / CPU readout in the corner.
 - **Language** – English or Bulgarian.
 
 **Alerts**
 - **Answer permission prompts here** – adds a small hook to the Claude Code settings (`~/.claude/settings.json`, a backup is kept). When Claude asks “Allow …?”, Allow / Deny buttons appear at the bottom (keys `Y` / `N`). The terminal works as before; if you do not answer here within 45 s the question stays there. Turning it off removes the hook.
 - **Sound** – a short tune when an agent waits for you or finishes a long task, only when you are not looking at the window.
+- **Office sounds** – all off by default and synthesized (no audio files): clicks when you poke things, an ambience of keyboards, rain on the glass, coffee and birds through an open window, and a quiet lofi that follows the time of day, with one volume slider. Everything ducks for a moment when an agent waits for you. The speaker button in the bottom bar (or the `M` key) mutes every sound at once.
 - **System notification** *(app)* – a pop-up when an agent waits for you; clicking it opens that session's terminal.
 
 **Updates**

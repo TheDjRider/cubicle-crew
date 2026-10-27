@@ -266,6 +266,15 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.0': [
+        ['Светлина по часа', 'Зазоряване, златен час, синьо време и нощ имат свои цветове. Слънцето пада на петна през прозорците и се движи с деня; нощем мониторите светят в цвета на състоянието, лампите – топло. Настройки → Изглед → „Атмосфера“: пълна, лека или изключена.'],
+        ['Премиум осветление (GPU)', 'По желание: истинска светлина за всеки пиксел – лампи, монитори, неон, луна, сенки и сияние. Настройки → Изглед, сменя се веднага; на батерия или при бавна видеокарта минава само на обикновеното.'],
+        ['Офисът е по-жив', 'Хората отпиват, протягат се и поглеждат телефона си, бъбрят с иконки в зоната за почивка, радват се заедно, когато някой свърши, а под-агентите носят резултата на лидера. Понякога каца птичка или идва куриер. Докато някой те чака, всичко останало замира. „Спокоен офис“ спира разговорите и случките.'],
+        ['Любимци с характер', 'Котката спи на слънце или върху клавиатурата на празно бюро, кучето носи топката, а любимецът сяда до този, който те чака. Щракни купичката – лакомство за 5 монети.'],
+        ['Щракай по нещата', 'Кафемашината вари, принтерът печата, прозорецът се отваря, рибките се стрелкат, часовникът кука…'],
+        ['Звуци на офиса', 'По желание, синтезирани, без файлове: клавиатури, дъжд по стъклото, птички, кафе и тих lofi, който следва часа. Бутонът с високоговорителя (или M) спира всичко наведнъж.'],
+        ['Албум и пестене на батерията', 'Нов раздел „Албум“ в магазина – всичко за събиране, с фиксирани цени. Пестенето на батерията се включва само, когато лаптопът е на батерия.'],
+      ],
       '2.18.5': [
         ['Бутон за прозрачния фон', 'Новият бутон ◐ в лентата на прозореца, до „Винаги отгоре“, включва и изключва прозрачния фон с едно щракване.'],
         ['Без стойки', 'При прозрачен фон часовникът и времето под него просто висят във въздуха над бюрата, а неонът е пак на мястото си над зоната за почивка.'],
@@ -553,6 +562,15 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.0': [
+        ['Light that follows the day', 'Dawn, golden hour, blue hour and night each have their own colours. Sunlight falls through the windows in patches that move with the day; at night monitors glow in their state colour and lamps glow warm. Settings → Look → "Atmosphere": full, soft or off.'],
+        ['Premium lighting (GPU)', 'Optional: real per-pixel light – lamps, monitors, neon, moonlight, shadows and bloom. Settings → Look, switches instantly; on battery or a slow GPU it falls back to the normal look.'],
+        ['A livelier office', 'People sip, stretch and check their phones, chat in icons in the lounge, cheer together when someone finishes, and sub-agents bring their results to the lead. Sometimes a bird lands or a courier drops by. While someone waits for you, everything else stays still. "Calm office" turns chats and events off.'],
+        ['Pets with personality', 'The cat naps in the sun or on the keyboard of an empty desk, the dog brings the ball, and a pet sits next to whoever is waiting for you. Click the bowl for a treat (5 coins).'],
+        ['Click things', 'The coffee machine brews, the printer prints, the window opens, the fish dart, the clock cuckoos…'],
+        ['Office sounds', 'Optional, synthesized, no files: keyboards, rain on the glass, birds, coffee and a quiet lofi that follows the time of day. The speaker button (or M) stops everything at once.'],
+        ['Album and battery saver', 'A new "Album" tab in the shop – everything to collect, at fixed prices. The battery saver turns on by itself while the laptop runs on battery.'],
+      ],
       '2.18.5': [
         ['A button for the transparent background', 'The new ◐ button on the title bar, next to "Always on top", turns the transparent background on and off with one click.'],
         ['No more poles', 'On the transparent background the clock and the weather under it simply float above the desks, and the neon is back in its spot above the lounge.'],
