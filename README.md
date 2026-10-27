@@ -264,7 +264,7 @@ Issues and pull requests are welcome – see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Contributor pets:** Bueno, the tricolour mix – [@buensoft](https://github.com/buensoft).
 
-**Contributor decor:** the "Beer & metal" neon sign – Ivan Turtev.
+**Contributor decor:** the "Beer & metal" neon sign – Ivan Turtev; the massage chair – Hristiyan Dimov.
 
 ## License
 

@@ -174,7 +174,7 @@ export const ITEMS = [
   I('espresso.pro', 'espresso', 800, 'Еспресо машина', {}),
   I('aquarium.reef', 'aquarium', 1200, 'Аквариум', {}),
   I('arcade.retro', 'arcade', 1500, 'Аркадна машина', {}),
-  I('massage.chair', 'massage', 1300, 'Масажен стол', {}),
+  I('massage.chair', 'massage', 1300, 'Масажен стол', { by: 'Hristiyan Dimov' }),
 ];
 export const ITEM = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
 export const GROUP_SLOTS = {};
