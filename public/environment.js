@@ -888,17 +888,17 @@ export function drawArcadeScreen(ctx, ar, t) {
   R(ctx, '#f0d040', x0 + ((k * 3) % (s.w - 1)), y0 + 2 + (k % (s.h - 4)), 1, 1);
 }
 // масажен стол отпред: облегалка за глава, ролкови възглавници, подлакътници (с пулт вдясно), поставка за краката
-const MASSAGE = { w: 22, h: 32, led: { x: 19, y: 17 } };
+const MASSAGE = { w: 28, h: 37, led: { x: 24, y: 21 } }; // по-голям от седящия: главата и подлакътниците се подават
 function drawMassage(ctx) {
   const { w, h } = MASSAGE, dk = '#5a4c44', c = '#b8a890', mid = '#d2c4aa', hi = '#ece0c8', st = '#9a8a72';
-  R(ctx, dk, 5, 0, 12, 7); R(ctx, mid, 6, 1, 10, 5); R(ctx, hi, 7, 1, 8, 1);                      // за главата
-  R(ctx, dk, 3, 6, 16, 18); R(ctx, c, 4, 7, 14, 16);                                              // облегалка
-  for (let y = 8; y < 22; y += 4) { R(ctx, mid, 5, y, 12, 3); R(ctx, hi, 6, y, 10, 1); }         // ролкови възглавници
-  R(ctx, st, 10, 8, 2, 14);                                                                       // шев по средата
-  for (const x of [0, 17]) { R(ctx, dk, x, 14, 5, 13); R(ctx, mid, x + 1, 15, 3, 11); R(ctx, hi, x + 1, 15, 3, 1); } // подлакътници
-  R(ctx, dk, 18, 16, 3, 3); R(ctx, '#2a3448', 18, 17, 2, 1);                                      // пулт
-  R(ctx, dk, 4, 22, 14, 4); R(ctx, c, 5, 22, 12, 3);                                              // седалка
-  R(ctx, dk, 6, 26, 10, 5); R(ctx, mid, 7, 26, 8, 4); R(ctx, hi, 7, 26, 8, 1);                   // за краката
+  R(ctx, dk, 7, 0, 14, 9); R(ctx, mid, 8, 1, 12, 7); R(ctx, hi, 9, 1, 10, 2);   // за главата
+  R(ctx, dk, 4, 7, 20, 22); R(ctx, c, 5, 8, 18, 20);                                              // облегалка
+  for (let y = 9; y < 27; y += 4) { R(ctx, mid, 6, y, 16, 3); R(ctx, hi, 7, y, 14, 1); }         // ролкови възглавници
+  R(ctx, st, 13, 9, 2, 18);                                                                       // шев по средата
+  for (const x of [0, 22]) { R(ctx, dk, x, 17, 6, 15); R(ctx, mid, x + 1, 18, 4, 13); R(ctx, hi, x + 1, 18, 4, 1); R(ctx, c, x + 1, 26, 4, 5); } // подлакътници
+  R(ctx, dk, 23, 20, 4, 3); R(ctx, '#2a3448', 23, 21, 3, 1);                                      // пулт
+  R(ctx, dk, 5, 27, 18, 4); R(ctx, c, 6, 27, 16, 3);                                              // седалка
+  R(ctx, dk, 8, 31, 12, 5); R(ctx, mid, 9, 31, 10, 4); R(ctx, hi, 9, 31, 10, 1);                 // за краката
   R(ctx, '#2a2228', 3, h - 1, w - 6, 1);                                                          // основа
 }
 /** Лампичката на пулта: мига зелено, докато някой се масажира. */
@@ -1112,7 +1112,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   if (decor.massage && lo.massage) {
     const ms = lo.massage;
     massage = { x: Math.round(ms.x - MASSAGE.w / 2), y: ms.base - MASSAGE.h, w: MASSAGE.w, key: ms.base };
-    add(prop('massage', MASSAGE.w, MASSAGE.h, drawMassage), massage.x, ms.base, ms.base, { w: 24, h: 5 });
+    add(prop('massage', MASSAGE.w, MASSAGE.h, drawMassage), massage.x, ms.base, ms.base, { w: 30, h: 6 });
   }
   add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base, lo.cornerPlant.base, PLANT_SH);
   const sf = lo.sofa, so = decor.sofa, sv = variant('sofa', so);
