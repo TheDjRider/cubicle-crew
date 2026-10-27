@@ -231,6 +231,9 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.18.2': [
+        ['Прозрачният фон хваща кликовете правилно', 'Кликовете минават само през празните места – върху хората, мебелите и лентата горе прозорецът ги хваща, при всякакъв мащаб на екрана.'],
+      ],
       '2.18.1': [
         ['По-нисък офис', 'Редовете бюра са по-близо и леко се застъпват – офисът заема по-малко място по височина. Прозорец в стария размер по подразбиране се смалява сам веднъж.'],
         ['Купички и фонтан пред бюрото', 'Купичките и фонтанът за любимците са пред най-дясното бюро, за да се виждат; играчките остават под килима.'],
@@ -470,6 +473,9 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.18.2': [
+        ['Transparent background catches clicks properly', 'Clicks go through only on empty spots – on people, furniture and the title bar the window catches them, at any display scale.'],
+      ],
       '2.18.1': [
         ['A lower office', 'The desk rows are closer and slightly overlap – the office takes less height. A window still at the old default size shrinks once by itself.'],
         ['Bowls and fountain by the desk', 'The pet bowls and the water fountain sit in front of the rightmost desk, where you can see them; the toys stay under the rug.'],
