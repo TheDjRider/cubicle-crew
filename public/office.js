@@ -1,7 +1,7 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES, PARAMS } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawClearFloor, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawFountainWater, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
+import { buildRoom, buildPod, drawClearFloor, drawClearDynamic, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawFountainWater, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
@@ -717,7 +717,7 @@ export class Office {
     // ?clear (прозрачен фон): без небе, стени, под, оттенък и светлини – мебелите, хората, любимците, дартса и сенките под бюрата
     const clear = PARAMS.clear;
     // 1) небе (под прозрачните стъкла) 2) фон
-    if (clear) { ctx.clearRect(0, 0, room.W, room.H); drawClearFloor(ctx, room); }
+    if (clear) { ctx.clearRect(0, 0, room.W, room.H); drawClearFloor(ctx, room); drawClearDynamic(ctx, room, date, tod.wx, tod); }
     else {
       drawSky(ctx, room, tod, now);
       ctx.drawImage(room.bg, 0, 0);
@@ -771,10 +771,25 @@ export class Office {
 
     this.drawDarts(ctx, now, 'air');
     if (!clear) this.drawLight(ctx, room, tod, lit, now, occupant);
+    else this.drawLightClear(ctx, room, tod, lit, now, occupant);
     // 7) частици и икони отгоре
     this.fx.draw(ctx, 'top');
     for (const a of this.actors.values()) a.drawOverlay(ctx, now);
     if (this.focusId && this.actors.has(this.focusId)) this.drawFocus(ctx, this.actors.get(this.focusId), now);
+  }
+
+  /** Прозрачен фон: същата нощ и същите светлини, но само върху нарисуваното – правят се в отделно платно и
+   *  се изрязват по формата на сцената (destination-in), иначе биха оцветили празното (и хващали кликовете). */
+  drawLightClear(ctx, room, tod, lit, now, occupant) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const buf = this.lightBuf ||= document.createElement('canvas');
+    if (buf.width !== W || buf.height !== H) { buf.width = W; buf.height = H; }
+    const g = buf.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H); g.drawImage(ctx.canvas, 0, 0);
+    this.drawLight(g, room, tod, lit, now, occupant);
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(ctx.canvas, 0, 0); g.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, W, H); ctx.drawImage(buf, 0, 0);
   }
 
   /** Оттенъкът за часа, светкавицата и светлините (multiply/lighter – върху прозрачен фон биха оцветили празното). */

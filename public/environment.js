@@ -1133,6 +1133,18 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   drawPoster(g, lo.cooler.x - 1, 10, decor.posters.kinds[1 + (posters.length % 2)]);
   if (decor.neon) drawNeon(g, lo.x + lo.w - 26, 12, decor.neon.c, decor.neon.style);
 
+  // прозрачен фон: стената я няма – часовникът, метеостанцията и неонът стоят на стойки вляво от дартса
+  let clearProps = null;
+  if (CFG.FIXED_ROOM) {
+    const ck = { x: dt.x - 22, y: 12, r: 7 };
+    const nh = decor.neon ? neonH(decor.neon.style) : 0;
+    clearProps = {
+      clock: ck, digital: { x: ck.x - 10, y: ck.y + 9, w: 21, h: 7 },
+      plaque: { cx: ck.x - 36, y: 16 },
+      neon: decor.neon ? { x: ck.x - 82, y: 9, h: nh, c: decor.neon.c, style: decor.neon.style } : null,
+    };
+  }
+
   // ---------- мебели като отделни обекти (сортират се по дълбочина) ----------
   const objects = [];
   // sh = сянката на пода под предмета: { w, h, cx? } (cx – отместване на центъра от левия ръб), null = без сянка
@@ -1242,9 +1254,9 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, massage, season, shredder, fountain, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, massage, season, shredder, fountain, neon: clearProps?.neon ? { x: clearProps.neon.x + 11, y: clearProps.neon.y + clearProps.neon.h / 2, c: decor.neon.c } : decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0, dartboard: { img: dartImg, x: dt.x, y: dt.y }, // dartboard – за прозрачния фон (там стената я няма)
-    decor, seed,
+    decor, seed, clearProps,
   };
 }
 
@@ -1254,7 +1266,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
 /** Прозрачен фон: целият под (с килимите и сенките в него), избледняващ към краищата – рисува се веднъж в room.clearBg –
  *  и дъската за дартс на стойка (стената я няма). */
 export function drawClearFloor(ctx, room) {
-  const db = room.dartboard, WH = CFG.WALL_H;
+  const db = room.dartboard, WH = CFG.WALL_H, cp = room.clearProps;
   if (!room.clearBg) {
     const c = makeCanvas(room.W, room.H), g = c.getContext('2d');
     g.drawImage(room.bg, 0, WH, room.W, room.H - WH, 0, WH, room.W, room.H - WH);
@@ -1270,17 +1282,37 @@ export function drawClearFloor(ctx, room) {
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(mask, 0, 0);
     g.globalCompositeOperation = 'source-over';
-    if (db) floorShadow(g, db.x + Math.floor(db.img.width / 2), WH, 16, 4);
+    // стената я няма: дъската за дартс, часовникът, метеостанцията и неонът стоят на стойки до задния ръб на пода
+    if (db) { floorShadow(g, db.x + Math.floor(db.img.width / 2), WH, 16, 4); stand(g, db.x + Math.floor(db.img.width / 2), db.y + db.img.height - 2); g.drawImage(db.img, db.x, db.y); }
+    if (cp) {
+      const { clock: ck, digital: dg, plaque: pq, neon: ne } = cp;
+      floorShadow(g, ck.x, WH, 16, 4); stand(g, ck.x, dg.y + dg.h);
+      drawClockFace(g, ck);
+      R(g, '#1a1420', dg.x, dg.y, dg.w, dg.h); R(g, '#0e1a16', dg.x + 1, dg.y + 1, dg.w - 2, dg.h - 2); R(g, '#3a3248', dg.x, dg.y + dg.h, dg.w, 1);
+      floorShadow(g, pq.cx, WH, 12, 3); stand(g, pq.cx, pq.y + 8, true);
+      if (ne) { floorShadow(g, ne.x + 11, WH, 16, 4); stand(g, ne.x + 11, ne.y + ne.h - 1); drawNeon(g, ne.x, ne.y, ne.c, ne.style); }
+    }
     room.clearBg = c;
   }
   ctx.drawImage(room.clearBg, 0, 0);
-  // дъската за дартс на стойка (стената я няма): два крака до мястото, където беше стената
-  if (db) {
-    const cx = db.x + Math.floor(db.img.width / 2), y0 = db.y + db.img.height - 2, y1 = CFG.WALL_H + 3;
-    R(ctx, '#2a2030', cx - 4, y0, 2, y1 - y0); R(ctx, '#2a2030', cx + 3, y0, 2, y1 - y0);
-    R(ctx, '#4a3e52', cx - 4, y0, 1, y1 - y0); R(ctx, '#4a3e52', cx + 3, y0, 1, y1 - y0);
-    ctx.drawImage(db.img, db.x, db.y);
-  }
+}
+
+/** Стойка до задния ръб на пода (CFG.WALL_H + 3): два крака или (one) един прът. */
+function stand(g, cx, y0, one = false) {
+  const y1 = CFG.WALL_H + 3, h = y1 - y0;
+  if (h <= 0) return;
+  if (one) { R(g, '#2a2030', cx - 1, y0, 2, h); R(g, '#4a3e52', cx - 1, y0, 1, h); R(g, '#2a2030', cx - 3, y1 - 1, 6, 1); return; }
+  R(g, '#2a2030', cx - 4, y0, 2, h); R(g, '#2a2030', cx + 3, y0, 2, h);
+  R(g, '#4a3e52', cx - 4, y0, 1, h); R(g, '#4a3e52', cx + 3, y0, 1, h);
+}
+
+/** Прозрачен фон, всеки кадър: стрелките и цифрите на часовника и метеостанцията (room.wxPlaque – за клика). */
+export function drawClearDynamic(ctx, room, date, wx, tod) {
+  const cp = room.clearProps;
+  room.wxPlaque = null;
+  if (!cp) return;
+  drawClockHands(ctx, cp.clock, cp.digital, date);
+  if (wx) { const pw = plaqueWidth(wx); room.wxPlaque = drawWeatherPlaque(ctx, Math.round(cp.plaque.cx - pw / 2), cp.plaque.y, wx, tod); }
 }
 
 export function drawSky(ctx, room, tod, t) {
@@ -1427,23 +1459,24 @@ function icon(ctx, rows, x, y, c) {
 }
 
 /** Часовник с истинското време, дъска със статистики, вратата. */
-export function drawWallDynamic(ctx, room, date, stats, t) {
-  // часовник
-  const c = room.clock;
+/** Стрелките на часовника c и цифрите на дигиталния dg (ЧЧ:ММ, двоеточието мига всяка секунда). */
+function drawClockHands(ctx, c, dg, date) {
   const hh = date.getHours() % 12 + date.getMinutes() / 60, mm = date.getMinutes() + date.getSeconds() / 60;
   const ha = hh / 12 * Math.PI * 2, ma = mm / 60 * Math.PI * 2, sa = date.getSeconds() / 60 * Math.PI * 2;
   pixLine(ctx, '#2a2030', c.x, c.y, c.x + Math.sin(ma) * (c.r - 2), c.y - Math.cos(ma) * (c.r - 2));
   pixLine(ctx, '#2a2030', c.x, c.y, c.x + Math.sin(ha) * (c.r - 4), c.y - Math.cos(ha) * (c.r - 4));
   R(ctx, '#e04a4a', Math.round(c.x + Math.sin(sa) * (c.r - 2)), Math.round(c.y - Math.cos(sa) * (c.r - 2)), 1, 1);
   R(ctx, '#e04a4a', c.x, c.y, 1, 1);
-  // дигиталният: ЧЧ:ММ, двоеточието мига всяка секунда
-  const dg = room.digital;
   if (dg) {
     const hh2 = String(date.getHours()).padStart(2, '0'), mm2 = String(date.getMinutes()).padStart(2, '0');
     drawText(ctx, hh2, dg.x + 2, dg.y + 1, '#6ae08a');
     if (date.getSeconds() % 2 === 0) drawText(ctx, ':', dg.x + 10, dg.y + 1, '#6ae08a');
     drawText(ctx, mm2, dg.x + 12, dg.y + 1, '#6ae08a');
   }
+}
+
+export function drawWallDynamic(ctx, room, date, stats, t) {
+  drawClockHands(ctx, room.clock, room.digital, date);
   // метеостанция над шкафа с книги (клик -> настройки на времето)
   room.wxPlaque = null;
   if (stats.wx) {
