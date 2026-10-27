@@ -232,6 +232,9 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.18.3': [
+        ['Офисът до магазина е цял', 'В голям прозорец с отворен магазин офисът вече не се разтяга до дребни бюра сред безкраен под – остава в нормален размер, в средата.'],
+      ],
       '2.18.2': [
         ['Прозрачният фон хваща кликовете правилно', 'Кликовете минават само през празните места – върху хората, мебелите и лентата горе прозорецът ги хваща, при всякакъв мащаб на екрана.'],
       ],
@@ -474,6 +477,9 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.18.3': [
+        ['The office stays whole next to the shop', 'In a big window with the shop open the office no longer stretches into tiny desks on an endless floor – it keeps its normal size, centred.'],
+      ],
       '2.18.2': [
         ['Transparent background catches clicks properly', 'Clicks go through only on empty spots – on people, furniture and the title bar the window catches them, at any display scale.'],
       ],
