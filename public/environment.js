@@ -1010,9 +1010,13 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
       }
     }
   }
-  // сянка до стената и долу: на стъпала (пикселарт), не гладък градиент
-  [[2, 0.4], [3, 0.28], [4, 0.17], [5, 0.08]].reduce((y, [h, a]) => { R(g, `rgba(16,10,24,${a})`, 0, y, W, h); return y + h; }, WH);
-  [[8, 0.06], [8, 0.12], [8, 0.18], [6, 0.24]].reduce((y, [h, a]) => { R(g, `rgba(16,10,24,${a})`, 0, y, W, h); return y + h; }, H - 30);
+  // сянка до стената и долу: мек преход (стъпалата от 2.16 се виждаха като твърди ленти под прозорците)
+  const ao = g.createLinearGradient(0, WH, 0, WH + 12);
+  ao.addColorStop(0, 'rgba(16,10,24,0.38)'); ao.addColorStop(0.35, 'rgba(16,10,24,0.16)'); ao.addColorStop(1, 'rgba(16,10,24,0)');
+  g.fillStyle = ao; g.fillRect(0, WH, W, 12);
+  const vg = g.createLinearGradient(0, H - 30, 0, H);
+  vg.addColorStop(0, 'rgba(16,10,24,0)'); vg.addColorStop(1, 'rgba(16,10,24,0.22)');
+  g.fillStyle = vg; g.fillRect(0, H - 30, W, 30);
 
   // ---------- килими ----------
   L.rugs.forEach((rug, ti) => {
@@ -1420,14 +1424,13 @@ export function drawTint(ctx, room, tod, lit = 0) {
   }
 }
 let vigCache = null;
-/** Винетка W x H: тъмни ъгли на 4 стъпала с дитеринг. */
+/** Винетка W x H: тъмни ъгли с плавен преход (стъпалата с дитеринг очертаваха пръстени). */
 function vignette(W, H) {
   if (vigCache && vigCache.width === W && vigCache.height === H) return vigCache;
   const c = makeCanvas(W, H), g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const dx = (x - W / 2) / (W / 2), dy = (y - H * 0.55) / (H * 0.6), t = Math.sqrt(dx * dx * 0.8 + dy * dy);
-    const f = Math.min(1, Math.max(0, (t - 0.55) / 0.65)) * 0.62;
-    const q = stepAt(f, x, y);
+    const f = Math.min(1, Math.max(0, (t - 0.55) / 0.65)), q = f * f * (3 - 2 * f) * 0.55; // smoothstep
     if (q <= 0) continue;
     const i = (y * W + x) * 4;
     d[i] = 10; d[i + 1] = 6; d[i + 2] = 22; d[i + 3] = Math.round(q * 255);
@@ -1461,6 +1464,11 @@ export function lightGlows(ctx, room, tod, lit, now) {
   const n = nightK(tod);
   if (lit > 0.01 && n > 0.01) {
     const a = lit * n;
+    // ореолът и конусът са по стената – прозорците (стъклото и рамката) се изрязват, иначе светлината минава през тях
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, room.W, CFG.WALL_H);
+    for (const w of room.windows || []) ctx.rect(w.x - 2, w.y - 2, w.w + 4, w.h + 4);
+    ctx.clip('evenodd');
     for (const x of room.ceil || []) {
       R(ctx, rgba('#fff2d6', 0.9 * lit), x - 8, 1, 16, 1);
       glow(ctx, x, 4, 24, '#fff0d0', 0.32 * a);
@@ -1470,8 +1478,9 @@ export function lightGlows(ctx, room, tod, lit, now) {
         R(ctx, rgba('#ffe8c4', 0.07 * a), x - hw, y, hw * 2, 1);
         R(ctx, rgba('#ffe8c4', 0.06 * a), x - Math.round(hw * 0.55), y, Math.round(hw * 0.55) * 2, 1);
       }
-      glowE(ctx, x, CFG.WALL_H + 26, 62, 22, '#ffe2b8', 0.22 * a);
     }
+    ctx.restore();
+    for (const x of room.ceil || []) glowE(ctx, x, CFG.WALL_H + 26, 62, 22, '#ffe2b8', 0.22 * a);
   }
   // светодиодът на ключа свети, докато лампите са изгасени – да се намира на тъмно
   const s = room.lightSwitch;
@@ -1480,7 +1489,7 @@ export function lightGlows(ctx, room, tod, lit, now) {
 
 // ---- светлина по пикселната мрежа: 4 стъпала с дитеринг (Bayer 4x4) вместо гладък преход ----
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
-const LEVELS = 4;
+const LEVELS = 8; // 4 стъпала очертаваха видими пръстени около лампите
 /** Стъпаловидна стойност 0..1: чисти ленти, дитеринг само в тясна ивица около границата между две стъпала. */
 function stepAt(f, x, y) {
   const v = f * LEVELS, b = Math.floor(v), fr = v - b;
@@ -1523,17 +1532,16 @@ export function glowE(ctx, x, y, rx, ry, color, a) {
   ctx.globalAlpha = prev;
 }
 
-/** Мека сянка на пода: елипса в 2 нюанса (по-тъмна сърцевина), центрирана в cx, горният ѝ ръб е y. */
+/** Мека сянка на пода: елипса w x h с плавно избледняване към ръба (най-тъмна в средата), центрирана в cx, горният ѝ ръб е y.
+ *  Двата плътни нюанса от 2.16 изглеждаха като правоъгълник с назъбени краища. */
 export function floorShadow(g, cx, y, w, h, k = 1) {
-  const ell = (rx, ry, col) => {
-    g.fillStyle = col;
-    for (let j = 0; j < ry * 2; j++) {
-      const t = (j + 0.5 - ry) / ry, hw = Math.round(rx * Math.sqrt(Math.max(0, 1 - t * t)));
-      if (hw > 0) g.fillRect(Math.round(cx - hw), Math.round(y + (h / 2 - ry)) + j, hw * 2, 1);
-    }
-  };
-  ell(w / 2, h / 2, `rgba(20,12,28,${0.2 * k})`);
-  ell(Math.max(1, w / 2 - 3), Math.max(1, h / 2 - 1), `rgba(20,12,28,${0.22 * k})`);
+  const rx = w / 2, ry = h / 2;
+  g.save();
+  g.translate(cx, y + ry); g.scale(1, ry / rx);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+  gr.addColorStop(0, `rgba(20,12,28,${0.42 * k})`); gr.addColorStop(0.55, `rgba(20,12,28,${0.3 * k})`); gr.addColorStop(1, 'rgba(20,12,28,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill();
+  g.restore();
 }
 
 export { ACCENTS };
