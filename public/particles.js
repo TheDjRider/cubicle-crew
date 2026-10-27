@@ -30,10 +30,10 @@ export class Particles {
     this.add({ kind: 'glyph', layer: 'top', ch: Math.random() < 0.5 ? 'z' : 'Z', x, y, vx: 5, vy: -6, g: 0, life: 2.2, color: '#c8c8e8', wobble: 1 });
   }
   steam(x, y) {
-    this.add({ kind: 'px', layer: 'mid', x: x + Math.random() * 2, y, vx: 0, vy: -5 - Math.random() * 3, g: 0, life: 1.5, color: '#ffffff', alpha: 0.35, wobble: 1, size: 1 });
+    this.add({ kind: 'px', layer: 'over', x: x + Math.random() * 2, y, vx: 0, vy: -5 - Math.random() * 3, g: 0, life: 1.5, color: '#ffffff', alpha: 0.35, wobble: 1, size: 1 });
   }
   dust(x, y) {
-    this.add({ kind: 'px', layer: 'mid', x, y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.3) * 1.5, g: 0, life: 5 + Math.random() * 4, color: '#fff4d0', alpha: 0.5, twinkle: Math.random() * 6, size: 1 });
+    this.add({ kind: 'px', layer: 'over', x, y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.3) * 1.5, g: 0, life: 5 + Math.random() * 4, color: '#fff4d0', alpha: 0.5, twinkle: Math.random() * 6, size: 1 });
   }
   bubble(x, y) {
     this.add({ kind: 'px', layer: 'mid', x, y, vx: 0, vy: -4, g: 0, life: 1.4, color: '#d8f0ff', alpha: 0.8, size: 1 });

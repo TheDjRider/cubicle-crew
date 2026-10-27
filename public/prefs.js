@@ -7,6 +7,7 @@
 //  lamp    – лампата и неонът в зоната за почивка (вторият ключ, под първия)
 //  saver   – пестене на батерията: най-много 15 кадъра/s, без частици (искри, пара, прашинки);
 //            без изричен избор следва захранването – включва се само, докато лаптопът е на батерия (navigator.getBattery)
+//  atmos   – атмосфера: 'full' (по подразбиране) | 'soft' | 'off' – колко силно часът оцветява и затъмнява стаята (light.js)
 //  calm    – спокоен офис: без разговори, общи радости и редки случки (life.js); любимците остават
 //  perf    – малък брояч долу вляво: кадри/s, мс на кадър и ~% от едно ядро (за доверие: колко струва)
 // ?overlay включва private по подразбиране (стрийм); Electron сменя focus/private от менюто в трея (IPC 'pref').
@@ -27,6 +28,9 @@ export const prefs = {
   get lamp() { return state.lamp !== false; },
   get saver() { return state.saver ?? onBattery; },
   get calm() { return !!state.calm; },
+  /** Сила на светлината и цветовете по часа: 1 пълна, 0.5 лека (и винаги във „Фокус“), 0 изключена (плоско, най-ясно). */
+  get atmos() { const a = state.atmos || 'full'; return a === 'off' ? 0 : a === 'soft' || state.focus ? 0.5 : 1; },
+  get atmosKey() { return ['full', 'soft', 'off'].includes(state.atmos) ? state.atmos : 'full'; },
   get perf() { return !!state.perf || PARAMS.debug; },
   get board() { const b = state.board | 0; return b >= 0 && b < 4 ? b : 0; },
   /** Собственото име на сесия (или null). */

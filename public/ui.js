@@ -622,6 +622,7 @@ export class UI {
     const d = t.dataset || {};
     if (d.pref) prefs.set(d.pref, t.checked);
     else if (t.name === 'mode') prefs.set('focus', t.value === 'focus');
+    else if (t.name === 'atmos') prefs.set('atmos', t.value);
     else if (d.legend != null) { this.legend.hidden = !t.checked; try { localStorage.setItem('po.legend', t.checked ? '1' : '0'); } catch { /* */ } }
     else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
     else if (d.audio) { audioPrefs.set(d.audio, t.checked); if (t.checked && d.audio === 'sfx') sfx('bloop'); }

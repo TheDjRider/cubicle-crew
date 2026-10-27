@@ -1,8 +1,9 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES, PARAMS } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawClearFloor, drawClearDynamic, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawFountainWater, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
+import { buildRoom, buildPod, drawClearFloor, drawClearDynamic, drawSky, drawWallDynamic, vignette, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawFountainWater, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
 import { flashAt } from './weather.js';
+import { gradeOf, applyGrade, lightCanvas, sunPatches, drawSunPatches, drawSunBeams, beamPoint, drawWetReflections } from './light.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
 import { resolveDecor, AVATAR, SLOTS, PET_SLOTS } from './catalog.js';
@@ -12,7 +13,7 @@ import { Life } from './life.js';
 import { avatarLook } from './sprites.js';
 import { prefs } from './prefs.js';
 import { drawBoardScreen, boardGlow, boardMoving, BOARD_PAGES } from './board.js';
-import { rgba } from './palette.js';
+import { rgba, mix } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
 import { Pokes } from './poke.js';
 import { sfx } from './sound.js';
@@ -712,8 +713,17 @@ export class Office {
     this.life.update(dt, now);
     // прашинки в слънчевите снопове
     if (!prefs.focus && this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
-      const w = this.room.windows[Math.floor(Math.random() * this.room.windows.length)];
-      this.fx.dust(w.x + Math.random() * w.w, CFG.WALL_H + Math.random() * 40);
+      const pt = beamPoint(this.sun);
+      if (pt) this.fx.dust(pt.x, pt.y);
+    }
+    // кафемашината от време на време пуска пара (прясно кафе), и без никого до нея
+    if (!prefs.focus && L.lounge?.counter) {
+      this.coffeeT = (this.coffeeT ?? 6) - dt;
+      if (this.coffeeT <= 0) { this.coffeeT = 18 + Math.random() * 22; this.coffeePuff = 2.6; }
+      if (this.coffeePuff > 0) {
+        this.coffeePuff -= dt; this.coffeeP = (this.coffeeP ?? 0) - dt;
+        if (this.coffeeP <= 0) { this.coffeeP = 0.2; const c = L.lounge.counter; this.fx.steam(c.x + 9, c.base - 28); }
+      }
     }
     this.pokes.update(now);
     if (!this._lastTeams || now - this._lastTeams > 1000) { this._lastTeams = now; this.manageTeams(now); this.ensureLayout(); }
@@ -747,6 +757,15 @@ export class Office {
       if (fx.spark <= 0) { fx.spark = st === 'running' ? 0.08 : 0.13; this.fx.spark(p.x + POD.keyboard.x + 2 + Math.random() * 12, p.y + POD.keyboard.y, Math.random() < 0.5 ? '#ffffff' : col); }
       fx.glyph -= dt;
       if (fx.glyph <= 0) { fx.glyph = 0.9 + Math.random() * 0.8; this.fx.glyph(p.x + POD.screen.x + 4 + Math.random() * 10, p.y + POD.screen.y - 4, col); }
+    }
+    // пара от чашата на бюрото: кратка струйка на случаен интервал (всеки по свое време, не в синхрон)
+    if (atDesk) {
+      fx.mug = (fx.mug ?? 2 + Math.random() * 10) - dt;
+      if (fx.mug <= 0) { fx.mug = 8 + Math.random() * 12; fx.mugPuff = 1.6; }
+      if (fx.mugPuff > 0) {
+        fx.mugPuff -= dt; fx.mugT = (fx.mugT ?? 0) - dt;
+        if (fx.mugT <= 0) { fx.mugT = 0.26; this.fx.steam(p.x + DESK_MUG.x, p.y + DESK_MUG.y - 2); }
+      }
     }
     if (a.loc.type === 'darts' && a.mode === 'idleSpot') this.throwDart(a, now);
     // храни рибките: люспичките тръгват, щом ръката се протегне (позата в characters.js)
@@ -805,7 +824,8 @@ export class Office {
     const lit = this.lightLevel(now);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
-    if (!clear) drawShafts(ctx, room, tod, now);
+    this.sun = clear ? null : sunPatches(room, tod); // слънчевите петна (и за прашинките в update)
+    if (!clear) drawWetReflections(ctx, room, tod, now);
     this.drawLinks(ctx, now);
     for (const a of this.actors.values()) {
       if (a.vstate === 'waiting' && a.isAtDesk(L)) {
@@ -847,6 +867,7 @@ export class Office {
     items.sort((a, b) => a.key - b.key || a.i - b.i);
     for (const it of items) it.fn();
 
+    this.fx.draw(ctx, 'over'); // пара от чашите, прашинки – над мебелите, но под светлината
     this.drawDarts(ctx, now, 'air');
     if (!clear) this.drawLight(ctx, room, tod, lit, now, occupant);
     else this.drawLightClear(ctx, room, tod, lit, now, occupant);
@@ -873,18 +894,117 @@ export class Office {
 
   /** Оттенъкът за часа, светкавицата и светлините (multiply/lighter – върху прозрачен фон биха оцветили празното). */
   drawLight(ctx, room, tod, lit, now, occupant) {
-    // 5) нощен/вечерен оттенък
-    drawTint(ctx, room, tod, lit);
+    const W = room.W, H = room.H, clear = PARAMS.clear;
+    // 5) степенуване за часа (light.js): обезцветяване + оттенък, после умножение по картата на светлината
+    const G = gradeOf(tod, lit, prefs.atmos);
+    if (clear) G.amb = mix(G.amb, '#ffffff', 0.6 * (1 - G.n)); // прозрачен фон: без слънчеви петна за контраст – денем не притъмнява
+    applyGrade(ctx, W, H, G);
+    const lm = lightCanvas(W, H), g = lm.getContext('2d');
+    // картата се преизчислява ~10 пъти в секунда (светлината се мени бавно) – по-малко работа за процесора;
+    // всеки кадър само докато лампите примигват при включване
+    const fresh = lm === this.lmCanvas && now - this.lmAt < 100 && now >= this.lmAt && performance.now() - this.lights.at > 900;
+    if (!fresh) {
+    this.lmCanvas = lm; this.lmAt = now;
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = G.amb; g.fillRect(0, 0, W, H);
+    // стъклата: навън не зависи от лампите в стаята – само леко по часа
+    // (летвите на рамката са вътре в стаята – остават с околната светлина)
+    if (!clear) for (const w of room.windows) {
+      g.fillStyle = mix(G.amb, '#ffffff', 0.6 + 0.4 * tod.daylight); g.fillRect(w.x + 1, w.y + 1, w.w - 2, w.h - 2);
+      g.fillStyle = G.amb;
+      const mx = w.x + Math.floor(w.w / 2);
+      g.fillRect(mx - 1, w.y + 1, 2, w.h - 2);
+      if (w.h >= 36) for (const by of [Math.round(w.h * 0.34), Math.round(w.h * 0.67)]) g.fillRect(w.x + 1, w.y + by, w.w - 2, 2);
+      else g.fillRect(w.x + 1, w.y + Math.floor(w.h / 2) - 1, w.w - 2, 2);
+    }
+    g.globalCompositeOperation = 'lighter';
+    this.lightSources(g, room, tod, G, now, occupant);
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(lm, 0, 0);
+    ctx.restore();
+    // ъглите потъмняват вечер (по-силно без лампите)
+    if (G.n > 0.02) { const pa = ctx.globalAlpha; ctx.globalAlpha = G.n * (0.25 + 0.3 * (1 - lit)); ctx.drawImage(vignette(W, H), 0, 0); ctx.globalAlpha = pa; }
     // светкавица при буря – цялата стая проблясва за миг
     const fl = flashAt(tod.wx, now);
-    if (fl) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(170,180,230,${0.09 * fl})`; ctx.fillRect(0, 0, room.W, room.H); ctx.restore(); }
-    // 6) светлини
+    if (fl) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(170,180,230,${0.09 * fl})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+    // 6) ореол (адитивно) – по-слаб от преди: самата светлина вече е в картата
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
+    if (this.sun && G.sun > 0.02) {
+      drawSunBeams(ctx, this.sun, G.sunC, 0.07 * G.sun);
+      drawSunPatches(ctx, this.sun, G.sunC, 0.26 * G.sun);
+    }
+    ctx.globalAlpha = 0.6;
     lightGlows(ctx, room, tod, lit, now);
     boardGlow(ctx, room, this.board, now, tod.night);
     this.drawGlows(ctx, now, tod, occupant);
     ctx.restore();
+  }
+
+  /** Картата на светлината (адитивно върху околната): дневна светлина и слънце от прозорците, лунна светлина,
+   *  лампите на тавана, мониторите (в цвета на състоянието – по лицето, ръцете и бюрото), настолните лампи… */
+  lightSources(g, room, tod, G, now, occupant) {
+    const L = this.L, n = G.n, dark = n * (1 - G.lit * 0.55), clear = PARAMS.clear;
+    if (!clear) for (const w of room.windows) {
+      const cx = w.x + w.w / 2;
+      // разсеяна дневна светлина пред прозореца + студена лунна нощем (най-видима при изгасени лампи)
+      glowE(g, cx, CFG.WALL_H + 4, w.w * 1.15, 30, '#fff4e4', 0.2 * tod.daylight);
+      glowE(g, cx, CFG.WALL_H + 8, w.w * 0.9, 24, '#5a6cb4', 0.42 * dark * (1 - (tod.cover || 0) * 0.6));
+    }
+    if (this.sun) drawSunPatches(g, this.sun, G.sunC, 0.6 * G.sun);
+    // таванните лампи: петно на пода под всяка, конус по стената (без прозорците)
+    if (G.lit > 0.01) {
+      for (const x of room.ceil || []) glowE(g, x, CFG.WALL_H + 34, 80, 40, '#ffe0bc', 0.55 * G.lit);
+      g.save();
+      g.beginPath(); g.rect(0, 0, room.W, CFG.WALL_H);
+      if (!clear) for (const w of room.windows) g.rect(w.x - 2, w.y - 2, w.w + 4, w.h + 4);
+      g.clip('evenodd');
+      for (const x of room.ceil || []) glowE(g, x, 14, 24, 30, '#ffe8cc', 0.4 * G.lit);
+      g.restore();
+    }
+    // мониторите: светлина в цвета на състоянието към лицето и ръцете (вляво от екрана) и по бюрото
+    for (const p of L.pods) {
+      const a = occupant.get(p.i);
+      const owner = a || [...this.actors.values()].find((x) => x.pod === p.i);
+      if (!owner) continue;
+      const st = a ? a.vstate : 'idle';
+      const col = STATES[st].color;
+      const k = (st === 'idle' ? 0.5 : 1) * (0.93 + 0.07 * Math.sin(now / 90 + p.i));
+      const sx = p.x + POD.screen.x + POD.screen.w / 2, sy = p.y + POD.screen.y + POD.screen.h / 2;
+      glow(g, sx, sy, 26, col, 0.5 * n * k);
+      if (a) glowE(g, p.x + 30, p.y + 20, 16, 13, col, 0.55 * n * k);  // лице и ръце
+      glowE(g, sx - 6, p.y + POD.desk.y + 3, 24, 6, col, 0.4 * n * k); // по плота
+      const bx = p.x + POD.bulb.x, by = p.y + POD.bulb.y;
+      if (st === 'waiting') {
+        const on = Math.floor(now / 320) % 2 === 0;
+        glow(g, bx, by + 4, 30, STATES.waiting.color, (on ? 0.7 : 0.25) * (0.3 + n));
+      } else if (a) {
+        // настолната лампа: топъл конус надолу към плота
+        glowE(g, bx + 6, by + 9, 28, 14, '#ffc674', 0.8 * n);
+        glow(g, bx, by + 2, 10, '#ffd898', 0.6 * n);
+      }
+    }
+    // хората: мека запълваща светлина, за да не падат под ~60 % яркост нощем – цветът на ризата е състоянието
+    for (const a of this.actors.values()) if (a.alpha > 0.05) glowE(g, a.x, a.y - 15, 13, 19, '#e6e2f2', 0.5 * n * (1 - G.lit * 0.6));
+    const lo = L.lounge;
+    for (const a of this.actors.values()) {
+      if (a.loc.type === 'sofa' && a.mode === 'idleSpot' && a.sofaAct === 'game') glow(g, a.x, a.y - 16, 12, '#6ae08a', 0.5 * n);
+    }
+    if (prefs.lamp && room.lampGlow) {
+      glow(g, room.lampGlow.x, room.lampGlow.y + 6, 40, '#ffd08a', 0.75 * n);
+      glowE(g, room.lampGlow.x, lo.floorLamp.base, 52, 18, '#ffcc84', 0.7 * n);
+    }
+    if (room.neon && prefs.lamp) glow(g, room.neon.x, room.neon.y + 6, 30, room.neon.c, 0.45 * n * neonFlicker(now));
+    if (room.aquarium) glow(g, room.aquarium.x + 14, room.aquarium.y + 14, 28, '#4ab8f0', 0.45 * n);
+    if (room.arcade) glow(g, room.arcade.x + 9, room.arcade.y + 14, 22, '#a06ae0', 0.45 * n);
+    const se = room.season;
+    if (se?.style === 'pumpkins') glow(g, se.x + 9, se.base - 7, 20, '#ffb040', 0.55 * n);
+    else if (se?.style === 'tree') glow(g, se.x + 15, se.base - 17, 24, '#ffd860', 0.45 * n);
+    glow(g, lo.counter.x + 14, lo.counter.base - 34, 12, '#6ae0ff', 0.35 * n);
+    glow(g, L.door.x + 12, L.door.y - 4, 16, '#4ac26b', 0.45 * n);
+    if (room.board && this.board?.page) glow(g, room.board.x + room.board.w / 2, room.board.y + room.board.h / 2, room.board.w * 0.75, '#e8f0ff', 0.5 * n);
   }
 
   /** Купчина листове в десния ъгъл на бюрото: колко е пълен контекстът на агента (жълто > 60%, червено > 85%). */
