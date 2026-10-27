@@ -188,7 +188,7 @@ const T_BG = {
     groups: {
       wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под бюрата', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
-      cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', season: 'Сезонно', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада',
+      cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', season: 'Сезонно', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада', massage: 'Масажен стол',
     },
     slots: { 'rug.team0': 'Екип 1', 'rug.team1': 'Екип 2', 'chair.team0': 'Под-агенти', 'chair.team1': 'Екип 2', 'chair.lead': '★ Оркестратори' },
     by: (h) => `от ${h.includes(' ') ? h : '@' + h}`, // GitHub акаунт с @, истинско име без
@@ -407,7 +407,7 @@ const T_EN = {
     groups: {
       wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Office rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',
-      cat: 'Cat', cat2: 'One more cat', dog: 'Dog', season: 'Seasonal', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade',
+      cat: 'Cat', cat2: 'One more cat', dog: 'Dog', season: 'Seasonal', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade', massage: 'Massage chair',
     },
     slots: { 'rug.team0': 'Team 1', 'rug.team1': 'Team 2', 'chair.team0': 'Sub-agents', 'chair.team1': 'Team 2', 'chair.lead': '★ Leads' },
     by: (h) => `by ${h.includes(' ') ? h : '@' + h}`,
@@ -513,7 +513,7 @@ const T_EN = {
     'dog.husky': 'Husky', 'dog.dalmatian': 'Dalmatian', 'dog.pug': 'Pug',
     'season.pumpkins': 'Pumpkins', 'season.tree': 'Christmas tree', 'season.tulips': 'Tulips', 'season.fan': 'Standing fan',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',
-    'neon.code': 'Neon sign', 'neon.cheers': 'Cheers', 'neon.metal': 'Beer & metal', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet',
+    'neon.code': 'Neon sign', 'neon.cheers': 'Cheers', 'neon.metal': 'Beer & metal', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet', 'massage.chair': 'Massage chair',
   },
 };
 

@@ -79,6 +79,8 @@ export function computeLayout(devW, devH) {
   const base = CFG.WALL_H + 8;
   const sofaW = 58, sofaBase = Math.round(Math.min(H - 34, ly + Math.max(70, lh * 0.56)));
   const sofaX = Math.round(lx + (lw - sofaW) / 2 + 4);
+  // масажният стол (купува се) – под килима, вляво; пътеката на зоната (lx + 9) остава свободна
+  const massage = { x: sofaX + 14, base: Math.min(H - 5, sofaBase + 42) };
   const lounge = {
     x: lx, y: ly, w: lw, h: lh,
     bookshelf: { x: lx + 4, base, w: 30, h: 50 },
@@ -91,6 +93,7 @@ export function computeLayout(devW, devH) {
     cornerPlant: { x: lx + lw - 20, base: H - 6 },
     arcade: { x: lx + lw - 14, base },                       // под неоновия надпис, вдясно от диспенсъра (центърът)
     aquarium: { x: sofaX + sofaW + 15, base: sofaBase },     // вдясно от дивана (центърът)
+    massage,                                                 // центърът на стола
     rug: { x: sofaX - 10, y: sofaBase - 10, w: sofaW + 20, h: 30 },
     darts: { x: ax1 - 22, y: 16, w: 15, h: 15 },   // дъската за дартс – в десния край на стената с прозорците
     spots: {
@@ -99,11 +102,12 @@ export function computeLayout(devW, devH) {
       darts: { x: ax1 - 15, y: CFG.WALL_H + 13, face: 'back' },
       arcade: { x: lx + lw - 14, y: base + 11, face: 'back' },
       aquarium: { x: sofaX + sofaW + 7, y: sofaBase + 4, face: 'back' },   // в левия край – рибките се виждат
+      massage: { x: massage.x, y: massage.base - 3 },
       sofa: [{ x: sofaX + 16, y: sofaBase - 5 }, { x: sofaX + 42, y: sofaBase - 5 }],
       // места за чакащи сесии (опашка) – прави около масичката и до библиотеката
       extra: [
         { x: lx + 22, y: base + 13 }, { x: sofaX - 4, y: Math.min(H - 6, sofaBase + 22) },
-        { x: sofaX + sofaW + 2, y: Math.min(H - 6, sofaBase + 22) }, { x: sofaX + 29, y: Math.min(H - 4, sofaBase + 30) },
+        { x: sofaX + sofaW + 2, y: Math.min(H - 6, sofaBase + 22) }, { x: sofaX + 40, y: Math.min(H - 4, sofaBase + 30) }, // вдясно от масажния стол
       ],
     },
     laneY: Math.round(Math.min(sofaBase - 22, base + 26)),   // пътека през зоната за почивка

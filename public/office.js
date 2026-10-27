@@ -1,7 +1,7 @@
 // Сцената: подредба, мебели, герои, маршрути, рисуване по слоеве.
 import { CFG, STATES } from './config.js';
 import { computeLayout, POD } from './layout.js';
-import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
+import { buildRoom, buildPod, drawSky, drawShafts, drawWallDynamic, drawTint, drawLightFixtures, lightGlows, glow, glowE, drawAquariumFish, drawArcadeScreen, drawMassageLed, drawMug, DESK_MUG, drawShredderChew } from './environment.js';
 import { flashAt } from './weather.js';
 // без избран град: празна метеостанция ("--°") – клик върху нея отваря настройките
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
@@ -14,7 +14,7 @@ import { drawBoardScreen, boardGlow, boardMoving, BOARD_PAGES } from './board.js
 import { rgba } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
 
-const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts', 'arcade', 'aquarium']);
+const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts', 'arcade', 'aquarium', 'massage']);
 // чашата на бюрото = екипът на седящия (под-агентските бюра са общи); без екип (оркестраторът чака) – бяла
 // екипи 0/1 = двете оркестраторски бюра; 2–4 = оркестратори на горещо бюро (3-та+ работеща сесия на под-агентско бюро)
 const TEAM_MUGS = ['#2fa8a8', '#d060b0', '#a8d040', '#9a5a32', '#5a5ad0'], NO_TEAM_MUG = '#e8e4dc';
@@ -328,6 +328,7 @@ export class Office {
       case 'darts': return lo.spots.darts;
       case 'arcade': return lo.spots.arcade;
       case 'aquarium': return lo.spots.aquarium;
+      case 'massage': return lo.spots.massage;
       case 'board': { const b = this.room?.board; return b ? { x: b.x + b.w + 10, y: CFG.WALL_H + 13 } : lo.spots.darts; }
       case 'sofa': return lo.spots.sofa[loc.i];
       case 'lounge': return lo.spots.extra[loc.i % lo.spots.extra.length];
@@ -348,7 +349,7 @@ export class Office {
       // вратата е на стената: излиза се направо на горната пътека под нея
       case 'door': return { pts: [{ x: L.door.cx, y: L.door.floorY }, { x: L.door.cx, y: ln.topY }], lane: 'row', y: ln.topY };
       case 'visit': { const pt = this.locPoint(loc, a); return { pts: [pt], lane: 'row', y: pt.y }; }
-      case 'coffee': case 'cooler': case 'arcade': case 'aquarium': { const s = lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
+      case 'coffee': case 'cooler': case 'arcade': case 'aquarium': case 'massage': { const s = lo.spots[loc.type]; return { pts: [{ x: ln.loungeX, y: s.y }], lane: 'v', x: ln.loungeX }; }
       case 'darts': { const s = lo.spots.darts; return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'board': { const s = this.locPoint(loc, a); return { pts: [{ x: s.x, y: ln.topY }], lane: 'row', y: ln.topY }; }
       case 'sofa': { const s = lo.spots.sofa[loc.i]; const ay = lo.sofa.base + 4; return { pts: [{ x: s.x, y: ay }, { x: ln.loungeX, y: ay }], lane: 'v', x: ln.loungeX }; }
@@ -555,7 +556,7 @@ export class Office {
     this.leisure(a, now);
   }
 
-  /** Почивка: кафе/вода -> диван (конзолка или дрямка) -> от време на време дартс, аркадата или храни рибките -> обратно на дивана. */
+  /** Почивка: кафе/вода -> диван (конзолка или дрямка) -> от време на време дартс, аркадата, рибките или масажният стол -> обратно на дивана. */
   leisure(a, now) {
     const here = now - a.spotSince, t = a.loc.type;
     if (t === 'coffee' || t === 'cooler') {
@@ -564,14 +565,14 @@ export class Office {
       if (prefs.focus) return; // „Фокус“: само сяда, без забавления
       a.sofaFor ||= 20000 + Math.random() * 25000;
       if (here <= a.sofaFor) return;
-      // свободните забавления (аркадата и аквариумът – само ако са купени)
-      const fun = ['darts', this.room?.arcade && 'arcade', this.room?.aquarium && 'aquarium']
+      // свободните забавления (аркадата, аквариумът и масажният стол – само ако са купени)
+      const fun = ['darts', this.room?.arcade && 'arcade', this.room?.aquarium && 'aquarium', this.room?.massage && 'massage']
         .filter((f) => f && !this.live().some((x) => x !== a && x.loc.type === f));
       if (!fun.length) return;
       const f = fun[Math.floor(Math.random() * fun.length)];
-      a.sofaFor = 0; a.funFor = f === 'aquarium' ? 6000 + Math.random() * 3000 : 12000 + Math.random() * 12000;
+      a.sofaFor = 0; a.funFor = f === 'aquarium' ? 6000 + Math.random() * 3000 : f === 'massage' ? 15000 + Math.random() * 15000 : 12000 + Math.random() * 12000;
       this.route(a, { type: f });
-    } else if (t === 'darts' || t === 'arcade' || t === 'aquarium') {
+    } else if (t === 'darts' || t === 'arcade' || t === 'aquarium' || t === 'massage') {
       if (here > a.funFor) this.route(a, this.freeSofa(a) || this.freeLoungeSpot(a));
     }
   }
@@ -637,7 +638,7 @@ export class Office {
     this.room.doorOpen = clamp(this.room.doorOpen + (nearDoor ? dt * 4 : -dt * 2.5), 0, 1);
     // кучето понякога отива при някого, който почива (стои на място в зоната за почивка)
     const people = this.pets.some((p) => p.kind === 'dog') ? [...this.actors.values()].filter((a) => a.mode === 'idleSpot' && LOUNGE.has(a.loc.type)) : [];
-    for (const c of this.pets) c.update(dt, now, L, people);
+    for (const c of this.pets) { c.avoid = this.room.massage; c.update(dt, now, L, people); } // любимците не застават в масажния стол
     // прашинки в слънчевите снопове
     if (!prefs.focus && this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
       const w = this.room.windows[Math.floor(Math.random() * this.room.windows.length)];
@@ -756,6 +757,7 @@ export class Office {
     for (const c of this.pets) items.push({ key: c.y, fn: () => c.draw(ctx, now) });
     if (room.aquarium) items.push({ key: room.aquarium.key + 0.5, fn: () => drawAquariumFish(ctx, room.aquarium, now) });
     if (room.arcade) items.push({ key: room.arcade.key + 0.5, fn: () => drawArcadeScreen(ctx, room.arcade, now) });
+    if (room.massage) { const on = this.live().some((x) => x.loc.type === 'massage' && x.mode === 'idleSpot'); items.push({ key: room.massage.key + 3, fn: () => drawMassageLed(ctx, room.massage, now, on) }); }
     if (room.shredder) items.push({ key: room.shredder.base + 0.5, fn: () => drawShredderChew(ctx, room.shredder, now) });
     items.forEach((it, i) => { it.i = i; });
     items.sort((a, b) => a.key - b.key || a.i - b.i);

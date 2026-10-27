@@ -28,6 +28,7 @@ export const SLOTS = {
   neon:          { group: 'neon',     def: null },
   aquarium:      { group: 'aquarium', def: null },
   arcade:        { group: 'arcade',   def: null },
+  massage:       { group: 'massage',  def: null },
   espresso:      { group: 'espresso', def: null },
   season:        { group: 'season',   def: null },  // сезонна украса в долния ляв ъгъл (купува се само в сезона си)
 };
@@ -39,7 +40,7 @@ export const TABS = [
   { id: 'furniture', groups: ['sofa', 'chair', 'lamp'] },
   { id: 'decor', groups: ['plants', 'posters', 'window', 'season'] },
   { id: 'pets', groups: ['cat', 'catslot', 'dog'] },
-  { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade'], merge: true },
+  { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade', 'massage'], merge: true },
   { id: 'avatar', groups: [] },
   { id: 'stats', groups: [] },
   { id: 'weather', groups: [] },
@@ -173,6 +174,7 @@ export const ITEMS = [
   I('espresso.pro', 'espresso', 800, 'Еспресо машина', {}),
   I('aquarium.reef', 'aquarium', 1200, 'Аквариум', {}),
   I('arcade.retro', 'arcade', 1500, 'Аркадна машина', {}),
+  I('massage.chair', 'massage', 1300, 'Масажен стол', {}),
 ];
 export const ITEM = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
 export const GROUP_SLOTS = {};

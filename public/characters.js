@@ -190,6 +190,7 @@ export class Actor {
       if (this.loc.type === 'darts') return dartPose(st);
       if (this.loc.type === 'arcade') return st > 700 && frameAt(st + this.phase, 260) ? 'standBackUse' : 'standBack'; // джойстикът
       if (this.loc.type === 'aquarium') return st > 700 && st < 2200 ? 'standBackUse' : 'standBack';                   // сипва храна
+      if (this.loc.type === 'massage') return st < 1200 ? 'couchSit' : st > 7000 ? 'couchDoze' : 'couchSit';            // отпуска се и задрямва
       if (this.loc.type === 'board') return now - (this.boardPress || 0) < 650 ? 'standBackUse' : 'standBack'; // с дистанционното към екрана
       if (this.loc.type === 'door') return 'stand';
       if (this.loc.type === 'visit') return 'carryS1';
@@ -214,6 +215,7 @@ export class Actor {
     }
     // седнал на дивана: пред седалката (sofa_front е с ключ base + 1), иначе тя скрива краката
     if (this.loc.type === 'sofa' && this.mode !== 'walk' && L.lounge) return L.lounge.sofa.base + 2;
+    if (this.loc.type === 'massage' && this.mode !== 'walk' && L.lounge) return L.lounge.massage.base + 2; // пред стола
     return this.y;
   }
   isAtDesk(L) {
@@ -226,7 +228,9 @@ export class Actor {
     const pose = this.pose(now);
     const f = this.sprites.frame(pose, this.eyes(now, pose), this.shirtColor(now));
     const img = layer === 'front' ? f.front : f.body;
-    const x = Math.round(this.x) - 12, y = Math.round(this.y) - (FH - 1);
+    // в масажния стол: тресе се с 1 px
+    const jig = this.loc.type === 'massage' && this.mode === 'idleSpot' && now - this.spotSince > 1200 && frameAt(now, 120) ? 1 : 0;
+    const x = Math.round(this.x) - 12 + jig, y = Math.round(this.y) - (FH - 1);
     if (this.alpha < 1) ctx.globalAlpha = this.alpha;
     const grey = this.agent.crashed && !this.agent.crashSeen; // сесията прекъсна насред работа
     if (grey) { ctx.save(); ctx.filter = 'grayscale(1) brightness(0.75)'; }
@@ -324,10 +328,13 @@ class Pet {
       if (Math.abs(dx) > 0.2) this.flip = dx < 0;
     } else if (now > this.until) {
       this.mode = 'walk';
-      const t = this.target(area, people);
+      let t = this.target(area, people);
+      // не в масажния стол (avoid = room.massage): друга случайна точка
+      for (let i = 0; i < 6 && this.blocked(t); i++) t = Pet.prototype.target.call(this, area);
       this.tx = clamp(t.x, area.x0, area.x1); this.ty = clamp(t.y, area.y0, area.y1);
     }
   }
+  blocked(t) { const m = this.avoid; return !!m && t.x > m.x - 8 && t.x < m.x + m.w + 8 && t.y > m.key - 24 && t.y < m.key + 6; }
   /** Погален: сяда за малко (кучето маха по-бързо с опашка). */
   pet(now) { this.mode = 'sit'; this.until = now + 4500; this.pettedAt = now; }
   /** Попадение с мишката (логически пиксели) – за името при посочване. */

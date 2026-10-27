@@ -887,6 +887,25 @@ export function drawArcadeScreen(ctx, ar, t) {
   R(ctx, '#ffffff', px, y0 + s.h - 2, 3, 1);
   R(ctx, '#f0d040', x0 + ((k * 3) % (s.w - 1)), y0 + 2 + (k % (s.h - 4)), 1, 1);
 }
+// масажен стол отпред: облегалка за глава, ролкови възглавници, подлакътници (с пулт вдясно), поставка за краката
+const MASSAGE = { w: 22, h: 32, led: { x: 19, y: 17 } };
+function drawMassage(ctx) {
+  const { w, h } = MASSAGE, dk = '#5a4c44', c = '#b8a890', mid = '#d2c4aa', hi = '#ece0c8', st = '#9a8a72';
+  R(ctx, dk, 5, 0, 12, 7); R(ctx, mid, 6, 1, 10, 5); R(ctx, hi, 7, 1, 8, 1);                      // за главата
+  R(ctx, dk, 3, 6, 16, 18); R(ctx, c, 4, 7, 14, 16);                                              // облегалка
+  for (let y = 8; y < 22; y += 4) { R(ctx, mid, 5, y, 12, 3); R(ctx, hi, 6, y, 10, 1); }         // ролкови възглавници
+  R(ctx, st, 10, 8, 2, 14);                                                                       // шев по средата
+  for (const x of [0, 17]) { R(ctx, dk, x, 14, 5, 13); R(ctx, mid, x + 1, 15, 3, 11); R(ctx, hi, x + 1, 15, 3, 1); } // подлакътници
+  R(ctx, dk, 18, 16, 3, 3); R(ctx, '#2a3448', 18, 17, 2, 1);                                      // пулт
+  R(ctx, dk, 4, 22, 14, 4); R(ctx, c, 5, 22, 12, 3);                                              // седалка
+  R(ctx, dk, 6, 26, 10, 5); R(ctx, mid, 7, 26, 8, 4); R(ctx, hi, 7, 26, 8, 1);                   // за краката
+  R(ctx, '#2a2228', 3, h - 1, w - 6, 1);                                                          // основа
+}
+/** Лампичката на пулта: мига зелено, докато някой се масажира. */
+export function drawMassageLed(ctx, m, t, on) {
+  const l = MASSAGE.led;
+  R(ctx, on ? (Math.floor(t / 300) % 2 ? '#6af08a' : '#3a9a5a') : '#7a3a4a', m.x + l.x, m.y + l.y, 1, 1);
+}
 // две наклонени една към друга халби бира с искри между ръбовете (лявата половина; дясната е огледална)
 // ръбът и дъното също са наклонени. a = контур, b/B = бира/мехурчета, f = пяна, w = искра
 const CHEERS = [
@@ -1075,7 +1094,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   const bigPlant = () => prop('plant_big', 28, 36, (c) => drawPlant(c, 28, 36, true, pl.style), pv);
   const PLANT_SH = { w: 18, h: 5 }, SMALL_SH = { w: 12, h: 4 };
   // аркадата заема мястото на голямото растение до диспенсъра (под неоновия надпис), аквариумът стои вдясно от дивана
-  let aquarium = null, arcade = null;
+  let aquarium = null, arcade = null, massage = null;
   if (decor.arcade) {
     const ar = lo.arcade, img = prop('arcade', ARCADE.w, ARCADE.h, drawArcade);
     arcade = { x: Math.round(ar.x - ARCADE.w / 2), y: ar.base - ARCADE.h, key: ar.base };
@@ -1085,6 +1104,11 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
     const aq = lo.aquarium, img = prop('aquarium', AQUA.w, AQUA.h, drawAquarium);
     aquarium = { x: Math.round(aq.x - AQUA.w / 2), y: aq.base - AQUA.h, key: aq.base };
     add(img, aquarium.x, aq.base, aq.base, { w: 30, h: 5 });
+  }
+  if (decor.massage && lo.massage) {
+    const ms = lo.massage;
+    massage = { x: Math.round(ms.x - MASSAGE.w / 2), y: ms.base - MASSAGE.h, w: MASSAGE.w, key: ms.base };
+    add(prop('massage', MASSAGE.w, MASSAGE.h, drawMassage), massage.x, ms.base, ms.base, { w: 24, h: 5 });
   }
   add(bigPlant(), lo.cornerPlant.x - 14, lo.cornerPlant.base, lo.cornerPlant.base, PLANT_SH);
   const sf = lo.sofa, so = decor.sofa, sv = variant('sofa', so);
@@ -1151,7 +1175,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, season, shredder, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, massage, season, shredder, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0,
   };
 }
@@ -1549,6 +1573,7 @@ export function thumb(it) {
     case 'espresso': return mk(30, 42, (g) => drawCounter(g, 30, 42, true));
     case 'aquarium': return mk(AQUA.w, AQUA.h, (g) => { drawAquarium(g); drawAquariumFish(g, { x: 0, y: 0 }, 1200); });
     case 'arcade': return mk(ARCADE.w, ARCADE.h, (g) => { drawArcade(g); drawArcadeScreen(g, { x: 0, y: 0 }, 900); });
+    case 'massage': return mk(MASSAGE.w, MASSAGE.h, (g) => { drawMassage(g); drawMassageLed(g, { x: 0, y: 0 }, 0, true); });
     case 'season': return mk(SEASON.w, SEASON.h, (g) => drawSeasonal(g, SEASON.w, SEASON.h, it.style));
     default: return null;
   }

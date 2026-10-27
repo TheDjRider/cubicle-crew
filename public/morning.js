@@ -1,9 +1,10 @@
 // Сутрешен екран: малкото прозорче при старт с Windows, докато няма нито една сесия.
-// Аватарът пие кафе на бюрото, любимецът спи на перваза, небето в прозореца е по истинския час.
+// Аватарът пие кафе на бюрото пред прозореца (небето и времето навън са по истинския час и града),
+// от време на време става, поглежда навън и отива да погали любимеца, който спи на пода.
 // Щом се появи агент (или потребителят кликне) – екранът изчезва и прозорецът става офисът.
 import { T, STATES } from './config.js';
 import { timeOfDay } from './environment.js';
-import { applyWeather, drawWindowWeather } from './weather.js';
+import { applyWeather, drawWindowWeather, drawWeatherPlaque } from './weather.js';
 import { CharacterSprites, avatarLook, FW, FH } from './sprites.js';
 import { Cat, Dog } from './characters.js';
 import { ENV, mix, shade } from './palette.js';
@@ -14,7 +15,9 @@ import { R, rng } from './util.js';
 const SCRIPT = [
   [4, 'sip'], [9, 'sit'], [11, 'stretch'], [15, 'chin'], [17.4, 'wave'], [19, 'sit'], [25, 'doze'], [26, 'sit'], [28.4, 'scratch'], [31, 'sit'],
 ];
-const CYCLE = SCRIPT[SCRIPT.length - 1][0];
+const SIT = SCRIPT[SCRIPT.length - 1][0];
+// разходката след седенето (секунди): става, гледа през прозореца, отива до любимеца (или метеостанцията) и се връща
+const UP = 1, LOOK = 4.5, VISIT = 4.5, WALK_V = 14;
 const FRAME_MS = 100;  // ~10 fps стигат за пикселна анимация, а прозорецът виси така с часове
 const MIN_W = 120, MIN_H = 68;
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -82,57 +85,62 @@ export class Morning {
     }
     R(ctx, ENV.floorHi, 0, floorY, W, 1);
 
-    // ---- прозорец с небето по истинския час
-    const wx = 6, wy = 7, ww = Math.max(40, Math.round(W * 0.4)), wh = floorY - 22;
-    this.drawSky(ctx, tod, wx, wy, ww, wh, t);
-    R(ctx, ENV.frame, wx - 2, wy - 2, ww + 4, 2); R(ctx, ENV.frame, wx - 2, wy + wh, ww + 4, 2);
-    R(ctx, ENV.frame, wx - 2, wy, 2, wh); R(ctx, ENV.frame, wx + ww, wy, 2, wh);
-    R(ctx, ENV.frame, wx + (ww >> 1) - 1, wy, 2, wh); R(ctx, ENV.frame, wx, wy + (wh >> 1), ww, 1);
-    R(ctx, ENV.frameDk, wx - 3, wy + wh + 2, ww + 6, 2); // перваз
-
-    // ---- бюро вдясно, аватарът зад него
-    const deskW = 62, dx = Math.min(W - deskW - 6, Math.max(wx + ww + 10, W - deskW - 10)), dTop = floorY - 15;
+    // ---- бюро вдясно, прозорецът с небето и времето навън е точно зад него (бюрото скрива долния край)
+    const deskW = 62, dx = W - deskW - 8, dTop = floorY - 15;
     const cx = dx + 37; // центърът на стола
-    // часовник на стената над бюрото
-    this.drawClock(ctx, dx + deskW - 9, 11, date);
+    const wx = dx + 3, wy = 6, ww = deskW - 6, wh = dTop - wy + 2;
+    this.drawSky(ctx, tod, wx, wy, ww, wh, t);
+    R(ctx, ENV.frame, wx - 2, wy - 2, ww + 4, 2);
+    R(ctx, ENV.frame, wx - 2, wy, 2, wh); R(ctx, ENV.frame, wx + ww, wy, 2, wh);
+    R(ctx, ENV.frame, wx + Math.round(ww * 0.3) - 1, wy, 2, wh); R(ctx, ENV.frame, wx, wy + Math.round(wh * 0.45), ww, 1);
+    // лявата стена: часовник и метеостанцията (само с избран град); любимецът спи на пода под тях
+    const left = Math.max(4, dx - 56);
+    // метеостанцията горе (главата на аватара при любимеца не я закрива), часовникът под нея
+    const plq = weather ? drawWeatherPlaque(ctx, left, 7, weather, tod) : null;
+    this.drawClock(ctx, left + 6, plq ? 26 : 12, date);
+    const petX = left + 12, petY = floorY + 8;
     // стол (облегалката се вижда над рамото)
     R(ctx, ENV.chairDk, cx - 8, dTop - 17, 16, 14); R(ctx, ENV.chair, cx - 7, dTop - 16, 14, 12); R(ctx, ENV.chairHi, cx - 6, dTop - 16, 12, 2);
-    // аватарът
-    const pose = this.pose(t);
+    // аватарът: седи или се разхожда
+    const first = this.office.pets[0] || null, key = first ? first.look.id || first.kind : '';
+    if (key !== this.petKey) { this.petKey = key; this.pet = first ? new (first.kind === 'dog' ? Dog : Cat)(first.look) : null; }
+    const pet = this.pet;
+    const goal = pet ? petX + (pet.kind === 'dog' ? 15 : 12) : (plq ? plq.x + (plq.w >> 1) : left + 7);
+    const pose = this.pose(t, cx, goal);
     const look = avatarLook(this.office.avatar, 'morning');
     if (!this.sprites || this.lookKey !== JSON.stringify(this.office.avatar)) { this.sprites = new CharacterSprites(look); this.lookKey = JSON.stringify(this.office.avatar); }
-    const blink = pose.name === 'sit' && t % 3.7 < 0.15 ? 'closed' : null;
+    const blink = (pose.name === 'sit' || pose.name === 'stand') && t % 3.7 < 0.15 ? 'closed' : null;
     const f = this.sprites.frame(pose.name, blink, STATES.idle.color);
-    const px = cx - (FW >> 1), py = dTop + 6 - FH;
-    ctx.drawImage(f.body, px, py);
+    // прав зад бюрото стъпва по-назад (по-високо); заобикаля го отляво и излиза отпред на пода
+    const ax = Math.round(pose.x ?? cx), out = Math.min(1, Math.max(0, (dx + 6 - ax) / 16));
+    const px = ax - (FW >> 1), py = (pose.up ? Math.round(dTop + 6 + (floorY + 2 - dTop - 6) * out) : dTop + 6) - FH;
+    this.blit(ctx, f.body, px, py, pose.flip);
+    if (pose.up) this.blit(ctx, f.front, px, py, pose.flip); // прав: ръцете са зад бюрото заедно с тялото
     // бюрото
     R(ctx, ENV.deskTopHi, dx, dTop, deskW, 1); R(ctx, ENV.deskTop, dx, dTop + 1, deskW, 3); R(ctx, ENV.deskEdge, dx, dTop + 4, deskW, 1);
     R(ctx, ENV.deskFront, dx + 1, dTop + 5, deskW - 2, floorY - dTop - 4); R(ctx, ENV.deskFrontHi, dx + 1, dTop + 5, deskW - 2, 1);
     R(ctx, ENV.deskFrontDk, dx + 4, dTop + 8, 18, 1); R(ctx, ENV.deskFrontDk, dx + deskW - 22, dTop + 8, 18, 1);
     R(ctx, ENV.shadow, dx - 2, floorY + 1, deskW + 4, 2);
-    ctx.drawImage(f.front, px, py);
+    if (!pose.up) ctx.drawImage(f.front, px, py);
     // монитор вляво на бюрото: часът (двоеточието мига)
     this.drawMonitor(ctx, dx + 2, dTop - 15, date, t);
     // чаша на бюрото, когато не е в ръката – с пара
-    if (pose.name !== 'sip') this.drawMug(ctx, dx + deskW - 12, dTop - 4, t);
-    else this.drawSteam(ctx, px + 13, py + 10, t);
+    if (pose.name === 'sip') this.drawSteam(ctx, px + 13, py + 10, t);
+    else if (pose.name !== 'standSip') this.drawMug(ctx, dx + deskW - 12, dTop - 4, t);
     if (pose.name === 'doze') this.drawZ(ctx, px + 17, py + 4, t);
     // растение в ъгъла
     const plx = dx + deskW - 4;
     R(ctx, ENV.pot[1], plx - 1, dTop - 5, 5, 5); R(ctx, ENV.pot[0], plx - 1, dTop - 5, 5, 1);
     R(ctx, ENV.leaf[1], plx - 1, dTop - 9, 2, 4); R(ctx, ENV.leaf[0], plx + 1, dTop - 11, 2, 6); R(ctx, ENV.leaf[2], plx + 3, dTop - 8, 2, 3);
 
-    // ---- първият любимец от офиса спи на перваза, понякога сяда и се оглежда
-    const first = this.office.pets[0] || null, key = first ? first.look.id || first.kind : '';
-    if (key !== this.petKey) { this.petKey = key; this.pet = first ? new (first.kind === 'dog' ? Dog : Cat)(first.look) : null; }
-    const pet = this.pet;
+    // ---- първият любимец от офиса спи на пода; буди се и сяда, когато аватарът дойде да го погали
     if (pet) {
-      const cyc = t % 40;
-      pet.mode = cyc > 30 && cyc < 36 ? 'sit' : 'sleep';
-      pet.x = wx + (pet.kind === 'dog' ? 12 : 9); pet.y = wy + wh + 2; // подът е под надписа – и кучето е на перваза
-      pet.flip = false;
+      pet.mode = pose.visit || (t % 40 > 12 && t % 40 < 17) ? 'sit' : 'sleep';
+      pet.x = petX; pet.y = petY; pet.flip = false;
+      R(ctx, mix(ENV.floor[1], '#c04a4a', 0.35), petX - 8, petY - 2, 16, 3); // възглавничка
       pet.draw(ctx, now);
       if (pet.mode === 'sleep') this.drawZ(ctx, pet.x + (pet.kind === 'dog' ? 9 : 6), pet.y - (pet.kind === 'dog' ? 8 : 11), t * 0.8, true);
+      if (pose.visit) this.drawHearts(ctx, pet.x + 2, pet.y - 13, pose.visit);
     }
 
     // ---- светлина: нощем синкаво, на изгрев топло; мониторът свети
@@ -151,14 +159,42 @@ export class Morning {
     this.updateText(date, weather);
   }
 
-  /** Текуща поза от сценария (махането и чесането сменят два кадъра). */
-  pose(t) {
-    const s = t % CYCLE;
-    const p = SCRIPT.find(([until]) => s < until)[1];
+  /** Текуща поза от сценария (махането и чесането сменят два кадъра); след седенето – разходка от x0 (столът) до x1 и обратно.
+   *  Връща { name, x?, up? (прав), flip?, visit? (секунди при любимеца) }. */
+  pose(t, x0, x1) {
+    const walk = Math.max(0.5, Math.abs(x0 - x1) / WALK_V), cycle = SIT + UP + LOOK + walk + VISIT + walk + UP;
+    let s = t % cycle;
     const alt = Math.floor(t / 0.32) % 2;
+    if (s >= SIT) {
+      s -= SIT;
+      const step = (k, back) => ({ name: `walkS${Math.floor((k * walk * WALK_V) / 3.2) % 4}`, up: true, flip: back ? x1 > x0 : x1 < x0, x: back ? x1 + (x0 - x1) * k : x0 + (x1 - x0) * k });
+      if (s < UP) return { name: 'stand', up: true };
+      if ((s -= UP) < LOOK) return { name: s > 1.2 && s < 3.2 ? 'standSip' : 'standBack', up: true }; // гледа през прозореца с чашата
+      if ((s -= LOOK) < walk) return step(s / walk, false);
+      if ((s -= walk) < VISIT) return { name: this.pet ? 'stand' : 'standBack', up: true, x: x1, visit: this.pet ? s : 0 };
+      if ((s -= VISIT) < walk) return step(s / walk, true);
+      return { name: 'stand', up: true };
+    }
+    const p = SCRIPT.find(([until]) => s < until)[1];
     if (p === 'wave') return { name: alt ? 'waveA' : 'waveB' };
     if (p === 'scratch') return { name: alt ? 'scratchA' : 'scratchB' };
     return { name: p };
+  }
+
+  /** Рисува кадър, огледално при flip (ходи наляво). */
+  blit(ctx, img, x, y, flip) {
+    if (!flip) { ctx.drawImage(img, x, y); return; }
+    ctx.save(); ctx.translate(x + FW, y); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0); ctx.restore();
+  }
+
+  /** Сърчица над погаления любимец (k = секунди, откакто е при него). */
+  drawHearts(ctx, x, y, k) {
+    if (k < 0.8 || k > 4) return;
+    for (let i = 0; i < 2; i++) {
+      const q = ((k - 0.8) * 0.6 + i * 0.5) % 1, hx = x + i * 4 - 2 + Math.round(Math.sin(q * 6 + i)), hy = y - Math.round(q * 8);
+      const c = `rgba(240,90,120,${(1 - q).toFixed(2)})`;
+      R(ctx, c, hx, hy, 1, 1); R(ctx, c, hx + 2, hy, 1, 1); R(ctx, c, hx, hy + 1, 3, 1); R(ctx, c, hx + 1, hy + 2, 1, 1);
+    }
   }
 
   drawSky(ctx, tod, x, y, w, h, t) {

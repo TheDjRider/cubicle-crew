@@ -79,7 +79,7 @@ Today the furniture colours are hard-coded: `ENV` in `palette.js`, plus `SOFA`, 
 | `lamp` | floor lamp (default) · arc lamp 160 · neon sign 350 |
 | `cat` | grey (default) · ginger 150 · black 150 · second cat 600 |
 | `window` | city (default) · seaside 500 · mountains 500 (changes the skyline in `drawSky`) |
-| `special` | aquarium 1200 · arcade cabinet 1500 · espresso bar upgrade 800 |
+| `special` | aquarium 1200 · arcade cabinet 1500 · massage chair 1300 · espresso bar upgrade 800 |
 
 ## 6. Shop UI
 - Open with a **☕ button in the HUD**, the key **B**, or the tray menu "Магазин" (desktop).
