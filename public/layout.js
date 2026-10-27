@@ -24,7 +24,7 @@ export const POD = {
 export function teamNeed(podH = CFG.POD_H) {
   return {
     w: Math.max(CFG.MIN_W, CFG.MARGIN_L + CFG.SUB_PER_ROW * CFG.POD_W + CFG.LOUNGE_W + CFG.MARGIN_R),
-    // ROW_STEP (прозрачен фон): долният ред е по-близо от височината на едно място – бюрата се застъпват
+    // ROW_STEP: долният ред е по-близо от височината на едно място – бюрата се застъпват
     h: Math.max(CFG.MIN_H, CFG.WALL_H + CFG.TOP_GAP + (CFG.ROW_STEP ?? podH) + podH + CFG.MARGIN_B),
   };
 }
@@ -76,6 +76,10 @@ export function computeLayout(devW, devH) {
   for (let k = 0; k < per; k++) mk(null, 'sub', k, ox + k * gw, oy + gh, 1);
   const rowYs = [...new Set(pods.map((p) => p.aisleY))];
 
+  // купичките и фонтанът на любимците – пред най-дясното бюро на долния ред, под десния ъгъл на бюрото (base = долният ръб)
+  const rp = pods[pods.length - 1];
+  const petFood = { fountain: { x: rp.x + 61, base: rp.y + 63 }, bowls: [{ x: rp.x + 51, base: rp.y + 63 }, { x: rp.x + 41, base: rp.y + 64 }, { x: rp.x + 31, base: rp.y + 63 }] };
+
   // зона за почивка вдясно
   const lx = W - CFG.MARGIN_R - CFG.LOUNGE_W, lw = CFG.LOUNGE_W, ly = CFG.WALL_H, lh = H - CFG.WALL_H;
   const base = CFG.WALL_H + 8;
@@ -101,10 +105,9 @@ export function computeLayout(devW, devH) {
     arcade: { x: lx + lw - 14, base },                       // под неоновия надпис, вдясно от диспенсъра (центърът)
     aquarium, aquaLow,                                       // вдясно от дивана / под масажния стол (центърът)
     massage,                                                 // центърът на стола
-    // кътът на любимците под килима: фонтан вляво, купичките до него, играчките – разхвърляни (base = долният ръб)
+    // кътът на любимците: фонтанът и купичките пред най-дясното бюро, играчките – разхвърляни под килима (base = долният ръб)
     pets: {
-      fountain: { x: lx + 13, base: sofaBase + 38 },
-      bowls: [{ x: lx + 29, base: sofaBase + 38 }, { x: lx + 31, base: sofaBase + 45 }, { x: lx + 41, base: sofaBase + 41 }],
+      ...petFood,
       toys: [
         { kind: 'ball', x: lx + 58, base: sofaBase + 30 }, { kind: 'yarn', x: lx + 74, base: sofaBase + 36 },
         { kind: 'mouse', x: lx + 55, base: sofaBase + 46 }, { kind: 'bone', x: lx + 79, base: sofaBase + 49 },

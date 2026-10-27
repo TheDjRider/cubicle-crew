@@ -10,10 +10,10 @@ import { canSelfUpdate, download as downloadUpdate, runInstaller } from './updat
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MARGIN = 8;                  // разстояние от ръба на работния плот (над лентата със задачи)
 const MAC = process.platform === 'darwin'; // macOS: горе вдясно под менюто, без икона в Dock, без стартиране при вход по подразбиране
-const TARGET = { w: 712, h: 416 }; // физически пиксели – стаята (356×208) в мащаб 2
+const TARGET = { w: 712, h: 364 }; // физически пиксели – стаята (356×182) в мащаб 2
 const CLEAR_H = 332;                // прозрачен фон: стаята е 356×166 (по-ниска стена, застъпени редове)
 const target = () => (settings.clear ? { w: TARGET.w, h: CLEAR_H } : TARGET);
-const OLD_TARGET = { w: 790, h: 470 }; // до 2.7: по-голямата стая – прозорците с този размер се смаляват веднъж
+const OLD_TARGETS = [{ w: 790, h: 470 }, { w: 712, h: 416 }]; // до 2.7 и до 2.18 – прозорците в стария размер по подразбиране се смаляват веднъж
 const HIDE_AFTER_MS = 8000;           // „само когато трябва“: скрива се толкова след последното „трябваш“
 const SHORTCUT = 'CommandOrControl+Alt+P';
 const COMPACT = { w: 300, h: 170 }; // сутрешното прозорче (DIP), докато няма сесия
@@ -48,19 +48,20 @@ function loadSettings() {
   // от по-стара версия: запазеният размер става базов
   if (!settings.baseSize && settings.bounds) settings.baseSize = { w: settings.bounds.width, h: settings.bounds.height };
 }
-// 2.8: стаята е по-малка. Ако прозорецът е още в стария размер по подразбиране (не е местен ръчно), смаляваме го
+// 2.8 и 2.19: стаята е по-малка. Ако прозорецът е още в стар размер по подразбиране (не е местен ръчно), смаляваме го
 // веднъж, закотвен в долния десен ъгъл. Ръчно избран размер не се пипа.
 function migrateSize() {
-  if (settings.size28) return;
-  settings.size28 = true;
+  if (settings.size219) return;
+  settings.size28 = settings.size219 = true;
   const b = settings.bounds, base = settings.baseSize;
   if (!b || !base) return;
   const k = screen.getDisplayMatching(b).scaleFactor || 1;
   const near = (v, t) => Math.abs(v - Math.ceil(t / k)) <= 4;
-  if (!near(base.w, OLD_TARGET.w) || !near(base.h, OLD_TARGET.h)) return;
-  const w = Math.ceil(TARGET.w / k), h = Math.ceil(TARGET.h / k);
+  const old = OLD_TARGETS.find((t) => near(base.w, t.w) && near(base.h, t.h));
+  if (!old) return;
+  const T = target(), w = Math.ceil(T.w / k), h = Math.ceil(T.h / k);
   settings.baseSize = { w, h };
-  if (near(b.width, OLD_TARGET.w) && near(b.height, OLD_TARGET.h)) settings.bounds = { x: b.x + b.width - w, y: b.y + b.height - h, width: w, height: h };
+  if (near(b.width, old.w) && near(b.height, old.h)) settings.bounds = { x: b.x + b.width - w, y: b.y + b.height - h, width: w, height: h };
   log('size migrated', JSON.stringify(settings.bounds));
 }
 
