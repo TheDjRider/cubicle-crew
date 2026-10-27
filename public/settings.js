@@ -76,6 +76,7 @@ function sections(ui) {
     sw('id="opt-legend" data-legend', !ui.legend.hidden, H.legend, H.legendHint) +
     sw('id="pref-lights" data-pref="lights"', prefs.lights, H.lights, H.lightsHint) +
     sw('id="pref-lamp" data-pref="lamp"', prefs.lamp, H.lamp, H.lampHint) +
+    sw('id="pref-calm" data-pref="calm"', prefs.calm, H.calm, H.calmHint) +
     `<div class="row"><b>${H.lang}</b><div class="seg">${card('lang', 'bg', LANG === 'bg', 'Български')}${card('lang', 'en', LANG === 'en', 'English')}</div></div>` +
     // леко за машината: пестене на батерията + брояч на кадрите (колко струва офисът)
     `<h4>${H.perfTitle}</h4>` +

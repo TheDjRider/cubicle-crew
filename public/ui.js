@@ -243,6 +243,7 @@ export class UI {
       // предмет в офиса: малка анимация + звук (poke.js); купичката – лакомство за любимец
       const hit = !a && this.office.pokes.at(m.x, m.y);
       if (hit) { if (hit.name === 'pet_bowl') this.treat(hit); else this.office.pokes.poke(hit); return; }
+      if (a) this.office.greet(a); // почиващият ти маха
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
   }

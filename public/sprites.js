@@ -17,6 +17,7 @@ export const FW = 24, FH = 32;
 //  q/p/P панталон или пола   G/F чорапогащник   O колан  Y катарама   b/B/V обувки (+ отблясък)
 //  e очи  m уста  u руменина  A обеци/верижка  g рамки  l стъкла
 //  H лента на слушалки  n/N/v шапка  w/W хартия  i мастило  M/x чаша  L бадж  t химикал  X/I капак на лаптоп
+//  T/U картонен пакет (+ тиксо)
 // ---------------------------------------------------------------------
 const HEAD = [
   '..hsssssss..',
@@ -277,6 +278,23 @@ POSES.couchLaptopA = { arms: ['hold', 'hold'], legs: 'couch', prop: 'laptopA', l
 POSES.couchLaptopB = { arms: ['hold', 'hold'], legs: 'couch', prop: 'laptopB', look: 'down' };
 POSES.standLaptopA = { arms: ['hold', 'hold'], legs: 'stand', prop: 'laptopA', look: 'down' };
 POSES.standLaptopB = { arms: ['hold', 'hold'], legs: 'stand', prop: 'laptopB', look: 'down' };
+// „живот“: телефон, прозявка, поздрав към теб, радост, надничане, разговор, книга от рафта, куриерът с пакета
+POSES.phone = { arms: ['rest', 'phone'], legs: 'sit', prop: 'phone', look: 'down' };
+POSES.yawn = { arms: ['rest', 'yawn'], legs: 'sit', mouth: 'o', eyes: 'closed', dy: -1 };
+POSES.hiA = { arms: ['rest', 'waveA'], legs: 'sit', mouth: 'smile' };
+POSES.hiB = { arms: ['rest', 'waveB'], legs: 'sit', mouth: 'smile' };
+POSES.cheerA = { arms: ['up', 'up'], legs: 'sit', mouth: 'o', dy: -1 };
+POSES.cheerB = { arms: ['waveB', 'waveA'], legs: 'sit', mouth: 'smile' };
+POSES.talk = { arms: ['rest', 'rest'], legs: 'sit', mouth: 'o' };
+for (const p of ['phone', 'yawn', 'hiA', 'hiB', 'cheerA', 'cheerB', 'talk']) {
+  POSES['couch' + p[0].toUpperCase() + p.slice(1)] = { ...POSES[p], legs: 'couch' };
+  POSES['stand' + p[0].toUpperCase() + p.slice(1)] = { ...POSES[p], legs: 'stand', arms: POSES[p].arms.map((x) => (x === 'rest' ? 'down' : x)) };
+}
+POSES.standStretch = { arms: ['up', 'up'], legs: 'stand', mouth: 'o', eyes: 'closed', dy: -1 };
+POSES.standPeek = { arms: ['down', 'chin'], legs: 'stand', mouth: 'flat', look: 'down' };
+POSES.standRead = { arms: ['hold', 'hold'], legs: 'stand', prop: 'paper', look: 'down' };
+POSES.standBox = { arms: ['hold', 'hold'], legs: 'stand', prop: 'box' };
+for (let i = 0; i < 4; i++) POSES['walkBoxF' + i] = { ...POSES['walkF' + i], arms: ['hold', 'hold'], prop: 'box' };
 export const POSE_ORDER = Object.keys(POSES);
 
 // ---------------------------------------------------------------------
@@ -306,6 +324,8 @@ const ARMS = {
   swingF: [S(18, 15, 3, 5), Hd(18, 20, 3, 2)],
   swingB: [S(18, 16, 3, 5), Hd(19, 21, 3, 2)],
   reach: [S(18, 10, 3, 6), Hd(17, 8, 3, 3)],
+  phone: [S(18, 15, 3, 3), S(16, 17, 3, 2), Hd(14, 18, 3, 2)],
+  yawn: [S(18, 14, 3, 3), S(15, 13, 4, 2), Hd(12, 10, 3, 3)],
   // страничен изглед (гледа надясно): една видима ръка върху тялото
   sideF: [S(11, 15, 3, 4), S(13, 19, 3, 2), Hd(15, 20, 2, 2)],
   sideM: [S(10, 15, 3, 6), Hd(10, 21, 3, 2)],
@@ -537,7 +557,8 @@ function drawHead(g, look, dir, face, headDy, eyes, mouth) {
     g.rect('e', ex[0] - 1, hy + 6, 2, 1); g.rect('e', ex[1], hy + 6, 2, 1);
     if (fem) { g.set(ex[0] - 1, hy + 7, 'e'); if (face !== 'side') g.set(ex[1] + 1, hy + 7, 'e'); }
   } else {
-    for (const x of ex) { g.set(x, ey, 'e'); g.set(x, ey + 1, 'E'); }
+    const gx = face === 'front' ? (eyes === 'l' ? -1 : eyes === 'r' ? 1 : 0) : 0;
+    for (const x of ex) { g.set(x + gx, ey, 'e'); g.set(x + gx, ey + 1, 'E'); }
     if (fem) { g.set(ex[0] - 1, ey, 'e'); if (face !== 'side') g.set(ex[1] + 1, ey, 'e'); } // мигли
   }
   if (face === 'front' && fem) { g.set(7, hy + 7, 'u'); g.set(16, hy + 7, 'u'); }
@@ -658,6 +679,14 @@ function drawProp(g, prop, dy, layerFront) {
     g.rect('X', 6, y0, 12, 6); g.rect('I', 6, y0, 12, 1); g.rect('D', 17, y0 + 1, 1, 5);
     g.rect(prop === 'laptopB' ? 'a' : 'w', 11, y0 + 2, 2, 2);
     g.rect('D', 5, y0 + 6, 14, 1); g.rect('d', 6, y0 + 7, 12, 1);
+  } else if (prop === 'phone') {
+    // телефон в дясната ръка, екранчето свети
+    g.rect('D', 14, 15 + dy, 3, 4); g.rect('I', 15, 16 + dy, 1, 2);
+  } else if (prop === 'box') {
+    // картонен пакет с тиксо (куриерът)
+    g.layer = 1;
+    const y0 = 14 + dy;
+    g.rect('T', 6, y0, 12, 8); g.rect('U', 6, y0 + 7, 12, 1); g.rect('U', 17, y0, 1, 8); g.rect('U', 11, y0, 2, 8); g.rect('w', 7, y0 + 2, 3, 2);
   } else if (prop === 'dart') {
     g.rect('W', 18, 4 + dy, 1, 2); g.set(18, 3 + dy, 'f');
   } else if (prop === 'carry') {
@@ -675,7 +704,7 @@ function drawBadge(g, dy, face) {
   g.rect('L', 11, y + 3, 2, 1); g.rect('w', 11, y + 4, 2, 3); g.set(12, y + 5, 'L');
 }
 
-const PROPS_IN_HANDS = new Set(['paper', 'paperFlip', 'gameA', 'gameB']);
+const PROPS_IN_HANDS = new Set(['paper', 'paperFlip', 'gameA', 'gameB', 'box']);
 
 /** Сглобява кадъра в решетка от ключове. */
 function compose(look, poseName, eyesOverride) {
@@ -808,6 +837,7 @@ function paletteFor(look, shirt) {
     L: '#b04ae0',
     d: '#4a4a5a', D: '#2a2a36', z: '#1e3a3a', a: '#6ae08a', o: '#f07ab0', f: '#e05a5a',
     X: '#a8acba', I: '#d4d8e2',
+    T: '#c8945a', U: '#8a5e30',
   };
 }
 

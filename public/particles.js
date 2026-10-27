@@ -126,8 +126,9 @@ export class Particles {
         drawCoin(ctx, x0, y);
         ctx.globalAlpha = 1;
       } else if (p.kind === 'heart') {
+        // розово, не червеното на „чака те“ (#e04a6b) – иначе сърчицата приличат на тревога
         ctx.globalAlpha = fade;
-        R(ctx, '#e04a6b', x, y, 2, 1); R(ctx, '#e04a6b', x + 3, y, 2, 1); R(ctx, '#e04a6b', x, y + 1, 5, 1); R(ctx, '#e04a6b', x + 1, y + 2, 3, 1); R(ctx, '#e04a6b', x + 2, y + 3, 1, 1); R(ctx, '#ffb0c0', x, y, 1, 1);
+        R(ctx, '#f28cb8', x, y, 2, 1); R(ctx, '#f28cb8', x + 3, y, 2, 1); R(ctx, '#f28cb8', x, y + 1, 5, 1); R(ctx, '#f28cb8', x + 1, y + 2, 3, 1); R(ctx, '#f28cb8', x + 2, y + 3, 1, 1); R(ctx, '#ffe0ec', x, y, 1, 1);
         ctx.globalAlpha = 1;
       } else if (p.kind === 'plane') {
         const d = p.dir || 1;

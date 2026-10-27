@@ -1,7 +1,7 @@
 // Героите в сцената: движение, поведение по състояния, рисуване.
 // (Спрайтовете се генерират в sprites.js; тук се решава КОЯ поза кога.)
 import { CFG, STATES } from './config.js';
-import { CharacterSprites, lookFor, FW, FH } from './sprites.js';
+import { CharacterSprites, lookFor, FW, FH, POSES } from './sprites.js';
 import { mix, rgba } from './palette.js';
 import { R, clamp } from './util.js';
 import { drawText } from './pixelfont.js';
@@ -15,12 +15,10 @@ const frameAt = (t, ms, n = 2) => Math.floor(t / ms) % n;
 /** Поза за седнал герой според състоянието и колко време е в него (lt). */
 function seatedPose(st, lt, t, a) {
   if (lt < 140) return 'sit'; // кратък неутрален кадър = без "скок" между пози
+  // дребно движение по случаен таймер (отпива, протяга се, поглежда телефона…) – никои двама не са в синхрон
+  if (a.fid && a.fid.kind === st && !(st === 'idle' && lt > 16000)) return a.fid.pose;
   switch (st) {
-    case 'typing': {
-      const c = (lt + a.phase) % 7200;
-      if (c > 6300) return 'leanBack';
-      return frameAt(t, 110) ? 'typeA' : 'typeB';
-    }
+    case 'typing': return frameAt(t, 110) ? 'typeA' : 'typeB';
     case 'running': return frameAt(t, 75) ? 'typeA' : 'typeB';
     case 'reading': return ((lt + a.phase) % 2600) > 2250 ? 'readB' : 'readA';
     case 'thinking': {
@@ -38,18 +36,24 @@ function seatedPose(st, lt, t, a) {
     case 'waiting':
       if (lt > 8000) return frameAt(t, 210) ? 'waveBothA' : 'waveBothB';
       return frameAt(t, 260) ? 'waveA' : 'waveB';
-    default: { // idle
-      if (lt > 16000) return 'doze';
-      const c = (lt + a.phase) % 15000;
-      if (c < 3000) return 'sit';
-      if (c < 4500) return 'sip';
-      if (c < 8500) return 'sit';
-      if (c < 9700) return 'stretch';
-      if (c < 13000) return 'sit';
-      return 'sip';
-    }
+    default: // idle (отпиването, протягането и т.н. идват от a.fid)
+      return lt > 16000 ? 'doze' : 'sit';
   }
 }
+
+// дребни движения: [поза, мс] по вид; паузата между тях е случайна (FIDGET_GAP), всеки със свой таймер
+const FIDGETS = {
+  idle: [['sip', 1500], ['stretch', 1300], ['yawn', 1400], ['phone', 5200], ['phone', 7000], ['leanBack', 2600]],
+  typing: [['sip', 1400], ['leanBack', 1500], ['stretch', 1100]],
+  reading: [['sip', 1400], ['chin', 1800]],
+  running: [['leanBack', 2400], ['sip', 1400]],
+  stand: [['standStretch', 1300], ['standPhone', 6000], ['standYawn', 1400], ['standPhone', 4500]],
+  couch: [['couchPhone', 6000], ['couchYawn', 1400]],
+};
+// (15–45 s: в периферното зрение нищо не бива да мърда през няколко секунди – панелът)
+const FIDGET_GAP = { idle: [15000, 40000], typing: [20000, 45000], reading: [18000, 40000], running: [15000, 35000] };
+// реакции (поздрав към теб, радост, разговор): основната поза според това къде е – на бюрото, на дивана, прав
+const REACT_BASE = { '': 'sit', couch: 'couchSit', stand: 'stand' };
 
 /** Дартс: цикъл от DART_CYCLE мс – прицелва се, хвърля (в DART_RELEASE), сваля ръката. */
 export const DART_CYCLE = 1800, DART_RELEASE = 1000;
@@ -78,6 +82,10 @@ export class Actor {
     this.shirtFrom = STATES[agent.state].color;
     this.phase = Math.floor(Math.random() * 5000);
     this.nextBlink = performance.now() + 1500 + Math.random() * 3000;
+    // „живот“: дребно движение (fid), поглед встрани (gaze), реакция (react: hi | cheer | talk), иконка в балонче (say)
+    this.fid = null; this.nextFid = performance.now() + 3000 + Math.random() * 12000;
+    this.gaze = null; this.nextGaze = performance.now() + 1500 + Math.random() * 5000;
+    this.react = null; this.say = null;
     this.spotSince = 0;
     this.fx = { spark: 0, glyph: 0, zzz: 0, steam: 0, throwCycle: -1 };
     this.receivedAt = -1e9;
@@ -137,12 +145,68 @@ export class Actor {
       this.vstate = a.state; this.vstateAt = now;
     }
     if (now > this.nextBlink + 130) this.nextBlink = now + 2200 + Math.random() * 3800;
+    this.lifeTick(now);
     // прозрачност (появяване/изчезване)
     const fs = dt * 2.2;
     this.alpha = this.fadeTo > this.alpha ? Math.min(this.fadeTo, this.alpha + fs) : Math.max(this.fadeTo, this.alpha - fs);
     if (this.fadeTo === 0 && this.alpha === 0) this.mode = 'gone';
     if (this.mode === 'walk') this.step(dt);
     else if (this.mode === 'pace') this.paceStep(dt, now);
+  }
+
+  /** Какво дребно движение е уместно сега (null = никакво): на бюрото – по състоянието, прав в зоната / на дивана – почивка. */
+  fidgetKind() {
+    if (this.mode === 'seated' && this.loc.type === 'seat') return FIDGETS[this.vstate] ? this.vstate : null;
+    if (this.mode !== 'idleSpot' || this.agent.state !== 'idle') return null;
+    if (this.loc.type === 'lounge') return 'stand';
+    if (this.loc.type === 'sofa' && this.sofaAct === 'rest') return 'couch';
+    return null;
+  }
+
+  /** Таймерите на дребните движения и погледите – случайни за всеки, затова никога не са в синхрон. */
+  lifeTick(now) {
+    // тишина, докато някой те чака (Actor.hush, life.js): останалите не започват нови движения и погледи
+    if (Actor.hush && this.vstate !== 'waiting') { this.nextFid = Math.max(this.nextFid, now + 3000); this.nextGaze = Math.max(this.nextGaze, now + 3000); }
+    if (this.fid && now > this.fid.until) this.fid = null;
+    if (now > this.nextFid) {
+      const kind = this.fidgetKind(), list = kind && FIDGETS[kind];
+      if (list && !this.react) {
+        const [pose, ms] = list[Math.floor(Math.random() * list.length)];
+        this.fid = { pose, kind, until: now + ms * (0.85 + Math.random() * 0.3) };
+      }
+      const g = FIDGET_GAP[kind] || [5000, 12000];
+      this.nextFid = (this.fid ? this.fid.until : now) + g[0] + Math.random() * (g[1] - g[0]);
+    }
+    if (this.gaze && now > this.gaze.until) this.gaze = null;
+    if (now > this.nextGaze) {
+      this.gaze = { dir: Math.random() < 0.5 ? 'l' : 'r', until: now + 450 + Math.random() * 1100 };
+      this.nextGaze = now + 2500 + Math.random() * 6500;
+    }
+    if (this.react && now > this.react.until) this.react = null;
+    if (this.say && now > this.say.until) this.say = null;
+  }
+
+  /** Реакция за малко (hi = маха ти, cheer = радва се, talk = говори; dir = накъде гледа). delay – за разминаване. */
+  doReact(kind, ms, now, delay = 0, dir = null) {
+    this.react = { kind, at: now + delay, until: now + delay + ms, dir };
+    this.fid = null;
+  }
+
+  /** Позата на реакцията (или null): мястото определя варианта – на бюрото, на дивана/стола, прав. */
+  reactPose(now) {
+    const r = this.react;
+    if (!r || now < r.at || this.mode === 'walk' || this.mode === 'pace' || this.loc.type === 'door' || this.loc.type === 'visit') return null;
+    const e = now - r.at;
+    const where = this.mode === 'seated' ? '' : this.loc.type === 'sofa' || this.loc.type === 'massage' ? 'couch' : 'stand';
+    let p;
+    if (r.kind === 'hi') p = frameAt(e, 240) ? 'hiB' : 'hiA';
+    else if (r.kind === 'cheer') p = frameAt(e, 200) ? 'cheerB' : 'cheerA';
+    else { // talk: устата се движи на пресекулки
+      const k = Math.floor((e + this.phase) / 170);
+      if ((k * 2654435761 >>> 0) % 3 === 0) return REACT_BASE[where];
+      p = 'talk';
+    }
+    return where ? where + p[0].toUpperCase() + p.slice(1) : p;
   }
 
   paceStep(dt, now) {
@@ -175,8 +239,14 @@ export class Actor {
       return (this.face === 'back' ? 'walkB' : 'walkF') + f;
     }
     if (this.mode === 'pace') return 'standThink';
+    const rp = this.reactPose(now);
+    if (rp) return rp;
     if (this.mode === 'idleSpot') {
       const st = now - this.spotSince;
+      const fk = this.fid && this.fidgetKind();
+      if (fk && this.fid.kind === fk) return this.fid.pose;
+      if (this.loc.type === 'books') return st < 1400 ? 'standBackUse' : 'standRead';  // взима книга от рафта и чете
+      if (this.loc.type === 'peek') return 'standPeek';                                  // наднича в съседния екран
       if (this.loc.type === 'coffee' || this.loc.type === 'cooler') {
         if (st < 2600) return 'standBackUse';
         return frameAt(st, 1400) ? 'standSip' : 'standMug';
@@ -193,7 +263,7 @@ export class Actor {
       if (this.loc.type === 'massage') return st < 1200 ? 'couchSit' : st > 7000 ? 'couchDoze' : 'couchSit';            // отпуска се и задрямва
       if (this.loc.type === 'board') return now - (this.boardPress || 0) < 650 ? 'standBackUse' : 'standBack'; // с дистанционното към екрана
       if (this.loc.type === 'door') return 'stand';
-      if (this.loc.type === 'visit') return 'carryS1';
+      if (this.loc.type === 'visit') return this.loc.handback && this.handed ? 'standHiA' : 'carryS1'; // под-агентът подава резултата и маха
       // без бюро, но работи – прав с лаптоп
       if (!this.seat && this.agent.state !== 'idle' && this.loc.type === 'lounge') return frameAt(st + this.phase, 900) ? 'standLaptopB' : 'standLaptopA';
       return 'stand';
@@ -204,7 +274,13 @@ export class Actor {
 
   eyes(now, pose) {
     if (pose === 'doze' || pose === 'sip' || pose === 'couchDoze' || pose === 'couchSip' || pose === 'standBack' || pose === 'dartAim' || pose === 'dartThrow' || pose === 'stretch' || pose === 'standSip') return null;
-    return now >= this.nextBlink && now < this.nextBlink + 130 ? 'closed' : null;
+    const P = POSES[pose];
+    if (!P || P.eyes === 'closed' || P.face === 'back' || P.face === 'side') return null;
+    if (now >= this.nextBlink && now < this.nextBlink + 130) return 'closed';
+    // поглед: към събеседника, към теб (махане) или от време на време встрани
+    if (this.react && now >= this.react.at) return this.react.dir || null;
+    if (this.loc.type === 'peek') return this.peekDir || null;
+    return this.gaze && !P.look ? this.gaze.dir : null;
   }
 
   /** Дълбочина за сортиране. */
@@ -313,9 +389,62 @@ class Pet {
   /** Накъде да тръгне (people = хората в зоната за почивка – кучето понякога отива при тях). */
   target(area) { return { x: area.x0 + Math.random() * (area.x1 - area.x0), y: area.y0 + Math.random() * (area.y1 - area.y0) }; }
   rest() { return Math.random() < 0.35 ? 'sleep' : 'sit'; }
-  update(dt, now, L, people = []) {
-    const lo = L.lounge;
-    const area = { x0: lo.x + 10, x1: lo.x + lo.w - 12, y0: lo.rug.y + 16, y1: L.H - 6 };
+  /** Зоната, в която се разхожда сам (зоната за почивка). */
+  area(L) { const lo = L.lounge; return { x0: lo.x + 10, x1: lo.x + lo.w - 12, y0: lo.rug.y + 16, y1: L.H - 6 }; }
+  /** Задача от life.js: върви по pts (пътеки извън зоната), стои в rest до ms/end(), после се прибира по обратния път.
+   *  o = { rest, ms, end(now), rush, face, onArrive(pet, now), onLeave(pet, now) } */
+  errand(pts, o, now) {
+    this.job = { ...o, back: [...pts].reverse().slice(1) };
+    this.path = pts.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+    this.mode = 'walk'; this.until = now + 1e9;
+  }
+  get busy() { return !!this.job; }
+  /** Подскок (на бюрото и обратно) – дъга за ~0.35 s. */
+  jump(x, y, now) { this.hop = { x0: this.x, y0: this.y, x1: x, y1: y, t0: now }; }
+  home(now) {
+    const j = this.job;
+    j?.onLeave?.(this, now);
+    const next = j?.then?.(this, now); // верига: следващата задача (напр. кучето носи топката)
+    if (next) { this.errand(next.pts, next.o, now); return; }
+    this.carry = null;
+    this.job = j &&j.back.length ? { homing: true, back: [] } : null;
+    this.path = j ? j.back.map((p) => ({ ...p })) : [];
+    this.mode = this.path.length ? 'walk' : 'sit'; this.until = now + 3000;
+  }
+  walkPath(dt) {
+    let left = this.speed * dt * (this.job?.rush ? 1.9 : 1);
+    while (left > 0 && this.path.length) {
+      const p = this.path[0], dx = p.x - this.x, dy = p.y - this.y, d = Math.hypot(dx, dy);
+      if (d < 0.01) { this.path.shift(); continue; }
+      const m = Math.min(d, left);
+      this.x += dx / d * m; this.y += dy / d * m; this.dist += m; left -= m;
+      if (Math.abs(dx) > 0.2) this.flip = dx < 0;
+      if (m >= d) this.path.shift();
+    }
+  }
+  runJob(dt, now) {
+    const j = this.job;
+    if (this.path.length) {
+      this.mode = 'walk'; this.walkPath(dt);
+      if (this.path.length) return;
+      if (j.homing) { this.job = null; this.mode = this.rest(); this.until = now + 5000 + Math.random() * 8000; return; }
+      this.mode = j.rest || 'sit'; j.since = now; j.onArrive?.(this, now);
+      return;
+    }
+    if (j.homing) { this.job = null; return; }
+    if (j.face != null) this.flip = j.face;
+    if (j.sleepAfter && this.mode === 'sit' && now - j.since > j.sleepAfter) this.mode = 'sleep';
+    if (now - j.since > (j.ms ?? 1e9) || j.end?.(now)) this.home(now);
+  }
+  update(dt, now, L, people = [], walkers = []) {
+    if (this.hop) { // подскок: дъга, нищо друго междувременно
+      const k = Math.min(1, (now - this.hop.t0) / 350), h = this.hop;
+      this.x = h.x0 + (h.x1 - h.x0) * k; this.y = h.y0 + (h.y1 - h.y0) * k; this.lift = Math.round(Math.sin(k * Math.PI) * 7);
+      if (k >= 1) { this.hop = null; this.lift = 0; }
+      return;
+    }
+    if (this.job) { this.runJob(dt, now); return; }
+    const area = this.area(L);
     if (!this.placed) { this.x = area.x0 + (area.x1 - area.x0) * this.start; this.y = area.y1 - 4; this.placed = true; this.until = now + 4000; }
     // лакомство (poke.js -> купичката): отива до нея извън зоната си, яде и се връща пеша (без скок обратно)
     if (this.food) {
@@ -328,6 +457,8 @@ class Pet {
     }
     if (this.away && this.x >= area.x0 && this.x <= area.x1 && this.y >= area.y0 && this.y <= area.y1) this.away = false;
     if (!this.away) { this.x = clamp(this.x, area.x0, area.x1); this.y = clamp(this.y, area.y0, area.y1); }
+    // седнал: проследява с поглед минаващите наблизо
+    if (this.mode === 'sit') { const w = walkers.find((a) => Math.abs(a.x - this.x) < 50 && Math.abs(a.y - this.y) < 40); if (w) this.flip = w.x < this.x; }
     if (this.mode === 'walk') {
       // зоната може да се е смалила след избора на целта (магазин, размер на прозореца) – иначе ходи на място до ръба
       this.tx = clamp(this.tx, area.x0, area.x1); this.ty = clamp(this.ty, area.y0, area.y1);
@@ -344,6 +475,8 @@ class Pet {
       this.tx = clamp(t.x, area.x0, area.x1); this.ty = clamp(t.y, area.y0, area.y1);
     }
   }
+  /** Тръгва към точка в зоната (напр. след минаващ човек); clamp-ът в update я държи в зоната. */
+  goNear(x, y) { if (this.job || this.hop) return; this.mode = 'walk'; this.tx = x; this.ty = y; }
   blocked(t) { const m = this.avoid; return !!m && t.x > m.x - 8 && t.x < m.x + m.w + 8 && t.y > m.key - 24 && t.y < m.key + 6; }
   /** Погален: сяда за малко (кучето маха по-бързо с опашка). */
   pet(now) { this.mode = 'sit'; this.until = now + 4500; this.pettedAt = now; }
@@ -356,7 +489,7 @@ class Pet {
 export class Cat extends Pet {
   constructor(look = { c: '#3a3440', hi: '#5a5262', eye: '#e0c24a' }, start = 0.5) { super(look, start); this.kind = 'cat'; }
   draw(ctx, now) {
-    const x = Math.round(this.x), y = Math.round(this.y);
+    const x = Math.round(this.x), y = Math.round(this.y) - (this.lift || 0);
     const { c: C, hi: H, eye: E } = this.look;
     ctx.save();
     if (this.flip) { ctx.translate(x * 2, 0); ctx.scale(-1, 1); }
@@ -401,7 +534,7 @@ export class Dog extends Pet {
     return super.target(area);
   }
   draw(ctx, now) {
-    const x = Math.round(this.x), y = Math.round(this.y), lk = this.look;
+    const x = Math.round(this.x), y = Math.round(this.y) - (this.lift || 0), lk = this.look;
     const { c: C, hi: H, m: M, e: E, eye: EY } = lk;
     const legC = lk.pat === 'saddle' || lk.pat === 'chest' ? M : C;
     const short = lk.legs === 'short', len = lk.len || 0, tall = lk.tall || 0;
@@ -446,6 +579,7 @@ export class Dog extends Pet {
       }
       else { R(ctx, C, x - 6, y - 1 - tw, 2, 1); R(ctx, C, x - 7, y - 2 - tw, 1, 1); }
       dogPattern(ctx, lk, 'sit', x, y, x, 4, hy);
+      if (this.carry) { R(ctx, this.carry, x + 6, hy + 4, 3, 3); R(ctx, '#ffffff', x + 6, hy + 4, 1, 1); }
     } else {
       // върви: тяло, 4 крака, глава напред
       const lg = (short ? 2 : 3) + tall, bt = y - lg - 4 - tall, b0 = x - 5 - len, bw = 9 + len, f = Math.floor(this.dist / 2) % 2;
@@ -471,6 +605,7 @@ export class Dog extends Pet {
       }
       else { R(ctx, C, b0 - 1, bt, 1, 1); R(ctx, C, b0 - 2, bt - 1 - wag, 1, 1 + wag); }
       dogPattern(ctx, lk, 'walk', x, y, b0, bw, bt);
+      if (this.carry) { R(ctx, this.carry, x + 8, bt + 1, 3, 3); R(ctx, '#ffffff', x + 8, bt + 1, 1, 1); } // играчка в устата
     }
     ctx.restore();
   }

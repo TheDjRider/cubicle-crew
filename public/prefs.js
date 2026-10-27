@@ -7,6 +7,7 @@
 //  lamp    – лампата и неонът в зоната за почивка (вторият ключ, под първия)
 //  saver   – пестене на батерията: най-много 15 кадъра/s, без частици (искри, пара, прашинки);
 //            без изричен избор следва захранването – включва се само, докато лаптопът е на батерия (navigator.getBattery)
+//  calm    – спокоен офис: без разговори, общи радости и редки случки (life.js); любимците остават
 //  perf    – малък брояч долу вляво: кадри/s, мс на кадър и ~% от едно ядро (за доверие: колко струва)
 // ?overlay включва private по подразбиране (стрийм); Electron сменя focus/private от менюто в трея (IPC 'pref').
 import { PARAMS } from './config.js';
@@ -25,6 +26,7 @@ export const prefs = {
   get lights() { return state.lights !== false; },
   get lamp() { return state.lamp !== false; },
   get saver() { return state.saver ?? onBattery; },
+  get calm() { return !!state.calm; },
   get perf() { return !!state.perf || PARAMS.debug; },
   get board() { const b = state.board | 0; return b >= 0 && b < 4 ? b : 0; },
   /** Собственото име на сесия (или null). */

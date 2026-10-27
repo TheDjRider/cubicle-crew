@@ -74,6 +74,7 @@ model.on('join', (a) => office.join(a, performance.now()));
 model.on('leave', (a) => office.leave(a));
 model.on('link', (p, c) => office.link(p, c));
 model.on('celebrate', (a) => office.celebrate(a));
+model.on('tool_start', (a, e) => office.onTool(a, e)); // торта при юбилей, разходка до библиотеката (life.js)
 // приложението: оркестратор приключи -> „само когато трябва“ показва прозореца за малко
 model.on('celebrate', (a) => { if (!a.subagent) window.pixelOffice?.action?.('peek'); });
 // звуци (само с истински сесии – демото би звъняло постоянно)
