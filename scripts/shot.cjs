@@ -4,7 +4,7 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const WebSocket = require(path.join(__dirname, '..', 'node_modules', 'ws'));
+const WebSocket = (() => { try { return require(path.join(__dirname, '..', 'node_modules', 'ws')); } catch { return require('ws'); } })(); // worktree: ws е в родителската папка
 
 const [url, out, W = '1280', H = '720', DPR = '1', times = '3000', evalJs, preEval] = process.argv.slice(2);
 const port = 9300 + Math.floor(Math.random() * 500);
@@ -27,9 +27,12 @@ const findChrome = () => {
   }
   return hit;
 };
+// SHOT_GL=gpu (видеокартата) | swiftshader (софтуерен WebGL2), SHOT_GL_FLAGS="..." – свои флагове; без тях – както досега
+const GL_FLAGS = { gpu: ['--ignore-gpu-blocklist', '--use-angle=d3d11'], swiftshader: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }[process.env.SHOT_GL] ||
+  (process.env.SHOT_GL_FLAGS ? process.env.SHOT_GL_FLAGS.split(' ') : ['--disable-gpu']);
 const chrome = spawn(findChrome(), [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${prof}`, '--no-first-run',
-  '--disable-gpu', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: 'ignore' });
+  ...GL_FLAGS, '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: 'ignore' });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {

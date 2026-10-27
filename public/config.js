@@ -161,6 +161,8 @@ const T_BG = {
     lofi: 'Lofi фон', lofiHint: 'Много тихи бавни акорди с пращене като от плоча – за работа. Синтезирани в браузъра.',
     volume: 'Сила', volumeHint: 'Обща за звуците на офиса (известията за чакащ агент не зависят от нея).',
     atmos: 'Атмосфера', atmosOpt: { full: 'Пълна', soft: 'Лека', off: 'Изкл.' }, atmosHint: 'Колко силно часът оцветява стаята (зазоряване, залез, нощ). „Лека“ и „Изкл.“ са по-ясни за поглед; във „Фокус“ е винаги лека.',
+    gl: 'Премиум осветление (GPU)', glHint: 'Истинска светлина пиксел по пиксел: лампи и екрани със сенки, слънце през прозорците, мек ореол. Ползва видеокартата; при „Пестене на батерията“ или ако е бавно – обичайният изглед.',
+    glOff: 'Не е налично на този компютър (няма подходяща видеокарта) – остава обичайният изглед.',
     calm: 'Спокоен офис', calmHint: 'Без разговори, общи радости и редки случки (птичка, куриер). Любимците, монетите и „чака те“ остават.',
     perfTitle: 'Леко за машината', saver: 'Пестене на батерията', saverHint: 'Най-много 15 кадъра в секунда и без частици (искри, пара, прашинки). Хората и цветовете остават. Без изричен избор се включва само, докато лаптопът е на батерия.',
     perf: 'Брояч на кадрите', perfHint: 'Долу вляво: кадри в секунда, милисекунди работа на кадър и приблизително колко от едно ядро ползва офисът.',
@@ -447,6 +449,8 @@ const T_EN = {
     lofi: 'Lofi background', lofiHint: 'Very quiet slow chords with a little vinyl crackle – to work to. Synthesized in the browser.',
     volume: 'Volume', volumeHint: 'For the office sounds (the waiting-agent alerts do not depend on it).',
     atmos: 'Atmosphere', atmosOpt: { full: 'Full', soft: 'Soft', off: 'Off' }, atmosHint: 'How strongly the time of day colours the room (dawn, sunset, night). Soft and Off are easier to read at a glance; Focus mode always uses Soft.',
+    gl: 'Premium lighting (GPU)', glHint: 'Real per-pixel light: lamps and screens with shadows, sun through the windows, soft glow. Uses the graphics card; falls back to the normal look on battery saver or when it gets slow.',
+    glOff: 'Not available on this computer (no suitable graphics card) – the normal look stays.',
     calm: 'Calm office', calmHint: 'No chats, group cheers or rare events (bird, courier). Pets, coins and "waiting for you" stay.',
     perfTitle: 'Light on the machine', saver: 'Battery saver', saverHint: 'At most 15 frames per second and no particles (sparks, steam, dust). People and colours stay. Unless you choose, it turns on by itself while the laptop runs on battery.',
     perf: 'Frame counter', perfHint: 'Bottom left: frames per second, milliseconds of work per frame and roughly how much of one core the office uses.',
@@ -690,6 +694,7 @@ export const PARAMS = {
   clear: Q.has('clear'),       // прозрачен фон (приложението с transparent прозорец): без стени, небе и оттенък, подът избледнява
   overlay: Q.has('overlay'),   // ?overlay – за OBS/стрийм: без HUD и легенда, командите и пътищата са скрити
   focus: Q.has('focus'),       // ?focus – режим „Фокус“ (за тестове; иначе се пази в настройките)
+  gl: Q.has('gl') ? (Q.get('gl') || 'on') : null, // ?gl – WebGL2 рендер със светлини (опит); ?gl=geo|sun|norm – буферите; без WebGL2 – 2D
   strip: Q.has('strip'),       // ?strip – тънка лента: по един ред на сесия вместо офиса (Electron го слага от менюто)
   // отворено през адреса в локалната мрежа (изгледът за телефон): само за гледане, винаги без команди и пътища
   lan: !WEB && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname),

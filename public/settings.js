@@ -2,7 +2,7 @@
 // Разделите са по смисъл: как изглежда, кога те вика, какво вижда/праща, прозорецът, споделяне, помощ.
 // Всеки раздел има цвят от езика на състоянията и пикселна иконка 9x9 (рисува се тук, без файлове).
 // Отметките носят същите data-* като досега – ui.onHelpChange() ги прилага.
-import { T, LANG, STATES, STATE_ORDER } from './config.js';
+import { T, LANG, STATES, STATE_ORDER, PARAMS } from './config.js';
 import { prefs } from './prefs.js';
 import { soundOn, audioPrefs } from './sound.js';
 import { qrCanvas } from './qr.js';
@@ -77,6 +77,8 @@ function sections(ui) {
     sw('id="pref-lights" data-pref="lights"', prefs.lights, H.lights, H.lightsHint) +
     sw('id="pref-lamp" data-pref="lamp"', prefs.lamp, H.lamp, H.lampHint) +
     sw('id="pref-calm" data-pref="calm"', prefs.calm, H.calm, H.calmHint) +
+    // премиум осветление: без подходяща видеокарта (ui.glOff) – изключено, с бележка вместо обяснението
+    (PARAMS.clear ? '' : sw(`id="pref-gl" data-pref="gl"${ui.glOff ? ' disabled' : ''}`, prefs.gl && !ui.glOff, H.gl, ui.glOff ? H.glOff : H.glHint)) +
     `<div class="row"><b>${H.atmos}</b><div class="seg">${['full', 'soft', 'off'].map((k) => card('atmos', k, prefs.atmosKey === k, H.atmosOpt[k])).join('')}</div></div><small class="dim">${H.atmosHint}</small>` +
     `<div class="row"><b>${H.lang}</b><div class="seg">${card('lang', 'bg', LANG === 'bg', 'Български')}${card('lang', 'en', LANG === 'en', 'English')}</div></div>` +
     // леко за машината: пестене на батерията + брояч на кадрите (колко струва офисът)

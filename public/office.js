@@ -812,7 +812,9 @@ export class Office {
     // 1) небе (под прозрачните стъкла) 2) фон
     if (clear) { ctx.clearRect(0, 0, room.W, room.H); drawClearFloor(ctx, room); drawClearDynamic(ctx, room, date, tod.wx, tod); }
     else {
-      drawSky(ctx, room, tod, now);
+      // ?gl: стъклото в албедото остава прозрачно – небето е отделна текстура (свети само и оцветява светлината отвън)
+      if (this.gl) { ctx.clearRect(0, 0, room.W, room.H); drawSky(this.gl.skyCtx(), room, tod, now); }
+      else drawSky(ctx, room, tod, now);
       this.life.drawOutside(ctx, now); // птичката на перваза – зад рамката на прозореца
       ctx.drawImage(room.bg, 0, 0);
       const st = this.model.stats();
@@ -825,7 +827,7 @@ export class Office {
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
     this.sun = clear ? null : sunPatches(room, tod); // слънчевите петна (и за прашинките в update)
-    if (!clear) drawWetReflections(ctx, room, tod, now);
+    if (!clear && !this.gl) drawWetReflections(ctx, room, tod, now); // ?gl: отраженията са в шейдъра
     this.drawLinks(ctx, now);
     for (const a of this.actors.values()) {
       if (a.vstate === 'waiting' && a.isAtDesk(L)) {
@@ -847,14 +849,15 @@ export class Office {
     for (const a of this.actors.values()) if (a.isAtDesk(L)) occupant.set(a.pod, a);
     L.pods.forEach((p, i) => {
       const img = this.podImgs[i];
-      items.push({ key: p.y + POD.depthChair, fn: () => ctx.drawImage(img.back, p.x, p.y) });
-      items.push({ key: p.y + POD.depthDesk, fn: () => this.drawPodFront(ctx, p, img, occupant.get(i), now) });
+      // img/x/y/actor: само за ?gl (маската на хората и кръга „чака“ в gl/scene.js drawKinds) – 2D не ги чете
+      items.push({ key: p.y + POD.depthChair, img: img.back, x: p.x, y: p.y, fn: () => ctx.drawImage(img.back, p.x, p.y) });
+      items.push({ key: p.y + POD.depthDesk, img: img.front, x: p.x, y: p.y, fn: () => this.drawPodFront(ctx, p, img, occupant.get(i), now) });
     });
-    for (const o of room.objects) items.push({ key: o.key, fn: () => (o.sway ? drawSway(ctx, o, now, this.pokes.rustle(o, now)) : drawPoked(ctx, o, this.pokes.offset(o, now))) });
+    for (const o of room.objects) items.push({ key: o.key, img: o.img, x: o.x, y: o.y, fn: () => (o.sway ? drawSway(ctx, o, now, this.pokes.rustle(o, now)) : drawPoked(ctx, o, this.pokes.offset(o, now))) });
     this.pokes.items(items, ctx, now);
     for (const a of this.actors.values()) {
       const k = a.depth(L);
-      items.push({ key: k, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
+      items.push({ key: k, actor: a, seated: occupant.get(a.pod) === a, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
     }
     for (const c of this.pets) items.push({ key: c.keyOverride ?? c.y, fn: () => c.draw(ctx, now) }); // котката на бюрото – над плота
     this.life.items((key, fn) => items.push({ key, fn }), ctx, now);
@@ -865,11 +868,14 @@ export class Office {
     if (room.shredder) items.push({ key: room.shredder.base + 0.5, fn: () => drawShredderChew(ctx, room.shredder, now) });
     items.forEach((it, i) => { it.i = i; });
     items.sort((a, b) => a.key - b.key || a.i - b.i);
+    this.gl?.kinds(items, this, now);
     for (const it of items) it.fn();
 
     this.fx.draw(ctx, 'over'); // пара от чашите, прашинки – над мебелите, но под светлината
     this.drawDarts(ctx, now, 'air');
-    if (!clear) this.drawLight(ctx, room, tod, lit, now, occupant);
+    // ?gl: кадърът дотук е албедото – светлините, сенките и bloom-ът са в gl/engine.js; отгоре остава само горният слой
+    if (this.gl) this.gl.lit(ctx, this, tod, lit, now, occupant);
+    else if (!clear) this.drawLight(ctx, room, tod, lit, now, occupant);
     else this.drawLightClear(ctx, room, tod, lit, now, occupant);
     // 7) частици и икони отгоре
     this.fx.draw(ctx, 'top');
@@ -1173,7 +1179,7 @@ export class Office {
 }
 
 /** Неонът: ~на всеки 7 s две бързи премигвания (детерминистично по времето). */
-function neonFlicker(now) {
+export function neonFlicker(now) {
   const t = now % 7300;
   return t < 60 || (t > 140 && t < 190) ? 0.35 : 1;
 }

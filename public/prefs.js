@@ -9,6 +9,7 @@
 //            без изричен избор следва захранването – включва се само, докато лаптопът е на батерия (navigator.getBattery)
 //  atmos   – атмосфера: 'full' (по подразбиране) | 'soft' | 'off' – колко силно часът оцветява и затъмнява стаята (light.js)
 //  calm    – спокоен офис: без разговори, общи радости и редки случки (life.js); любимците остават
+//  gl      – „Премиум осветление (GPU)“: WebGL2 рендерът в gl/ (main.js syncGl; ?gl го налага); по подразбиране изключено
 //  perf    – малък брояч долу вляво: кадри/s, мс на кадър и ~% от едно ядро (за доверие: колко струва)
 // ?overlay включва private по подразбиране (стрийм); Electron сменя focus/private от менюто в трея (IPC 'pref').
 import { PARAMS } from './config.js';
@@ -28,6 +29,7 @@ export const prefs = {
   get lamp() { return state.lamp !== false; },
   get saver() { return state.saver ?? onBattery; },
   get calm() { return !!state.calm; },
+  get gl() { return !!state.gl || !!PARAMS.gl; },
   /** Сила на светлината и цветовете по часа: 1 пълна, 0.5 лека (и винаги във „Фокус“), 0 изключена (плоско, най-ясно). */
   get atmos() { const a = state.atmos || 'full'; return a === 'off' ? 0 : a === 'soft' || state.focus ? 0.5 : 1; },
   get atmosKey() { return ['full', 'soft', 'off'].includes(state.atmos) ? state.atmos : 'full'; },

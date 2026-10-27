@@ -18,9 +18,13 @@ import { Capture } from './capture.js';
 import { play } from './sound.js';
 import { lanGate } from './lan.js';
 import { Ambience } from './ambience.js';
+import { GLView } from './gl/engine.js';
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d', { alpha: !!PARAMS.clear });
+// „Премиум осветление (GPU)“ (prefs.gl или ?gl): WebGL2 платно над #c (събитията минават към #c), офисът рисува в
+// неговия буфер. Включва се/изключва в движение – syncGl() по-долу.
+let glView = null;
 if (PARAMS.clear) { document.documentElement.classList.add('clear'); clearHits(); }
 // прозрачен фон: приложението пита (clear-probe, 20/s) какво има под курсора; празен (прозрачен) пиксел -> кликовете минават.
 // Лентата горе, ръбовете (за преоразмеряване) и всичко от DOM (етикети, панели, магазин) остават „твърди“.
@@ -62,6 +66,7 @@ ui.onClip = () => { ui.note(T.help.recording); capture.clip((ok) => ui.note(ok ?
 shop.onToggle = () => { lastSpecKey = ''; resize(); };
 // „Фокус“ / „Скривай команди“ (от ? панела или от трея): любимците, стената с монетите, магазинът
 prefs.onChange((k) => {
+  if (k === 'gl' || k === 'saver' || k === 'atmos' || k === 'focus') syncGl();
   if (k === 'saver' && prefs.saver) fx.list.length = 0;
   if (k === 'perf') perfEl();
   if (k !== 'focus') return;
@@ -109,6 +114,7 @@ function applyCanvas() {
   canvas.style.width = `${(L.W * L.scale) / dpr}px`;
   canvas.style.height = `${(L.H * L.scale) / dpr}px`;
   ui.setScale(L.scale, dpr, L.W, L.H);
+  glView?.resize(L.W, L.H, canvas.style.width, canvas.style.height, dpr);
   appliedVersion = office.layoutVersion;
   if (PARAMS.desktop && window.pixelOffice?.preferSize) {
     const key = `${L.need.w}x${L.need.h}`;
@@ -117,6 +123,39 @@ function applyCanvas() {
       window.pixelOffice.preferSize({ w: Math.ceil((L.need.w * 2) / dpr), h: Math.ceil((L.need.h * 2) / dpr) });
     }
   }
+}
+
+// ---------------------------------------------------------------- премиум осветление (GPU)
+// Включено, ако е избрано (или ?gl), без прозрачен фон/лента, без „Пестене на батерията“ и докато видеокартата
+// се справя (> GL_SLOW_MS на кадър няколко секунди -> 2D за GL_RETRY_MS, после пак). Няма WebGL2 / софтуерен
+// рендер / загубен контекст -> ui.glOff ('none'|'software'|'lost') – панелът казва „не е налично“ и остава 2D.
+const GL_SLOW_MS = 4, GL_SLOW_FOR = 3000, GL_RETRY_MS = 60000;
+let glSlowSince = 0, glSlowUntil = 0;
+function syncGl(now = performance.now()) {
+  const want = (PARAMS.gl || prefs.gl) && !PARAMS.clear && !PARAMS.strip && !prefs.saver && !ui.glOff && now >= glSlowUntil;
+  if (want && !glView) {
+    const v = GLView.create(canvas, PARAMS.gl);
+    if (!v) { ui.glOff = 'none'; helpAgain(); return; }
+    glView = v;
+    canvas.after(v.canvas);
+    v.onLost = () => { ui.glOff = 'lost'; dropGl(); helpAgain(); };
+    applyCanvas();
+    glSlowSince = 0;
+  } else if (!want && glView) dropGl();
+  if (glView) glView.atmos = prefs.atmos;
+  if (PARAMS.debug) window.__gl = glView;
+}
+function helpAgain() { if (ui.help && !ui.help.hidden) ui.renderHelp(); }
+function dropGl() {
+  glView?.destroy();
+  glView = null; office.gl = null;
+  capture.canvas = canvas;
+}
+/** После всеки кадър: скъпо ли е за видеокартата? */
+function glCost(now) {
+  if (!glView) { if (glSlowUntil && now >= glSlowUntil) { glSlowUntil = 0; syncGl(now); } return; }
+  if (glView.cost > GL_SLOW_MS) { if (!glSlowSince) glSlowSince = now; else if (now - glSlowSince > GL_SLOW_FOR) { glSlowUntil = now + GL_RETRY_MS; dropGl(); } }
+  else glSlowSince = 0;
 }
 function resize() {
   const dpr = window.devicePixelRatio || 1;
@@ -213,15 +252,26 @@ function frame(now) {
   checkSleep(now);
   if (shown) {
     const date = nowDate();
+    const officeOn = !strip && !morning?.active;
+    glView?.show(officeOn);
+    // ?gl: офисът рисува в буфера на GL (с прозрачност), #c остава скрит отдолу за събитията
+    office.gl = officeOn ? glView : null;
+    capture.canvas = office.gl ? glView.canvas : canvas;
     if (strip) strip.render(now);
     else if (morning?.active) morning.render(now, date, currentWx());
-    else { office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date); capture.frame(now); phoneList?.render(now); }
+    else {
+      const g = office.gl ? glView.bctx : ctx;
+      office.render(g, now, applyWeather(timeOfDay(date), currentWx()), date);
+      if (office.gl) { glView.present(g); glCost(now); } else glCost(now);
+      capture.frame(now); phoneList?.render(now);
+    }
   }
   ui.sync(now);
   if (!strip && !morning?.active) ambience.tick(now, office, office.tod, shown);
   perfTick(now, performance.now() - w0);
   schedule();
 }
+syncGl();
 schedule();
 window.pixelOffice?.onVisible?.((v) => {
   if (v === shown) return;
