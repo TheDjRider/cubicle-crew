@@ -719,7 +719,9 @@ export class Office {
     // 1) небе (под прозрачните стъкла) 2) фон
     if (clear) { ctx.clearRect(0, 0, room.W, room.H); drawClearFloor(ctx, room); drawClearDynamic(ctx, room, date, tod.wx, tod); }
     else {
-      drawSky(ctx, room, tod, now);
+      // ?gl: стъклото в албедото остава прозрачно – небето е отделна текстура (свети само и оцветява светлината отвън)
+      if (this.gl) { ctx.clearRect(0, 0, room.W, room.H); drawSky(this.gl.skyCtx(), room, tod, now); }
+      else drawSky(ctx, room, tod, now);
       ctx.drawImage(room.bg, 0, 0);
       const st = this.model.stats();
       drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
@@ -729,7 +731,7 @@ export class Office {
     const lit = this.lightLevel(now);
     // 3) по пода: светлина, връзки, сенки, пулсиращ кръг "чака"
     this.drawDarts(ctx, now, 'wall');
-    if (!clear) drawShafts(ctx, room, tod, now);
+    if (!clear && !this.gl) drawShafts(ctx, room, tod, now); // ?gl: сноповете са обемни в шейдъра
     this.drawLinks(ctx, now);
     for (const a of this.actors.values()) {
       if (a.vstate === 'waiting' && a.isAtDesk(L)) {
@@ -770,7 +772,9 @@ export class Office {
     for (const it of items) it.fn();
 
     this.drawDarts(ctx, now, 'air');
-    if (!clear) this.drawLight(ctx, room, tod, lit, now, occupant);
+    // ?gl: кадърът дотук е албедото – светлините, сенките и bloom-ът са в gl/engine.js; отгоре остава само горният слой
+    if (this.gl) this.gl.lit(ctx, this, tod, lit, now, occupant);
+    else if (!clear) this.drawLight(ctx, room, tod, lit, now, occupant);
     else this.drawLightClear(ctx, room, tod, lit, now, occupant);
     // 7) частици и икони отгоре
     this.fx.draw(ctx, 'top');
@@ -972,7 +976,7 @@ export class Office {
 }
 
 /** Неонът: ~на всеки 7 s две бързи премигвания (детерминистично по времето). */
-function neonFlicker(now) {
+export function neonFlicker(now) {
   const t = now % 7300;
   return t < 60 || (t > 140 && t < 190) ? 0.35 : 1;
 }

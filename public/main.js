@@ -17,9 +17,13 @@ import { Strip } from './strip.js';
 import { Capture } from './capture.js';
 import { play } from './sound.js';
 import { lanGate } from './lan.js';
+import { GLView } from './gl/engine.js';
 
 const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d', { alpha: !!PARAMS.clear });
+// ?gl: отделно WebGL2 платно над 2D платното (събитията минават през него към #c); 2D рисува албедото и горния слой
+let glView = PARAMS.gl && !PARAMS.clear && !PARAMS.strip ? GLView.create(canvas, PARAMS.gl) : null;
+if (glView) canvas.after(glView.canvas);
+const ctx = canvas.getContext('2d', { alpha: !!PARAMS.clear || !!glView });
 if (PARAMS.clear) { document.documentElement.classList.add('clear'); clearHits(); }
 // прозрачен фон: приложението пита (clear-probe, 20/s) какво има под курсора; празен (прозрачен) пиксел -> кликовете минават.
 // Лентата горе, ръбовете (за преоразмеряване) и всичко от DOM (етикети, панели, магазин) остават „твърди“.
@@ -40,7 +44,10 @@ function clearHits() {
 const model = new Model();
 const fx = new Particles();
 const office = new Office(model, fx);
-if (PARAMS.debug) { window.__office = office; window.__model = model; }
+if (PARAMS.debug) { window.__office = office; window.__model = model; window.__gl = glView; }
+office.gl = glView;
+// загубен контекст (драйвер, сън на видеокартата) -> обратно към 2D до презареждане
+if (glView) glView.onLost = () => { office.gl = null; glView.destroy(); glView = null; };
 const ui = new UI(office, model, canvas);
 if (PARAMS.seed != null) office.seed = PARAMS.seed;
 const tokens = new Tokens(office, ui);
@@ -51,7 +58,7 @@ ui.onPet = (slot) => shop.openPet(slot);
 ui.onStats = () => shop.open('stats');
 ui.onTab = (tab) => shop.open(tab); // от настройките: статистика / времето
 // споделяне: снимка / 10 s клип (кадрите се добавят в цикъла)
-const capture = new Capture(canvas);
+const capture = new Capture(glView ? glView.canvas : canvas);
 ui.onSnapshot = () => { capture.snapshot(); ui.note(T.help.saved); };
 ui.onClip = () => { ui.note(T.help.recording); capture.clip((ok) => ui.note(ok ? T.help.saved : T.help.noclip)); };
 // докато магазинът (или началната настройка) е отворен, Electron пренебрегва prefer-size -> след затваряне
@@ -103,6 +110,7 @@ function applyCanvas() {
   canvas.style.width = `${(L.W * L.scale) / dpr}px`;
   canvas.style.height = `${(L.H * L.scale) / dpr}px`;
   ui.setScale(L.scale, dpr, L.W, L.H);
+  glView?.resize(L.W, L.H, canvas.style.width, canvas.style.height, dpr);
   appliedVersion = office.layoutVersion;
   if (PARAMS.desktop && window.pixelOffice?.preferSize) {
     const key = `${L.need.w}x${L.need.h}`;
@@ -190,9 +198,14 @@ function frame(now) {
   checkSleep(now);
   if (shown) {
     const date = nowDate();
+    glView?.show(!strip && !morning?.active);
     if (strip) strip.render(now);
     else if (morning?.active) morning.render(now, date, currentWx());
-    else { office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date); capture.frame(now); phoneList?.render(now); }
+    else {
+      office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date);
+      if (glView && office.gl) glView.present(ctx);
+      capture.frame(now); phoneList?.render(now);
+    }
   }
   ui.sync(now);
   schedule();
