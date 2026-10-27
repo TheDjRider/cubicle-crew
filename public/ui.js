@@ -1,7 +1,7 @@
 // Целият текст е DOM (остър при всякакъв мащаб и с кирилица): етикети, балончета,
 // подсказки при посочване, HUD, легенда и ?debug панел.
 import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petTitle } from './config.js';
-import { shortDetail, fmtDuration, danger, fmtUsd } from './util.js';
+import { shortDetail, fmtDuration, danger, fmtUsd, shortModel } from './util.js';
 import { coinUrl } from './tokens.js';
 import { soundOn, setSound } from './sound.js';
 import { prefs } from './prefs.js';
@@ -375,6 +375,7 @@ export class UI {
       [T.state, `<i class="dot" data-state="${st}" style="background:${STATES[st].color}"></i>${T.states[st]}`],
     ];
     if (ag.provider) rows.push([T.agentKind, esc(PROVIDERS[ag.provider] || ag.provider)]);
+    if (ag.model) rows.push([T.model, esc(shortModel(ag.model))]);
     if (tool) rows.push([T.tool, `<b>${esc(tool.tool)}</b> ${dangerHtml(tool, priv ? '' : esc(shortDetail(tool.detail, 46)))}`]);
     rows.push([T.toolCalls, String(ag.toolCalls)]);
     if (ag.ctx > 0) { const k = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1).replace(/.0$/, '') + 'M' : Math.round(n / 1000) + 'k'); rows.push([T.context, `${k(ag.ctx)} / ${k(ag.ctxMax)} <span class="dim">(${Math.round((100 * ag.ctx) / ag.ctxMax)}%)</span>`]); }

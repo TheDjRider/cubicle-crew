@@ -136,20 +136,27 @@ function showcase(ingest) {
     { id: 'show-lead-b', label: 'api-gateway', tool: 'Agent', detail: 'Explore auth flow',
       kids: [['Write', 'src/auth/session.ts', 'Explore auth flow (1)'], ['Grep', 'auth|session', 'Explore auth flow (2)']] },
   ];
+  const PROVS = ['opencode', 'codex', 'gemini', 'copilot'];
   let delay = 0;
-  for (const t of teams) {
-    const emit = agent(t.id, t.label);
+  teams.forEach((t, i) => {
+    const emit = agent(t.id, t.label, { provider: i === 0 ? null : PROVS[0], model: i === 0 ? 'claude-sonnet-4-5-20250929' : undefined });
     setTimeout(() => { start(emit, t.tool, t.detail, `t-${t.id}`); keep(emit); }, delay);
     delay += 150;
     t.kids.forEach(([tool, detail, desc], k) => {
       const cid = `${t.id}-sub-${k}`;
-      const cemit = agent(cid, t.label, { subagent: true, parent: t.id, parent_tool_use_id: `t-${t.id}`, desc });
+      const cemit = agent(cid, t.label, { subagent: true, parent: t.id, parent_tool_use_id: `t-${t.id}`, desc, provider: i === 0 ? null : PROVS[(k + 1) % PROVS.length] });
       setTimeout(() => { start(cemit, tool, detail, `t-${cid}`); keep(cemit); }, 600 + k * 900);
     });
-  }
+  });
   // трета сесия, която чака теб, и четвърта, която почива – и двете в зоната за почивка
-  const w = agent('show-waiting', 'billing');
+  const w = agent('show-waiting', 'billing', { provider: 'copilot' });
   setTimeout(() => { w({ type: 'tool_start', id: 't-w', tool: 'AskUserQuestion', detail: T.demo2.whichShort }); keep(w); }, 400);
-  const idle = agent('show-idle', 'infra');
+  const idle = agent('show-idle', 'infra', { provider: 'opencode' });
   setTimeout(() => idle({ type: 'say' }), 500);
+  // демо „сбиване“: на всеки 45 с листовете на някой агент летят към мелачката
+  const desks = ['show-lead-a', 'show-lead-b', 'show-lead-a-sub-0'];
+  let di = Math.floor(Math.random() * desks.length);
+  const beat = () => ingest({ agent: desks[di++ % desks.length], type: 'compact', ts: Date.now() });
+  setTimeout(beat, 8000);
+  setInterval(beat, 45000);
 }

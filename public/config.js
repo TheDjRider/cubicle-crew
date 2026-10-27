@@ -37,6 +37,9 @@ export const CFG = {
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
 export const PROVIDERS = { cowork: 'Cowork', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
 
+/** Бранд цветове + пиксел символ за заставката на монитора при idle (агент без активност); липсващ запис = звездичката на Claude. */
+export const PROVIDER_MARK = { opencode: { c: '#fab283', g: 'ring' }, codex: { c: '#10a37f', g: 'gear' }, gemini: { c: '#4285f4', g: 'star4' }, copilot: { c: '#a371f7', g: 'eyes' }, cursor: { c: '#7f8ea3', g: 'bar' } };
+
 export const STATES = {
   idle:       { color: '#6b6b80' },
   thinking:   { color: '#e0c24a' },
@@ -73,6 +76,7 @@ const T_BG = {
   parentOf: 'Под-агенти',
   childOf: 'Под-агент на',
   agentKind: 'Агент',
+  model: 'Модел',
   context: 'Контекст',
   crashed: { title: 'Сесията прекъсна', hint: 'насред работа' },
   needsYou: 'Чака теб!',
@@ -294,6 +298,7 @@ const T_EN = {
   parentOf: 'Sub-agents',
   childOf: 'Sub-agent of',
   agentKind: 'Agent',
+  model: 'Model',
   context: 'Context',
   crashed: { title: 'Session ended', hint: 'in the middle of the work' },
   needsYou: 'Needs you!',

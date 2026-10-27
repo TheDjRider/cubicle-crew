@@ -291,6 +291,7 @@ wss.on('connection', (ws) => {
 // остава в офиса (на дивана), дори да няма нови редове в транскрипта или сървърът да е пуснат след него.
 // Съобщението {type:'sessions', list:[{agent, label, status}]} няма поле `agent` – старите клиенти го пропускат.
 let live = [], liveKey = '';
+const ocLive = { list: [] }; // статус на OpenCode сесиите – пълни се от watchOpencode в startServer
 const pidOf = new Map(); // сесия -> pid (за „Към терминала“; не се праща към страницата)
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 // pidDomain (Claude Code ≥ 2.1.3xx): "win32:<машина>", "linux::pid:[…]" – pid от контейнер/VM не е наш процес
@@ -335,6 +336,7 @@ function scanSessions() {
     list.push(item);
   }
   for (const x of external.list()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
+  for (const x of ocLive.list) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   list.sort((x, y) => (x.agent < y.agent ? -1 : 1));
   const key = JSON.stringify(list);
   if (key === liveKey) return;
@@ -461,6 +463,7 @@ function handleLine(file, line) {
     ts: Date.now(),
   };
   if (R?.provider) base.provider = R.provider;
+  if (obj.type === 'assistant' && obj.message?.model && obj.message.model !== '<synthetic>') base.model = obj.message.model; // незадължително поле, като ctx
   if (subagent) {
     const L = linkFor(file, obj, agent);
     // допълнителни полета – само ако ги знаем (старите клиенти просто ги игнорират)
@@ -616,7 +619,7 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   setInterval(scanSessions, SESSIONS_MS);
   if (CODEX_ON) console.log(`Codex: watching ${CODEX_ROOT}`);
   if (GEMINI_ON) console.log(`Gemini CLI: watching ${GEMINI_ROOT}`);
-  watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx).catch(() => {});
+  watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx, ocLive).catch(() => {});
   lan.start().catch(() => {});
   scanSessions();
   wallet.port = actual;

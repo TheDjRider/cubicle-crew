@@ -1,5 +1,5 @@
 // Какво показва мониторът във всяко състояние (екранът е 18x13 логически пиксела).
-import { STATES } from './config.js';
+import { STATES, PROVIDER_MARK } from './config.js';
 import { SYNTAX, mix, shade, rgba } from './palette.js';
 import { R, rng } from './util.js';
 import { drawText } from './pixelfont.js';
@@ -113,18 +113,43 @@ function drawWaiting(ctx, x, y, w, h, t, color) {
   drawText(ctx, '?', x + Math.floor(w / 2) - 3, y + 2, on ? '#ffffff' : color, 2 > h / 6 ? 1 : 2);
 }
 
-function drawIdle(ctx, x, y, w, h, seed, t) {
+/** Заставка на бездействащ монитор: звездичката на Claude или бранд символ на другия агент (provider). */
+function drawIdle(ctx, x, y, w, h, seed, t, provider) {
   R(ctx, '#10121c', x, y, w, h);
-  // заставка: оранжева звездичка, която бавно се движи
   const px = x + 2 + Math.round((Math.sin(t / 2300 + seed) * 0.5 + 0.5) * (w - 6));
   const py = y + 2 + Math.round((Math.cos(t / 3100 + seed * 2) * 0.5 + 0.5) * (h - 6));
-  const c = '#d9773f';
-  R(ctx, c, px + 1, py, 1, 3); R(ctx, c, px, py + 1, 3, 1);
-  ctx.fillStyle = 'rgba(217,119,63,0.25)'; ctx.fillRect(px - 1, py - 1, 5, 5);
+  const mk = provider ? PROVIDER_MARK[provider] : null;
+  const halo = (a = 0.25, s = 5) => { ctx.fillStyle = rgba(mk ? mk.c : '#d9773f', a); ctx.fillRect(px - 1, py - 1, s, s); };
+  if (!mk) {
+    // звездичка
+    R(ctx, '#d9773f', px + 1, py, 1, 3); R(ctx, '#d9773f', px, py + 1, 3, 1);
+    halo();
+  } else if (mk.g === 'ring') {
+    R(ctx, mk.c, px + 1, py, 3, 1); R(ctx, mk.c, px, py + 1, 1, 3); R(ctx, mk.c, px + 4, py + 1, 1, 3); R(ctx, mk.c, px + 1, py + 4, 3, 1); // контур, по-светъл вътре
+    R(ctx, mk.c, px + 2, py + 1, 1, 1); R(ctx, mk.c, px + 2, py + 3, 1, 1); R(ctx, mk.c, px + 1, py + 2, 1, 1); R(ctx, mk.c, px + 3, py + 2, 1, 1);
+    halo(0.2, 7);
+  } else if (mk.g === 'gear') {
+    R(ctx, mk.c, px, py + 1, 5, 1); R(ctx, mk.c, px + 2, py, 1, 3); // плюс
+    R(ctx, mk.c, px - 1, py - 1, 1, 1); R(ctx, mk.c, px + 3, py - 1, 1, 1); R(ctx, mk.c, px - 1, py + 3, 1, 1); R(ctx, mk.c, px + 3, py + 3, 1, 1); // зъби
+    halo(0.16, 7);
+  } else if (mk.g === 'star4') {
+    R(ctx, mk.c, px + 1, py, 1, 1); R(ctx, mk.c, px - 1, py + 2, 1, 1); R(ctx, mk.c, px + 3, py + 2, 1, 1); R(ctx, mk.c, px + 1, py + 4, 1, 1); // върховете
+    R(ctx, mk.c, px, py + 1, 3, 1); R(ctx, mk.c, px + 1, py + 2, 1, 1); R(ctx, mk.c, px, py + 3, 3, 1);
+    halo(0.2, 7);
+  } else if (mk.g === 'eyes') {
+    const blink = Math.floor(t / 700 + seed) % 2;
+    if (blink) R(ctx, mk.c, px - 2, py + 1, 2, 2);
+    else R(ctx, mk.c, px + 3, py + 1, 2, 2);
+    halo(0.18, 9);
+  } else if (mk.g === 'bar') {
+    const bx = px + Math.round((Math.sin(t / 900 + seed) * 0.5 + 0.5) * 2);
+    R(ctx, mk.c, bx, py + 1, 3, 1); R(ctx, mk.c, bx, py + 3, 3, 1);
+    halo(0.16, 7);
+  }
 }
 
 /** Рисува екрана; prev/fade – плавен преход между две състояния. */
-export function drawScreen(ctx, sx, sy, sw, sh, state, t, seed, prevState, fade) {
+export function drawScreen(ctx, sx, sy, sw, sh, state, t, seed, prevState, fade, provider) {
   const draw = (st) => {
     const color = STATES[st]?.color || '#888';
     switch (st) {
@@ -135,7 +160,7 @@ export function drawScreen(ctx, sx, sy, sw, sh, state, t, seed, prevState, fade)
       case 'delegating': return drawDelegate(ctx, sx, sy, sw, sh, seed, t, color);
       case 'waiting': return drawWaiting(ctx, sx, sy, sw, sh, t, color);
       case 'off': return R(ctx, '#0e1016', sx, sy, sw, sh);
-      default: return drawIdle(ctx, sx, sy, sw, sh, seed, t);
+      default: return drawIdle(ctx, sx, sy, sw, sh, seed, t, provider);
     }
   };
   draw(state);

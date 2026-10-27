@@ -48,9 +48,15 @@ export class Particles {
       this.add({ kind: 'px', layer: 'top', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 8, g: 0, drag: 2.5, life: 0.8 + Math.random() * 0.5, color, size: Math.random() < 0.3 ? 2 : 1 });
     }
   }
-  /** Листове хартия, които се разлитат (сбит контекст – купчината от бюрото отива в коша). */
-  papers(x, y, n = 8) {
-    for (let i = 0; i < n; i++) this.add({ kind: 'px', layer: 'top', x: x + Math.random() * 5, y: y - Math.random() * 6, vx: (Math.random() - 0.5) * 40, vy: -25 - Math.random() * 30, g: 110, life: 0.9 + Math.random() * 0.4, color: i % 3 ? '#f6f3ea' : '#d8d2c4', size: 2 });
+  /** Листове хартия, които се разлитат (сбит контекст – купчината от бюрото отива в мелачката).
+   *  Ако е зададен to = {x, y}, листчетата полягат към нея и умират при нея (planes по-нататък летят до нея). */
+  papers(x, y, n = 8, to = null) {
+    for (let i = 0; i < n; i++) {
+      const dx = to ? to.x - x : 0, d = to ? Math.abs(to.x - x) || 1 : 1;
+      const lf = 0.8 + d / 220 + Math.random() * 0.25;
+      // хвърляне нагоре, после гравитация + детерминиран полет към целта (умира до нея)
+      this.add({ kind: 'px', layer: 'top', x: x + Math.random() * 5, y: y - Math.random() * 6, vx: to ? (dx / lf) * (0.75 + Math.random() * 0.35) + (Math.random() - 0.5) * 6 : (Math.random() - 0.5) * 40, vy: -25 - Math.random() * 30, g: 110, life: lf, color: i % 3 ? '#f6f3ea' : '#d8d2c4', size: 2 });
+    }
   }
   /** Сърчица над погален любимец. */
   hearts(x, y, n = 3) {

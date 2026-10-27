@@ -105,3 +105,6 @@ export function fmtDuration(ms, T) {
   if (m < 60) return `${m} ${T.min}`;
   return `${Math.floor(m / 60)} ${T.hour} ${m % 60} ${T.min}`;
 }
+
+/** Кратко име на модела: без датата накрая (claude-sonnet-4-5-20250514 -> claude-sonnet-4-5). */
+export function shortModel(id) { return id ? id.replace(/-(\d{8})$/, '') : ''; }

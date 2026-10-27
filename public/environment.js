@@ -336,6 +336,42 @@ function drawPrinter(ctx, w, h) {
   R(ctx, '#4ac26b', w - 6, h - 23, 1, 1);
 }
 
+/** Материална мелачка (shredder) 18x30 върху шкафче (като принтера) – динамичната част (дъвченето) е в drawShredderChew. */
+export const SHREDDER = { w: 18, h: 30, cab: 12 };
+function drawShredder(ctx, w, h) {
+  const cab = '#d8d2c4', dk = '#a8a090', C = SHREDDER.cab;
+  R(ctx, 'rgba(16,10,24,0.3)', 1, h, w - 1, 1);
+  R(ctx, dk, 1, h - C, w - 2, C); R(ctx, cab, 2, h - C + 1, w - 4, C - 2); R(ctx, dk, 2, h - C + 6, w - 4, 1); // шкафче
+  R(ctx, '#7a7a8a', Math.floor(w / 2) - 2, h - C + 3, 4, 1); R(ctx, '#7a7a8a', Math.floor(w / 2) - 2, h - 3, 4, 1);
+  h -= C;                                                        // тялото стои върху шкафчето
+  R(ctx, '#3a3a48', 2, h - 13, w - 4, 13);                       // тяло
+  R(ctx, '#55556a', 2, h - 13, w - 4, 1); R(ctx, '#2a2a34', 2, h - 2, w - 4, 1);
+  R(ctx, '#1e1e26', 5, h - 17, w - 10, 4);                       // гърло
+  R(ctx, '#4a4a58', 5, h - 17, w - 10, 1);
+  R(ctx, '#1e1e26', 6, h - 6, w - 12, 3);                        // кошче под дюзата
+  R(ctx, '#4a4a58', w - 6, h - 12, 2, 2);                        // копче
+}
+
+/** Дъвченето: зъби в гърлото се отварят/затварят (~125 ms), светваща LED и хартиени трохи от дюзата.
+ *  sh = room.shredder ({x, base, chewAt}); base е дъното на пропа (същата координата като при add). */
+export function drawShredderChew(ctx, sh, now) {
+  const t = now - sh.chewAt;
+  if (t < 0 || t > 4000) return;
+  const t2 = t / 1000;
+  const x = sh.x, y = sh.base - SHREDDER.cab; // тялото е над шкафчето
+  if (Math.floor(t2 * 6) % 2 === 0) R(ctx, '#e0a44a', x + SHREDDER.w - 7, y - 15, 2, 2); // LED на тялото
+  const open = (Math.floor(t2 * 8) % 2) === 0 ? 0 : 2;           // зъбите щракат на всеки ~125 ms
+  const tx = x + 5, ty = y - 15;                                 // гърлото (в горните редове на тялото)
+  for (let i = 0; i < 2; i++) {                                  // 2 чифта зъби: точно в гърлото (x+5..x+13)
+    R(ctx, '#8a8ea0', tx + i * 4, ty + open, 2, 2);              // горни зъби – слиза
+    R(ctx, '#8a8ea0', tx + 2 + i * 4, ty + 2 - open, 2, 2);      // долни зъби – качва се
+  }
+  const fk = Math.floor(t2 * 3) % 3;                             // хартиени трохи, изскачащи отстрани
+  if (fk === 0) { R(ctx, '#f6f3ea', x - 4, y - 9, 2, 2); R(ctx, '#d8d2c4', x + SHREDDER.w + 1, y - 12, 2, 1); }
+  else if (fk === 1) { R(ctx, '#d8d2c4', x - 3, y - 5, 2, 1); R(ctx, '#f6f3ea', x + SHREDDER.w + 2, y - 7, 1, 2); }
+  R(ctx, 'rgba(30,20,10,0.25)', x + 4, y - 1, SHREDDER.w - 8, 1); // сянка на прясно смачканото
+}
+
 function drawBookshelf(ctx, w, h) {
   const wood = '#6a4630', woodHi = '#845a3e', woodDk = '#4a2e1e';
   R(ctx, woodDk, 0, 0, w, h); R(ctx, wood, 1, 1, w - 2, h - 2); R(ctx, woodHi, 1, 1, w - 2, 1);
@@ -1071,12 +1107,18 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   else add(smallPlant, L.door.x + L.door.w + 1, CFG.WALL_H + 4, CFG.WALL_H + 4, SMALL_SH);
   if (H - Math.max(...L.rugs.map((r) => r.y + r.h)) > 26) add(bigPlant(), 4, H - 6, H - 6, PLANT_SH);
 
-  // между бюрата на двамата оркестратори: шкаф с принтер и растение
+  // между бюрата на двамата оркестратори: шкаф с принтер, мелачка и растение
+  let shredder = null;
   const leads = L.pods.filter((p) => p.role === 'lead');
   if (leads.length) {
-    const p = leads.reduce((m, q) => (q.x < m.x ? q : m)), mx = p.x + (L.teams[0]?.gw || CFG.POD_W);
-    add(prop('printer', 26, 30, (c) => drawPrinter(c, 26, 30)), mx + 8, p.y + 48, p.y + 48, { w: 28, h: 6 });
-    add(bigPlant(), mx + 38, p.y + 48, p.y + 48, PLANT_SH);
+    const p = leads.reduce((m, q) => (q.x < m.x ? q : m));
+    const gw = L.teams[0]?.gw || CFG.POD_W, mx = p.x + gw;
+    // центрирана група в средната клетка; при тясно разположение (телефон, gw < 82) мелачката отпада
+    const hasShred = gw >= 82, x0 = mx + Math.floor((gw - (hasShred ? 80 : 58)) / 2);
+    add(prop('printer', 26, 30, (c) => drawPrinter(c, 26, 30)), x0, p.y + 48, p.y + 48, { w: 28, h: 6 });
+    if (hasShred) add(prop('shredder', SHREDDER.w, SHREDDER.h, (c) => drawShredder(c, SHREDDER.w, SHREDDER.h)), x0 + 30, p.y + 48, p.y + 48, { w: 20, h: 6 });
+    add(bigPlant(), x0 + (hasShred ? 52 : 30), p.y + 48, p.y + 48, PLANT_SH);
+    shredder = hasShred ? { x: x0 + 30, base: p.y + 48, chewAt: -60000 } : null;
   }
 
   // сенките на мебелите – на пода под тях (в bg, мебелите се рисуват отгоре)
@@ -1109,7 +1151,7 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   return {
     W, H, bg, objects, windows, posters, board, clock, digital, door: L.door, layout: L, ceil, lightSwitch, lampSwitch,
     sky: { x0: skyX0, x1: skyX1, stars, clouds, skyline, view, k },
-    lampGlow, aquarium, arcade, season, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
+    lampGlow, aquarium, arcade, season, shredder, neon: decor.neon ? { x: lo.x + lo.w - 15, y: 12 + neonH(decor.neon.style) / 2, c: decor.neon.c } : null,
     doorOpen: 0,
   };
 }

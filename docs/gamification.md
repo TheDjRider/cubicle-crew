@@ -29,7 +29,7 @@ Earnings come from **active agent time**, weighted by state:
 
 ### Where earnings are computed: on the **server**
 Earnings must accrue even when the widget is hidden or no browser tab is open. The desktop app runs the server anyway, and the server already sees every event.
-- The server keeps a light mirror of the model's activity rule per agent: active if there was an event in the last `IDLE_MS` (8 s) **or** a tool is pending. A pending tool counts for at most 10 minutes, so one hung Bash doesn't print money.
+- The server keeps a light mirror of the model's activity rule per agent: active if there was an event in the last `IDLE_MS` (8 s) **or** a tool is pending. A pending tool counts for at most 10 minutes, so one hung Bash doesn't print money. OpenCode has no transcript heartbeat, so its live status uses its own windows (`providers.js`): busy for `OC_BUSY_MS` (45 s) after the last database write or while a tool runs, listed as live for `OC_LIVE_MS` (45 min) of silence – and idle sessions only while an `opencode` terminal is open for them.
 - The state weight is derived from the pending tool via the same `TOOL_STATE` map (move it to a shared module, e.g. `public/rules.js`, imported by both server and client).
 - Accrue every 5 s. Persist with a debounced write (≤ 1 write / 10 s, plus on exit).
 

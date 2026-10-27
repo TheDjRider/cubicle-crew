@@ -59,12 +59,14 @@ export class Model {
     }
     if (e.subagent) a.subagent = true;
     if (e.desc && !a.desc) a.desc = e.desc;
+    if (e.model) a.model = e.model;
     if (e.background) a.background = true;
     if (e.parent_tool_use_id && !a.parentToolUseId) a.parentToolUseId = e.parent_tool_use_id;
     if (e.parent && e.parent !== a.parent && e.parent !== a.id) this.link(a.id, e.parent);
     // контекстът (ctx/ctxMax от сървъра): рязък спад = разговорът е сбит (compaction) – купчината отива в коша
+    // 16 с прозорец срещу двойно сработване: точно събитие (compact) + евристиката от спада на ctx
     if (e.ctx > 0) {
-      if (a.ctx > 30000 && e.ctx < a.ctx * 0.6) a.compactedAt = now;
+      if (a.ctx > 30000 && e.ctx < a.ctx * 0.6 && (!a.compactedAt || now - a.compactedAt > 16000)) a.compactedAt = now;
       a.ctx = e.ctx; a.ctxMax = e.ctxMax || a.ctxMax || 200000;
     }
     if (e.type === 'presence') return;
@@ -106,6 +108,9 @@ export class Model {
       case 'user_prompt':
         a.lastTool = null;
         break;
+      case 'compact': // точно събитие за сбиването (OpenCode compaction part) – евристиката на ctx спада го дублира
+        if (e.ts > (a.compactTs || 0) + 15000) { a.compactTs = e.ts; a.compactedAt = now; }
+        break;
       default: break;
     }
   }
@@ -116,7 +121,7 @@ export class Model {
     for (const s of Array.isArray(list) ? list : []) {
       if (!s || typeof s.agent !== 'string') continue;
       ids.add(s.agent);
-      if (!this.agents.has(s.agent)) this.ingest({ agent: s.agent, label: s.label, type: 'presence', provider: typeof s.provider === 'string' ? s.provider.slice(0, 20) : undefined }, now);
+      if (!this.agents.has(s.agent)) this.ingest({ agent: s.agent, label: s.label, type: 'presence', provider: typeof s.provider === 'string' ? s.provider.slice(0, 20) : undefined, model: typeof s.model === 'string' ? s.model.slice(0, 60) : undefined }, now);
       const a = this.agents.get(s.agent);
       a.live = true; a.ended = false;
       if (typeof s.name === 'string' && s.name) a.sessionName = s.name;
