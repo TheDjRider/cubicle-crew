@@ -231,6 +231,11 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.18.1': [
+        ['По-нисък офис', 'Редовете бюра са по-близо и леко се застъпват – офисът заема по-малко място по височина. Прозорец в стария размер по подразбиране се смалява сам веднъж.'],
+        ['Купички и фонтан пред бюрото', 'Купичките и фонтанът за любимците са пред най-дясното бюро, за да се виждат; играчките остават под килима.'],
+        ['Масажният стол е от Hristiyan Dimov', 'Благодарим!'],
+      ],
       '2.18.0': [
         ['Прозрачен фон', 'Настройки → Прозорец: без стени и небе, подът избледнява – офисът стои направо на работния плот, по-нисък, точно над лентата на задачите. Кликовете в празното минават през него.'],
         ['Прозрачност на прозореца', 'Плъзгач в Настройки → Прозорец – колко да прозира работата ти отдолу.'],
@@ -465,6 +470,11 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.18.1': [
+        ['A lower office', 'The desk rows are closer and slightly overlap – the office takes less height. A window still at the old default size shrinks once by itself.'],
+        ['Bowls and fountain by the desk', 'The pet bowls and the water fountain sit in front of the rightmost desk, where you can see them; the toys stay under the rug.'],
+        ['The massage chair is by Hristiyan Dimov', 'Thank you!'],
+      ],
       '2.18.0': [
         ['Transparent background', 'Settings → Window: no walls or sky, the floor fades out – the office sits right on your desktop, lower, just above the taskbar. Clicks on empty spots go through.'],
         ['Window opacity', 'A slider in Settings → Window – how much of your work shows through.'],

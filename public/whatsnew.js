@@ -31,7 +31,8 @@ export class WhatsNew {
       const was = prev || (OLD_KEYS.some((k) => get(k) != null) ? '0.0.0' : null);
       if (was && cmp(e.current, was) > 0) {
         const items = Object.entries(T.whatsNew.items).filter(([v]) => cmp(v, was) > 0 && cmp(v, e.current) <= 0).sort((a, b) => cmp(b[0], a[0]));
-        if (items.length) this.push({ kind: 'news', version: e.current, items: items[0][1] });
+        // всички пропуснати версии, най-новата първа (от 2.17 направо на 2.18.1 – и новото в 2.18.0)
+        if (items.length) this.push({ kind: 'news', version: e.current, items: items.flatMap(([, v]) => v) });
       }
     }
     const v = e.newer && e.latest?.version;
