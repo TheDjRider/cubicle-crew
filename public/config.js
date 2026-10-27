@@ -232,6 +232,10 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.18.4': [
+        ['Часовник, неон и време при прозрачен фон', 'Стоят на стойки над бюрата, до дартса – стрелките, цифрите и времето навън се движат както на стената.'],
+        ['Нощ и при прозрачен фон', 'Вечер офисът потъмнява, а лампите, мониторите и неонът светят – само върху нарисуваното, работният плот около него остава чист.'],
+      ],
       '2.18.3': [
         ['Офисът до магазина е цял', 'В голям прозорец с отворен магазин офисът вече не се разтяга до дребни бюра сред безкраен под – остава в нормален размер, в средата.'],
       ],
@@ -477,6 +481,10 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.18.4': [
+        ['Clock, neon and weather on the transparent background', 'They stand on poles above the desks, next to the darts – the hands, digits and weather move just like on the wall.'],
+        ['Night on the transparent background too', 'In the evening the office gets darker and the lamps, monitors and neon glow – only on the drawn parts, the desktop around it stays clean.'],
+      ],
       '2.18.3': [
         ['The office stays whole next to the shop', 'In a big window with the shop open the office no longer stretches into tiny desks on an endless floor – it keeps its normal size, centred.'],
       ],
