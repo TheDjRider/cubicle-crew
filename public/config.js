@@ -266,6 +266,9 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.2': [
+        ['Неонът се вижда', 'При прозрачен фон неонът е над диспенсъра за вода – аркадата вече не го закрива.'],
+      ],
       '2.19.1': [
         ['Прозрачен фон: подредено', 'Времето навън стои върху кафемашината, вместо да виси във въздуха, неонът е пак над зоната за почивка, а отрязаната саксия в ъгъла я няма.'],
       ],
@@ -565,6 +568,9 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.2': [
+        ['The neon is visible', 'On the transparent background the neon now hangs above the water cooler – the arcade no longer hides it.'],
+      ],
       '2.19.1': [
         ['Transparent background, tidied up', 'The weather sign now sits on the coffee machine instead of floating in the air, the neon is back above the lounge, and the cut-off plant in the corner is gone.'],
       ],
