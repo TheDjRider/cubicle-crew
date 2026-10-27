@@ -454,7 +454,11 @@ export class UI {
     // любимец: името му (може да се смени – клик отваря „Любимци“)
     const pet = !a && !html && this.office.petAt(m.x, m.y);
     if (pet) html = `<div class="title">${esc(petTitle(pet.slot, this.office.petNames, pet.look?.id))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}${pet.look?.by ? ` · ${esc(T.shop.by(pet.look.by))}` : ''}</div><div class="dim">${T.pets.tip}</div>`;
-    const pk = !a && !html && !pet && this.office.pokes.at(m.x, m.y);
+    // предмет: подсказка и „ръчичка“ чак след 600 ms задържане – мишката, която само минава, не вижда нищо
+    let pk = !a && !html && !pet && this.office.pokes.at(m.x, m.y);
+    if (!pk) this.pokeHover = null;
+    else if (this.pokeHover?.hit !== pk.name) this.pokeHover = { hit: pk.name, since: now };
+    if (pk && now - this.pokeHover.since < 600) pk = null;
     if (pk) html = this.pokeTip(pk);
     this.canvas.style.cursor = a || pet || pk || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }

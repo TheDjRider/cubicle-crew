@@ -71,13 +71,13 @@ export function play(name, id, force = false) {
 
 // ================================================================ звуците на офиса (по желание)
 // Всичко се синтезира тук (шум + осцилатори) – без файлове. Ключове в localStorage `po.audio`:
-//   sfx     – отклик при клик по предметите в офиса (кафемашина, растение, аквариум…) – тихо, включено
+//   sfx     – отклик при клик по предметите в офиса (кафемашина, растение, аквариум…) – тихо, изключено
 //   ambient – фонов звук: клавиатурите на работещите, дъжд по стъклото, кафемашината, вратата… – изключено
 //   lofi    – много тих синтезиран lofi фон (бавни акорди) – изключено
 //   vol     – обща сила 0..1 за тези три (известията 'ask'/'done' не се пипат)
 // Във „Фокус“ и в ?overlay мълчат. Контекстът се спира (suspend), щом нищо не звучи – процесорът не работи напразно.
 const AKEY = 'po.audio';
-const ADEF = { sfx: true, ambient: false, lofi: false, vol: 0.5 };
+const ADEF = { sfx: false, ambient: false, lofi: false, vol: 0.5 };
 let A = { ...ADEF };
 try { A = { ...ADEF, ...JSON.parse(localStorage.getItem(AKEY) || '{}') }; } catch { /* по подразбиране */ }
 const aListeners = [];
@@ -184,9 +184,10 @@ export const SFX = {
   shred: (ac, o, t, p) => { burst(ac, o, t, { dur: 1.2, f: 220, q: 4, vol: 0.14, attack: 0.05, pan: p }); blip(ac, o, t, 70, 1.2, { vol: 0.05, type: 'sawtooth', pan: p }); },
   arcade: (ac, o, t, p) => { [523, 659, 784, 1046, 1318].forEach((f, i) => blip(ac, o, t + i * 0.06, f, 0.07, { vol: 0.035, type: 'square', pan: p })); blip(ac, o, t + 0.34, 1568, 0.2, { vol: 0.03, type: 'square', f2: 2093, pan: p }); },
   arcadeBg: (ac, o, t, p) => { const f = [392, 523, 659, 784][Math.floor(Math.random() * 4)]; blip(ac, o, t, f, 0.06, { vol: 0.015, type: 'square', pan: p }); blip(ac, o, t + 0.08, f * 1.5, 0.06, { vol: 0.012, type: 'square', pan: p }); },
-  knock: (ac, o, t, p) => { for (let i = 0; i < 2; i++) { burst(ac, o, t + i * 0.16, { dur: 0.08, f: 260, q: 2, vol: 0.3, pan: p }); blip(ac, o, t + i * 0.16, 110, 0.07, { vol: 0.12, pan: p }); } },
+  knock: (ac, o, t, p) => { for (let i = 0; i < 2; i++) { burst(ac, o, t + i * 0.16, { dur: 0.08, f: 260, q: 2, vol: 0.14, pan: p }); blip(ac, o, t + i * 0.16, 110, 0.07, { vol: 0.06, pan: p }); } },
   door: (ac, o, t, p) => { blip(ac, o, t, 340, 0.4, { vol: 0.012, type: 'sawtooth', f2: 520, attack: 0.1, pan: p }); burst(ac, o, t + 0.35, { dur: 0.08, f: 300, q: 1.5, vol: 0.06, pan: p }); },
-  cuckoo: (ac, o, t, p) => { for (let i = 0; i < 2; i++) { blip(ac, o, t + i * 0.55, 784, 0.18, { vol: 0.05, type: 'triangle', pan: p }); blip(ac, o, t + i * 0.55 + 0.2, 622, 0.26, { vol: 0.05, type: 'triangle', pan: p }); } },
+  // часовникът: дървено тик-так и едно меко плъзгащо се „ку“ – никога две ноти, които да звучат като „чака те“
+  cuckoo: (ac, o, t, p) => { for (let i = 0; i < 4; i++) burst(ac, o, t + i * 0.22, { dur: 0.02, f: i % 2 ? 1900 : 1500, q: 6, vol: 0.08, pan: p }); blip(ac, o, t + 0.95, 520, 0.3, { vol: 0.035, type: 'sine', f2: 470, pan: p }); },
   thud: (ac, o, t, p) => { blip(ac, o, t, 95, 0.18, { vol: 0.18, f2: 55, pan: p }); burst(ac, o, t, { dur: 0.1, f: 600, q: 1, vol: 0.08, pan: p }); burst(ac, o, t + 0.12, { dur: 0.3, f: 5000, q: 0.5, vol: 0.03, type: 'highpass', attack: 0.05, pan: p }); },
   dart: (ac, o, t, p) => { burst(ac, o, t, { dur: 0.04, f: 1800, q: 2, vol: 0.12, pan: p }); blip(ac, o, t, 180, 0.05, { vol: 0.05, pan: p }); },
   poof: (ac, o, t, p) => { burst(ac, o, t, { dur: 0.35, f: 900, q: 0.6, type: 'lowpass', vol: 0.18, attack: 0.02, f2: 200, pan: p }); },

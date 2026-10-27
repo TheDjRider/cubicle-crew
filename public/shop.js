@@ -35,9 +35,9 @@ function silhouette(c) {
   const g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height).data;
   let cut = false;
   for (let i = 3; i < d.length; i += 4) if (d[i] < 200) { cut = true; break; }
-  if (cut) { g.globalCompositeOperation = 'source-in'; g.fillStyle = '#4a4266'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; return; }
+  if (cut) { g.globalCompositeOperation = 'source-in'; g.fillStyle = '#8a83b0'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; return; } // светъл силует – чете се и на тъмния фон
   const tmp = makeCanvas(c.width, c.height); tmp.getContext('2d').drawImage(c, 0, 0);
-  g.clearRect(0, 0, c.width, c.height); g.filter = 'grayscale(1) brightness(0.45)'; g.drawImage(tmp, 0, 0); g.filter = 'none';
+  g.clearRect(0, 0, c.width, c.height); g.filter = 'grayscale(1) brightness(0.7)'; g.drawImage(tmp, 0, 0); g.filter = 'none';
 }
 /** Купичка 9x9 – златна, ако е отключено. */
 function trophy(on) {
