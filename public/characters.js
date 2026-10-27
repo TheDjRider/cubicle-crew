@@ -317,7 +317,17 @@ class Pet {
     const lo = L.lounge;
     const area = { x0: lo.x + 10, x1: lo.x + lo.w - 12, y0: lo.rug.y + 16, y1: L.H - 6 };
     if (!this.placed) { this.x = area.x0 + (area.x1 - area.x0) * this.start; this.y = area.y1 - 4; this.placed = true; this.until = now + 4000; }
-    this.x = clamp(this.x, area.x0, area.x1); this.y = clamp(this.y, area.y0, area.y1);
+    // лакомство (poke.js -> купичката): отива до нея извън зоната си, яде и се връща пеша (без скок обратно)
+    if (this.food) {
+      const dx = this.food.x - this.x, dy = this.food.y - this.y, d = Math.hypot(dx, dy);
+      if (d < 0.6) { this.food = null; this.mode = 'sit'; this.until = now + 5000; this.pettedAt = now; this.ate = true; this.away = true; this.flip = this.feedFlip; return; }
+      const m = Math.min(d, this.speed * 1.3 * dt);
+      this.mode = 'walk'; this.x += dx / d * m; this.y += dy / d * m; this.dist += m;
+      if (Math.abs(dx) > 0.2) this.flip = dx < 0;
+      return;
+    }
+    if (this.away && this.x >= area.x0 && this.x <= area.x1 && this.y >= area.y0 && this.y <= area.y1) this.away = false;
+    if (!this.away) { this.x = clamp(this.x, area.x0, area.x1); this.y = clamp(this.y, area.y0, area.y1); }
     if (this.mode === 'walk') {
       // зоната може да се е смалила след избора на целта (магазин, размер на прозореца) – иначе ходи на място до ръба
       this.tx = clamp(this.tx, area.x0, area.x1); this.ty = clamp(this.ty, area.y0, area.y1);
@@ -337,6 +347,8 @@ class Pet {
   blocked(t) { const m = this.avoid; return !!m && t.x > m.x - 8 && t.x < m.x + m.w + 8 && t.y > m.key - 24 && t.y < m.key + 6; }
   /** Погален: сяда за малко (кучето маха по-бързо с опашка). */
   pet(now) { this.mode = 'sit'; this.until = now + 4500; this.pettedAt = now; }
+  /** Лакомство в купичката (x, y = пред нея): тръгва веднага. */
+  feed(x, y) { this.food = { x, y }; this.feedFlip = false; } // застава отляво и гледа надясно, към купичката
   /** Попадение с мишката (логически пиксели) – за името при посочване. */
   hit(x, y) { return x >= this.x - 8 && x <= this.x + 8 && y >= this.y - 14 && y <= this.y + 2; }
 }

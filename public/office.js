@@ -13,6 +13,8 @@ import { prefs } from './prefs.js';
 import { drawBoardScreen, boardGlow, boardMoving, BOARD_PAGES } from './board.js';
 import { rgba } from './palette.js';
 import { R, pixLine, hashStr, clamp } from './util.js';
+import { Pokes } from './poke.js';
+import { sfx } from './sound.js';
 
 const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts', 'arcade', 'aquarium', 'massage']);
 // чашата на бюрото = екипът на седящия (под-агентските бюра са общи); без екип (оркестраторът чака) – бяла
@@ -51,6 +53,7 @@ export class Office {
     this.board = { page: prefs.board, prev: prefs.board, at: -1e9 };
     this.boardStats = null;
     this.boardFlips = [];            // кога да се смени слайдът (след като водещият натисне дистанционното)
+    this.pokes = new Pokes(this);    // клик по предметите: малка анимация + звук (poke.js)
   }
 
   /** Клик върху дъската: някой отива до екрана и сменя слайда с дистанционното (без хора – веднага). */
@@ -174,7 +177,18 @@ export class Office {
   }
 
   /** Галене: любимецът сяда, над него – сърчица. */
-  petPet(p, now = performance.now()) { p.pet(now); this.fx.hearts(p.x, p.y - 16); }
+  petPet(p, now = performance.now()) { p.pet(now); this.fx.hearts(p.x, p.y - 16); sfx(p.kind === 'dog' ? 'woof' : 'purr', (p.x / this.room.W) * 1.4 - 0.7); }
+
+  /** Лакомство в купичката bowl (обект от room.objects): най-близкият свободен любимец идва да яде. */
+  feedPet(bowl) {
+    const free = this.pets.filter((p) => p.placed && !p.food);
+    if (!free.length) return false;
+    const bx = bowl.x - 4, by = bowl.y + bowl.img.height + 1; // отляво на купичката (вдясно е фонтанчето), с глава към нея
+    const p = free.sort((a, b) => Math.hypot(a.x - bx, a.y - by) - Math.hypot(b.x - bx, b.y - by))[0];
+    p.feed(bx, by);
+    this.fx.sparkle(bowl.x + bowl.img.width / 2, bowl.y, '#e0a040', 6);
+    return true;
+  }
 
   /** Любимецът под мишката (най-предният). */
   petAt(x, y) {
@@ -634,16 +648,20 @@ export class Office {
       this.emitParticles(a, now, dt);
     }
     // вратата се отваря, ако някой е до нея
-    const nearDoor = [...this.actors.values()].some((a) => Math.abs(a.x - L.door.cx) < 10 && a.y < L.door.floorY + 14 && a.mode !== 'seated');
+    const nearDoor = now < this.pokes.doorUntil || [...this.actors.values()].some((a) => Math.abs(a.x - L.door.cx) < 10 && a.y < L.door.floorY + 14 && a.mode !== 'seated');
     this.room.doorOpen = clamp(this.room.doorOpen + (nearDoor ? dt * 4 : -dt * 2.5), 0, 1);
     // кучето понякога отива при някого, който почива (стои на място в зоната за почивка)
     const people = this.pets.some((p) => p.kind === 'dog') ? [...this.actors.values()].filter((a) => a.mode === 'idleSpot' && LOUNGE.has(a.loc.type)) : [];
-    for (const c of this.pets) { c.avoid = this.room.massage; c.update(dt, now, L, people); } // любимците не застават в масажния стол
+    for (const c of this.pets) {
+      c.avoid = this.room.massage; c.update(dt, now, L, people);
+      if (c.ate) { c.ate = false; this.fx.hearts(c.x, c.y - 16); sfx('munch', (c.x / this.room.W) * 1.4 - 0.7); } // хапна лакомството
+    } // любимците не застават в масажния стол
     // прашинки в слънчевите снопове
     if (!prefs.focus && this.tod && this.tod.daylight * (this.tod.sunny ?? 1) > 0.4 && Math.random() < dt * 3 * this.room.windows.length) {
       const w = this.room.windows[Math.floor(Math.random() * this.room.windows.length)];
       this.fx.dust(w.x + Math.random() * w.w, CFG.WALL_H + Math.random() * 40);
     }
+    this.pokes.update(now);
     if (!this._lastTeams || now - this._lastTeams > 1000) { this._lastTeams = now; this.manageTeams(now); this.ensureLayout(); }
   }
 
@@ -654,6 +672,7 @@ export class Office {
       if (a.mode === 'walk' || a.mode === 'pace' || a.alpha !== a.fadeTo) return true;
       if (a.pod >= 0 && (a.vstate === 'typing' || a.vstate === 'running')) return true; // пози по 75–110 мс
     }
+    if (this.pokes.active(performance.now())) return true; // побутнат предмет (кафе, принтер, прозорец…)
     if (performance.now() - this.lights.at < 900 || boardMoving(this.board, performance.now())) return true; // лампите примигват, екранът се движи
     const d = this.room.doorOpen;
     return (d > 0 && d < 1) || this.darts.flying.length > 0 || this.fx.list.some((p) => p.layer === 'top') ||
@@ -724,6 +743,7 @@ export class Office {
       const st = this.model.stats();
       drawWallDynamic(ctx, room, date, { agents: st.agents, tools: st.tools, subs: st.subs, agentColors: st.states.map((s) => STATES[s].color), tokens: prefs.focus ? null : this.tokens ?? null, wx: tod.wx || NO_WX, tod }, now);
       drawBoardScreen(ctx, room, this.board, this.boardStats, now);
+      this.pokes.drawWall(ctx, room, tod, now); // отворени прозорци, кукувицата
       drawLightFixtures(ctx, room, this.lights.on, prefs.lamp);
     }
     const lit = this.lightLevel(now);
@@ -754,7 +774,8 @@ export class Office {
       items.push({ key: p.y + POD.depthChair, fn: () => ctx.drawImage(img.back, p.x, p.y) });
       items.push({ key: p.y + POD.depthDesk, fn: () => this.drawPodFront(ctx, p, img, occupant.get(i), now) });
     });
-    for (const o of room.objects) items.push({ key: o.key, fn: () => (o.sway ? drawSway(ctx, o, now) : ctx.drawImage(o.img, o.x, o.y)) });
+    for (const o of room.objects) items.push({ key: o.key, fn: () => (o.sway ? drawSway(ctx, o, now, this.pokes.rustle(o, now)) : drawPoked(ctx, o, this.pokes.offset(o, now))) });
+    this.pokes.items(items, ctx, now);
     for (const a of this.actors.values()) {
       const k = a.depth(L);
       items.push({ key: k, fn: () => { a.draw(ctx, now, 'body'); if (!occupant.has(a.pod) || occupant.get(a.pod) !== a) a.draw(ctx, now, 'front'); } });
@@ -979,11 +1000,17 @@ function neonFlicker(now) {
 
 /** Растение: на всеки 9–15 s върхът (горните ~40%) се полюшва 1 px за около секунда, всяко по свое време. */
 const SWAY = [1, 1, 0, -1, -1, 0, 1, 0];
-function drawSway(ctx, o, now) {
+function drawSway(ctx, o, now, rustle = 0) {
   const per = 9000 + (o.x * 131) % 6000, t = (now + o.x * 977) % per;
-  const i = Math.floor(t / 160), off = i < SWAY.length && !prefs.focus ? SWAY[i] : 0;
+  const i = Math.floor(t / 160), off = rustle || (i < SWAY.length && !prefs.focus ? SWAY[i] : 0);
   if (!off) { ctx.drawImage(o.img, o.x, o.y); return; }
   const h = o.img.height, w = o.img.width, cut = Math.round(h * 0.4);
   ctx.drawImage(o.img, 0, cut, w, h - cut, o.x, o.y + cut, w, h - cut);
   ctx.drawImage(o.img, 0, 0, w, cut, o.x + off, o.y, w, cut);
+}
+
+/** Предмет, побутнат с мишката: разклатен/подскочил с d = {x, y} (poke.js), иначе на мястото си. */
+function drawPoked(ctx, o, d) {
+  if (!d) ctx.drawImage(o.img, o.x, o.y);
+  else ctx.drawImage(o.img, o.x + d.x, o.y + d.y);
 }

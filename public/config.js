@@ -85,6 +85,19 @@ const T_BG = {
   allow: (tool) => (tool ? `Разреши ли ${tool}?` : 'Отговори в терминала'),
   danger: 'Рискова команда',
   perm: { allow: 'Разреши', deny: 'Откажи', more: (n) => `още ${n}`, keys: 'Y / N', global: 'или Ctrl+Alt+Y / N отвсякъде' },
+  // клик по предметите в офиса (poke.js) – подсказката при посочване
+  poke: {
+    names: {
+      counter: 'Кафемашина · клик: свари кафе', cooler: 'Диспенсър · клик: глътка вода', plant: 'Растение · клик: пошумоли', bookshelf: 'Библиотека · клик',
+      arcade: 'Аркада · клик: пусни монета', aquarium: 'Аквариум · клик: почукай по стъклото', massage: 'Масажен стол · клик: включи', sofa: 'Диван · клик: тупни възглавницата',
+      table: 'Масичка · клик', floor_lamp: 'Лампа · клик: светни/угаси', season: 'Украса · клик', pet_fountain: 'Фонтанче · клик: пръсни', pet_bowl: 'Купичка',
+      toy: 'Играчка · клик: писни', printer: 'Принтер · клик: разпечатай', shredder: 'Мелачка · клик', window: 'Прозорец · клик: отвори', windowOpen: 'Прозорец · клик: затвори',
+      clock: 'Часовник · клик: ку-ку', door: 'Врата · клик: почукай',
+    },
+    generic: 'клик',
+    treat: 'Лакомство', treatHint: (n) => `Клик: ${n} монети – любимецът идва да хапне`,
+  },
+  perf: { line: (fps, ms, cpu) => `${fps} к/с · ${ms} мс · ~${cpu}% CPU` },
   sound: {
     on: 'Звук: включен – звъни, когато агент чака теб или сесия приключи (само ако не гледаш прозореца). Клик – изключи.',
     off: 'Звук: изключен. Клик – включи.',
@@ -137,6 +150,12 @@ const T_BG = {
     lang: 'Език',
     alerts: 'Известия',
     sound: 'Звук', soundHint: 'Кратка мелодия, когато агент чака теб или приключи дълга задача – само когато не гледаш прозореца.',
+    sfxTitle: 'Звуци на офиса', sfx: 'Звук при клик по предметите', sfxHint: 'Кафемашината бълбука, растението шумоли, аквариумът звънва… Тихо, само когато ти щракнеш.',
+    ambient: 'Фонов звук', ambientHint: 'Тихи клавиатури на агентите, които пишат, кафемашината, вратата, дъждът по стъклото (по истинското време), птички през отворен прозорец. Нощем по-тихо. Всичко е синтезирано, без файлове.',
+    lofi: 'Lofi фон', lofiHint: 'Много тихи бавни акорди с пращене като от плоча – за работа. Синтезирани в браузъра.',
+    volume: 'Сила', volumeHint: 'Обща за звуците на офиса (известията за чакащ агент не зависят от нея).',
+    perfTitle: 'Леко за машината', saver: 'Пестене на батерията', saverHint: 'Най-много 15 кадъра в секунда и без частици (искри, пара, прашинки). Хората и цветовете остават.',
+    perf: 'Брояч на кадрите', perfHint: 'Долу вляво: кадри в секунда, милисекунди работа на кадър и приблизително колко от едно ядро ползва офисът.',
     perm: 'Отговаряй на разрешенията оттук', permHint: 'Добавя малък hook в настройките на Claude Code (~/.claude/settings.json, пази се резервно копие). Когато Claude пита „Разреши ли …?“, долу се появяват бутони Разреши / Откажи (клавиши Y / N). Терминалът работи както досега; ако не отговориш тук до 45 с, въпросът си остава там. Изключването маха hook-а.',
     permErr: { parse: 'settings.json не е валиден JSON – не го пипам.', write: 'Не успях да запиша settings.json.', offline: 'Сървърът не отговаря.' },
     notify: 'Известие от системата', notifyHint: 'Изскачащо известие, когато агент чака теб. Клик върху него отваря терминала на сесията.',
@@ -188,7 +207,12 @@ const T_BG = {
   shop: {
     title: 'Магазин',
     open: 'Магазин (B)',
-    tabs: { walls: 'Стени', floor: 'Под и килими', furniture: 'Мебели', decor: 'Декор', pets: 'Любимци', special: 'Специални', avatar: 'Аватар', stats: 'Статистика', weather: 'Времето', trophies: 'Постижения' },
+    tabs: { walls: 'Стени', floor: 'Под и килими', furniture: 'Мебели', decor: 'Декор', pets: 'Любимци', special: 'Специални', avatar: 'Аватар', stats: 'Статистика', weather: 'Времето', trophies: 'Постижения', album: 'Албум' },
+    album: {
+      total: (n, m) => `Колекция ${n} / ${m}`, trophies: (n, m) => `Постижения ${n} / ${m}`,
+      fair: 'Всяко нещо има точна цена и се купува направо – без случайни кутии и без лов на редки предмети. Посочи силует, за да го пробваш в офиса; клик – към раздела му.',
+      season: (a, b) => `сезонно, ${a} – ${b}`,
+    },
     groups: {
       wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под бюрата', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
@@ -342,6 +366,19 @@ const T_EN = {
   allow: (tool) => (tool ? `Allow ${tool}?` : 'Answer in the terminal'),
   danger: 'Risky command',
   perm: { allow: 'Allow', deny: 'Deny', more: (n) => `${n} more`, keys: 'Y / N', global: 'or Ctrl+Alt+Y / N from anywhere' },
+  // clicking props in the office (poke.js) – hover hint
+  poke: {
+    names: {
+      counter: 'Coffee machine · click: brew', cooler: 'Water cooler · click: a sip', plant: 'Plant · click: rustle', bookshelf: 'Bookshelf · click',
+      arcade: 'Arcade · click: insert coin', aquarium: 'Aquarium · click: tap the glass', massage: 'Massage chair · click: switch on', sofa: 'Sofa · click: fluff the cushion',
+      table: 'Coffee table · click', floor_lamp: 'Lamp · click: on/off', season: 'Decoration · click', pet_fountain: 'Water fountain · click: splash', pet_bowl: 'Bowl',
+      toy: 'Toy · click: squeak', printer: 'Printer · click: print', shredder: 'Shredder · click', window: 'Window · click: open', windowOpen: 'Window · click: close',
+      clock: 'Clock · click: cuckoo', door: 'Door · click: knock',
+    },
+    generic: 'click',
+    treat: 'Treat', treatHint: (n) => `Click: ${n} coins – your pet comes for a snack`,
+  },
+  perf: { line: (fps, ms, cpu) => `${fps} fps · ${ms} ms · ~${cpu}% CPU` },
   sound: {
     on: 'Sound: on – chimes when an agent needs you or a session finishes (only while you are not looking at the window). Click to mute.',
     off: 'Sound: off. Click to turn it on.',
@@ -391,6 +428,12 @@ const T_EN = {
     lang: 'Language',
     alerts: 'Alerts',
     sound: 'Sound', soundHint: 'A short tune when an agent waits for you or finishes a long task – only when you are not looking at the window.',
+    sfxTitle: 'Office sounds', sfx: 'Sounds when you click things', sfxHint: 'The coffee machine gurgles, the plant rustles, the aquarium tinks… Quiet, and only when you click.',
+    ambient: 'Ambient sound', ambientHint: 'Soft keyboards of the agents that are typing, the coffee machine, the door, rain on the glass (real weather), birds through an open window. Quieter at night. All synthesized, no files.',
+    lofi: 'Lofi background', lofiHint: 'Very quiet slow chords with a little vinyl crackle – to work to. Synthesized in the browser.',
+    volume: 'Volume', volumeHint: 'For the office sounds (the waiting-agent alerts do not depend on it).',
+    perfTitle: 'Light on the machine', saver: 'Battery saver', saverHint: 'At most 15 frames per second and no particles (sparks, steam, dust). People and colours stay.',
+    perf: 'Frame counter', perfHint: 'Bottom left: frames per second, milliseconds of work per frame and roughly how much of one core the office uses.',
     perm: 'Answer permission prompts here', permHint: 'Adds a small hook to the Claude Code settings (~/.claude/settings.json, a backup is kept). When Claude asks “Allow …?”, Allow / Deny buttons appear at the bottom (keys Y / N). The terminal works as before; if you do not answer here within 45 s the question stays there. Turning it off removes the hook.',
     permErr: { parse: 'settings.json is not valid JSON – leaving it alone.', write: 'Could not write settings.json.', offline: 'The server is not answering.' },
     notify: 'System notification', notifyHint: 'A pop-up when an agent waits for you. Clicking it opens that session\'s terminal.',
@@ -442,7 +485,12 @@ const T_EN = {
   shop: {
     title: 'Shop',
     open: 'Shop (B)',
-    tabs: { walls: 'Walls', floor: 'Floor & rugs', furniture: 'Furniture', decor: 'Decor', pets: 'Pets', special: 'Special', avatar: 'Avatar', stats: 'Stats', weather: 'Weather', trophies: 'Achievements' },
+    tabs: { walls: 'Walls', floor: 'Floor & rugs', furniture: 'Furniture', decor: 'Decor', pets: 'Pets', special: 'Special', avatar: 'Avatar', stats: 'Stats', weather: 'Weather', trophies: 'Achievements', album: 'Album' },
+    album: {
+      total: (n, m) => `Collection ${n} / ${m}`, trophies: (n, m) => `Achievements ${n} / ${m}`,
+      fair: 'Everything has a fixed price and is bought directly – no loot boxes, no hunting for rare drops. Hover a silhouette to try it in the office; click to jump to its tab.',
+      season: (a, b) => `seasonal, ${a} – ${b}`,
+    },
     groups: {
       wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Office rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',

@@ -233,6 +233,30 @@
   .trophy .pg em { display: block; font-style: normal; color: #ffe27a; }
   .trophy .bar { display: inline-block; width: 70px; height: 5px; margin-right: 6px; background: #2c2640; vertical-align: 1px; }
   .trophy .bar i { display: block; height: 100%; background: #e0c24a; }
+  /* албумът: колекцията (shop.js renderAlbum) */
+  .album-top { margin-top: 8px; padding: 8px 10px; background: #1f1a2c; border: 1px solid #2c2640; border-radius: 3px; }
+  .album-top .big { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  .album-top .big b { font-size: 14px; color: #ffe27a; }
+  .album-top .big .bar { flex: 1; min-width: 80px; height: 7px; }
+  .album-top .dim { color: var(--ui-dim); font-size: 11px; }
+  .album-top .hint { margin: 6px 0 0; font-size: 11px; color: var(--ui-dim); }
+  .shop-panel .bar { display: inline-block; height: 5px; background: #2c2640; vertical-align: 1px; }
+  .shop-panel .bar i { display: block; height: 100%; background: #e0c24a; }
+  .album h3 { display: flex; align-items: center; gap: 8px; }
+  .album h3 .cnt { color: #ffe27a; text-transform: none; letter-spacing: 0; }
+  .album h3 .bar { flex: 1; max-width: 120px; }
+  .album .tiles { display: flex; flex-wrap: wrap; gap: 4px; }
+  .shop-panel .album .tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 52px; min-height: 46px; padding: 3px; background: #15121e; border: 1px solid #2c2640; }
+  .shop-panel .album .tile.got { background: #1f1a2c; border-color: #4a4266; }
+  .shop-panel .album .tile.season { border-style: dashed; border-color: #a0603a; }
+  .shop-panel .album .tile .th { margin: 0; }
+  .shop-panel .album .tile .cap { font-size: 10px; line-height: 11px; color: #ffe27a; white-space: nowrap; }
+  .shop-panel .album .tile.season .cap { color: #f0a070; }
+  .shop-panel .album .tile .cap i[style] { width: 8px; height: 8px; margin-right: 2px; }
+  .shop-panel .album .tile.cup { min-width: 36px; min-height: 36px; }
+  /* брояч на кадрите (? панел → „Брояч“ или ?debug) */
+  #perf { position: fixed; left: 6px; bottom: 36px; z-index: 25; padding: 1px 6px; font: 11px/16px ui-monospace, Consolas, monospace; color: #c8c8e8; background: rgba(14,12,20,.72); border: 1px solid #2c2640; border-radius: 3px; pointer-events: none; }
+  body.shopping #perf { left: calc(var(--shop-w) + 6px); }
   /* известие за постижение */
   #toast { position: fixed; left: 50%; top: 34px; transform: translateX(-50%); z-index: 25; display: flex; flex-direction: column; align-items: center;
     padding: 6px 16px 8px; background: #2a1e08; border: 2px solid #f0c840; border-radius: 4px; box-shadow: 3px 3px 0 rgba(0,0,0,.45); pointer-events: none; animation: pop .3s ease-out; }

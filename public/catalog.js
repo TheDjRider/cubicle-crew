@@ -45,6 +45,7 @@ export const TABS = [
   { id: 'stats', groups: [] },
   { id: 'weather', groups: [] },
   { id: 'trophies', groups: [] },
+  { id: 'album', groups: [] }, // колекцията: какво имаш и какво още може да се купи (без случайност)
 ];
 
 // Аватар на оркестраторите (★) – безплатен, един и същ всеки път. Индекси в SKINS / HAIRS от palette.js;
@@ -275,6 +276,15 @@ export function equipItem(save, slot, id) {
 }
 
 /** Име на любимец (по място): до PET_NAME_MAX знака, без контролни знаци и <>; празно = името по подразбиране. */
+// ---- лакомство за любимец: клик по купичката в офиса, фиксирана цена, без случайност ----
+export const TREAT_PRICE = 5;
+export function giveTreat(save) {
+  if ((save.tokens || 0) < TREAT_PRICE) return { ok: false, error: 'funds' };
+  save.tokens -= TREAT_PRICE;
+  save.treats = (save.treats || 0) + 1;
+  return { ok: true };
+}
+
 export const PET_NAME_MAX = 16;
 export function cleanPetName(name) {
   return String(name ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, PET_NAME_MAX);

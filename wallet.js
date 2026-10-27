@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { Earner, dayKey } from './public/rules.js';
-import { buyItem, equipItem, setAvatar, grantAchievements, setupOffice, setPetName } from './public/catalog.js';
+import { buyItem, equipItem, setAvatar, grantAchievements, setupOffice, setPetName, giveTreat } from './public/catalog.js';
 import { Stats } from './stats.js';
 
 const DIR = process.env.PIXEL_OFFICE_HOME || path.join(os.homedir(), '.pixel-office');
@@ -151,6 +151,7 @@ export class Wallet {
       : kind === 'avatar' ? setAvatar(this.save, body)
       : kind === 'setup' ? setupOffice(this.save, body)
       : kind === 'pet' ? setPetName(this.save, String(body.slot), body.name)
+      : kind === 'treat' ? giveTreat(this.save) // лакомство за любимец (фиксирана цена)
       : equipItem(this.save, String(body.slot), body.item == null ? null : String(body.item));
     if (r.ok) {
       this.dirty = true;

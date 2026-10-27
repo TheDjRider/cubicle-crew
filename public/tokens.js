@@ -4,7 +4,7 @@
 import { PARAMS, T } from './config.js';
 import { prefs } from './prefs.js';
 import { Earner, dayKey } from './rules.js';
-import { resolveDecor, buyItem, equipItem, setAvatar, avatarOf, grantAchievements, setupOffice, setPetName, unlocked } from './catalog.js';
+import { resolveDecor, buyItem, equipItem, setAvatar, avatarOf, grantAchievements, setupOffice, setPetName, giveTreat, unlocked } from './catalog.js';
 
 const SHOW_EVERY_MS = 20000; // най-много едно "+N" на агент за толкова (натрупва се)
 
@@ -108,6 +108,7 @@ function serverBackend() {
   return {
     buy: (item, slot) => post('api/buy', { item, slot }), equip: (slot, item) => post('api/equip', { slot, item }), avatar: (a) => post('api/avatar', a),
     setup: (d) => post('api/setup', d), pet: (slot, name) => post('api/pet', { slot, name }),
+    treat: () => post('api/treat', {}),
   };
 }
 
@@ -145,6 +146,7 @@ export function demoWallet(tokens) {
     avatar: (a) => act(setAvatar(save, a), 'avatar'),
     setup: (d) => act(setupOffice(save, d), 'setup'),
     pet: (slot, name) => act(setPetName(save, slot, name), 'pet'),
+    treat: () => act(giveTreat(save), 'treat'),
   };
   return (e) => { for (const b of earner.ingest(e, Date.now())) add(b.amount, b.reason, b.src); };
 }
