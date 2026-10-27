@@ -266,6 +266,9 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.4': [
+        ['Музиката се чува', 'Lofi фонът е по-силен, а нощните акорди са с октава по-високо – на лаптоп и слушалки вече не изчезват.'],
+      ],
       '2.19.3': [
         ['Лентата горе се скрива', 'При прозрачен фон лентата на прозореца, долните бутони и подсказките се скриват, когато мишката излезе – и когато е излязла през празно място.'],
       ],
@@ -571,6 +574,9 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.4': [
+        ['You can hear the music', 'The lofi is louder and the night chords are an octave higher – they no longer vanish on laptop speakers and headphones.'],
+      ],
       '2.19.3': [
         ['The top bar hides again', 'On the transparent background the title bar, the bottom buttons and tooltips now hide when the mouse leaves – also when it leaves through an empty spot.'],
       ],
