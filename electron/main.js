@@ -223,12 +223,13 @@ function rebuildWindow() {
     settings.bounds = { ...b, y: b.y + b.height - h, height: h };
     settings.baseSize = { w: b.width, h };
   }
+  shopOpen = false; clearSolid = null; // новата страница е без отворен панел (иначе остава „отворен“ завинаги)
   createWindow();
   old.destroy();
 }
 
 function applyOnTop() { win.setAlwaysOnTop(settings.onTop, 'floating'); sendState(); }
-function applyThrough() { win.setIgnoreMouseEvents(settings.through, { forward: true }); sendState(); }
+function applyThrough() { clearSolid = null; win.setIgnoreMouseEvents(settings.through, { forward: true }); sendState(); }
 function sendState() { win?.webContents.send('state', { onTop: settings.onTop, through: settings.through }); }
 
 // ---------------------------------------------------------------- настройки на приложението: едни и същи от трея и от панела „?“
@@ -436,8 +437,19 @@ ipcMain.on('shop', (_e, open) => {
 ipcMain.handle('settings:get', () => desktopSettings());
 ipcMain.on('settings:set', (_e, key, v) => applyDesktop(String(key), typeof v === 'number' ? v : !!v));
 // прозрачен фон: над празно място кликовете минават към това отдолу (forward – страницата пак получава движението на мишката)
+// прозрачен фон: 20 пъти в секунда питаме страницата какво има под курсора и според отговора кликовете минават или не.
+// Не разчитаме на препратените от Windows движения на мишката: над лентата горе (drag) ги няма,
+// а при мащаб на екрана ≠ 100% се разминават – прозорецът оставаше „прозрачен за кликове“ навсякъде.
+let clearSolid = null;
+function clearTick() {
+  if (!win || !settings.clear || waiting || settings.strip || settings.through || shopOpen || !win.isVisible()) return;
+  const p = screen.getCursorScreenPoint(), b = win.getBounds();
+  if (p.x < b.x || p.y < b.y || p.x >= b.x + b.width || p.y >= b.y + b.height) return;
+  win.webContents.send('clear-probe', p.x - b.x, p.y - b.y);
+}
 ipcMain.on('clear-hit', (_e, solid) => {
-  if (!win || !settings.clear || settings.through || shopOpen) return;
+  if (!win || !settings.clear || settings.through || shopOpen || solid === clearSolid) return;
+  clearSolid = solid;
   win.setIgnoreMouseEvents(!solid, { forward: true });
 });
 // „Избери…“ до допълнителните папки (Docker, VM…): системният диалог; пътят отива към сървъра през страницата
@@ -537,5 +549,6 @@ app.whenReady().then(async () => {
   log('window', JSON.stringify(win.getBounds()));
   globalShortcut.register(SHORTCUT, () => toggleWindow());
   setInterval(autoHideTick, 1000);
+  setInterval(clearTick, 50);
   screen.on('display-metrics-changed', () => { if (!visible(win.getBounds())) win.setBounds(defaultBounds()); });
 });

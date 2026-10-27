@@ -21,13 +21,12 @@ import { lanGate } from './lan.js';
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d', { alpha: !!PARAMS.clear });
 if (PARAMS.clear) { document.documentElement.classList.add('clear'); clearHits(); }
-// прозрачен фон: мишката над празен (прозрачен) пиксел -> приложението пропуска кликовете към това отдолу.
+// прозрачен фон: приложението пита (clear-probe, 20/s) какво има под курсора; празен (прозрачен) пиксел -> кликовете минават.
 // Лентата горе, ръбовете (за преоразмеряване) и всичко от DOM (етикети, панели, магазин) остават „твърди“.
 function clearHits() {
   const bridge = window.pixelOffice;
-  if (!bridge?.clearHit) return;
+  if (!bridge?.clearHit || !bridge.onClearProbe) return;
   const g = canvas.getContext('2d');
-  let last = null, sent = 0;
   const solidAt = (x, y) => {
     if (y < 26 || x < 6 || y > innerHeight - 6 || x > innerWidth - 6) return true;
     const el = document.elementFromPoint(x, y);
@@ -36,11 +35,7 @@ function clearHits() {
     const px = Math.floor((x - r.left) * k), py = Math.floor((y - r.top) * k);
     try { return g.getImageData(px - 1, py - 1, 3, 3).data.some((v, i) => i % 4 === 3 && v > 24); } catch { return true; }
   };
-  addEventListener('mousemove', (e) => {
-    const s = solidAt(e.clientX, e.clientY);
-    // повтаря се веднъж в секунда: след магазина/панела приложението връща прозореца „твърд“
-    if (s !== last || e.timeStamp - sent > 1000) { last = s; sent = e.timeStamp; bridge.clearHit(s); }
-  });
+  bridge.onClearProbe((x, y) => bridge.clearHit(solidAt(x, y)));
 }
 const model = new Model();
 const fx = new Particles();
