@@ -238,6 +238,7 @@ export class UI {
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       const pet = !a && this.office.petAt(m.x, m.y);
       if (pet) { this.office.petPet(pet); return; } // клик = погали; двоен клик = име и външен вид
+      if (a) this.office.greet(a); // почиващият ти маха
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
   }
