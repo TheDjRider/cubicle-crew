@@ -17,6 +17,7 @@ import { Strip } from './strip.js';
 import { Capture } from './capture.js';
 import { play } from './sound.js';
 import { lanGate } from './lan.js';
+import { Ambience } from './ambience.js';
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d', { alpha: !!PARAMS.clear });
@@ -50,6 +51,8 @@ ui.onWeather = () => shop.open('weather');
 ui.onPet = (slot) => shop.openPet(slot);
 ui.onStats = () => shop.open('stats');
 ui.onTab = (tab) => shop.open(tab); // от настройките: статистика / времето
+// купичката в офиса: лакомство за монети (сървърът или демо портфейлът)
+ui.onTreat = () => (tokens.backend?.treat ? tokens.backend.treat() : Promise.resolve({ ok: false, error: 'offline' }));
 // споделяне: снимка / 10 s клип (кадрите се добавят в цикъла)
 const capture = new Capture(canvas);
 ui.onSnapshot = () => { capture.snapshot(); ui.note(T.help.saved); };
@@ -59,6 +62,8 @@ ui.onClip = () => { ui.note(T.help.recording); capture.clip((ok) => ui.note(ok ?
 shop.onToggle = () => { lastSpecKey = ''; resize(); };
 // „Фокус“ / „Скривай команди“ (от ? панела или от трея): любимците, стената с монетите, магазинът
 prefs.onChange((k) => {
+  if (k === 'saver' && prefs.saver) fx.list.length = 0;
+  if (k === 'perf') perfEl();
   if (k !== 'focus') return;
   office.syncPets();
   if (prefs.focus) { shop.close(); fx.list.length = 0; for (const a of office.actors.values()) if (a.sofaAct === 'game' || a.sofaAct === 'doze') a.sofaAct = 'rest'; }
@@ -171,6 +176,22 @@ function checkSleep(now) {
 // иначе 30 fps – картината е същата, просто не я рисуваме два пъти. Скрит прозорец в Electron
 // (backgroundThrottling е изключен) -> само логиката, 4 пъти в секунда, без рисуване.
 const CALM_MS = 1000 / 30 - 4;  // -4 мс толеранс за трептенето на vsync
+const SAVER_MS = 1000 / 15 - 4; // пестене на батерията: най-много 15 кадъра/s, каквото и да става
+const ambience = new Ambience(); // фоновият звук (по желание) – следи сцената 5 пъти в секунда
+// брояч за доверие (? панел → „Брояч на кадрите“ или ?debug): кадри/s, мс работа на кадър, ~% от едно ядро
+const perf = { frames: 0, busy: 0, since: performance.now(), el: null };
+function perfEl() {
+  if (prefs.perf && !perf.el) { perf.el = document.createElement('div'); perf.el.id = 'perf'; document.body.appendChild(perf.el); perf.el.textContent = '…'; }
+  else if (!prefs.perf && perf.el) { perf.el.remove(); perf.el = null; }
+}
+perfEl();
+function perfTick(now, busy) {
+  perf.frames++; perf.busy += busy;
+  const dt = now - perf.since;
+  if (dt < 1000) return;
+  if (perf.el) perf.el.textContent = T.perf.line(Math.round(perf.frames * 1000 / dt), (perf.busy / perf.frames).toFixed(1), Math.max(0.1, perf.busy / dt * 100).toFixed(1));
+  perf.frames = 0; perf.busy = 0; perf.since = now;
+}
 const HIDDEN_MS = 250;
 let last = performance.now();
 let shown = true, raf = 0, timer = 0;
@@ -179,7 +200,8 @@ function schedule() {
   else timer = setTimeout(() => frame(performance.now()), HIDDEN_MS);
 }
 function frame(now) {
-  if (shown && now - last < CALM_MS && !office.animating() && !capture.recording) { schedule(); return; }
+  if (shown && (prefs.saver ? now - last < SAVER_MS : now - last < CALM_MS && !office.animating() && !capture.recording)) { schedule(); return; }
+  const w0 = performance.now();
   let dt = Math.min(shown ? 0.1 : HIDDEN_MS / 1000 * 2, (now - last) / 1000);
   last = now;
   model.tick(now);
@@ -195,6 +217,8 @@ function frame(now) {
     else { office.render(ctx, now, applyWeather(timeOfDay(date), currentWx()), date); capture.frame(now); phoneList?.render(now); }
   }
   ui.sync(now);
+  if (!strip && !morning?.active) ambience.tick(now, office, office.tod, shown);
+  perfTick(now, performance.now() - w0);
   schedule();
 }
 schedule();

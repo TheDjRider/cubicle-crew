@@ -38,7 +38,7 @@ The text of your prompts, Claude's answers, thinking, file contents and tool out
 
 All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
 
-- `save.json` (+ `.bak`) – coins, bought decor, achievements, avatar, pet names. No session content.
+- `save.json` (+ `.bak`) – coins, bought decor, achievements, avatar, pet names, how many pet treats you gave (a treat = clicking the bowl, a fixed 5 coins via `POST /api/treat`, same local-only guard as the shop). No session content.
 - `save.lock` – which running copy counts coins (pid + port).
 - `stats.json` – your stats for the last 60 days: per day and session the project folder name, time in each state, number of tool calls, token counts and the API cost estimate. Numbers only, no commands or text.
 - `weather.json` – the city you picked and the last forecast.
@@ -46,7 +46,7 @@ All in `~/.pixel-office/` (or `PIXEL_OFFICE_HOME`):
 - `lan.json` – the phone view: on/off, its PIN, the preferred port and the sign-in tokens of the phones that entered the PIN.
 - `folders.json` – the extra agent folders you added in the settings panel (paths only).
 
-The desktop app also keeps `settings.json` and `desktop.log` (start, window size, wake/sleep) in `%APPDATA%\pixel-office\`. Page settings (language, sound, Focus mode, session names) live in the app's own browser storage.
+The desktop app also keeps `settings.json` and `desktop.log` (start, window size, wake/sleep) in `%APPDATA%\pixel-office\`. Page settings (language, sound, office sounds and their volume, battery saver, frame counter, Focus mode, session names) live in the app's own browser storage. All sounds – alerts, clicks on props, the optional ambient sound and lofi background – are synthesized in the page with WebAudio; there are no audio files and nothing is fetched or recorded. The ambient sound only reads what the office already shows (who is typing, the weather you picked).
 
 ## What it sends over the network
 

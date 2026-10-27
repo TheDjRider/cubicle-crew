@@ -3,7 +3,8 @@
 import { CFG, STATES, STATE_ORDER, PROVIDERS, T, PARAMS, LANG, setLang, itemName, petTitle } from './config.js';
 import { shortDetail, fmtDuration, danger, fmtUsd, shortModel } from './util.js';
 import { coinUrl } from './tokens.js';
-import { soundOn, setSound } from './sound.js';
+import { soundOn, setSound, sfx, audioPrefs } from './sound.js';
+import { TREAT_PRICE } from './catalog.js';
 import { prefs } from './prefs.js';
 import { boardData, demoBoardData, PAGE_DAYS } from './board.js';
 import { settingsHtml } from './settings.js';
@@ -232,14 +233,36 @@ export class UI {
     this.canvas.addEventListener('click', (e) => {
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
-      if (!a && this.onSwitch(m)) { this.office.toggleLights(); return; }
-      if (!a && this.onSwitch(m, 'lampSwitch')) { this.office.toggleLamp(); return; }
-      if (!a && this.onBoard(m)) { this.office.boardClick(); this.loadBoardStats(); return; }
+      const pan = (m.x / (this.office.room?.W || 356)) * 1.4 - 0.7, calm = prefs.focus; // звук при клик (не във „Фокус“)
+      if (!a && this.onSwitch(m)) { this.office.toggleLights(); sfx('click', pan, calm); return; }
+      if (!a && this.onSwitch(m, 'lampSwitch')) { this.office.toggleLamp(); sfx('click', pan, calm); return; }
+      if (!a && this.onBoard(m)) { this.office.boardClick(); this.loadBoardStats(); sfx('bloop', pan, calm); return; }
       if (!a && this.onPlaque(m)) { this.onWeather?.(); return; }
       const pet = !a && this.office.petAt(m.x, m.y);
       if (pet) { this.office.petPet(pet); return; } // клик = погали; двоен клик = име и външен вид
+      // предмет в офиса: малка анимация + звук (poke.js); купичката – лакомство за любимец
+      const hit = !a && this.office.pokes.at(m.x, m.y);
+      if (hit) { if (hit.name === 'pet_bowl') this.treat(hit); else this.office.pokes.poke(hit); return; }
       this.focus(a && a.id !== this.office.focusId ? a.id : null);
     });
+  }
+
+  /** Купичката: лакомство за монети (фиксирана цена) – най-близкият любимец идва да яде. Без любимци – само „блуп“. */
+  async treat(hit) {
+    const pk = this.office.pokes;
+    if (!this.office.pets.length || !this.onTreat || PARAMS.lan) { pk.poke(hit); sfx('bloop'); return; }
+    if (this.office.pets.every((p) => p.food)) return; // всички вече тичат към купичката
+    const r = await this.onTreat();
+    if (r?.ok) { pk.poke(hit); sfx('bloop'); this.office.feedPet(hit.o); }
+    else this.note(T.shop.errors[r?.error] || T.shop.errors.offline);
+  }
+
+  /** Подсказката за предмет, който може да се побутне. */
+  pokeTip(hit) {
+    const P = T.poke;
+    if (hit.name === 'pet_bowl') return this.office.pets.length && this.onTreat && !PARAMS.lan ? `<div class="title">${P.treat}</div><div class="dim">${P.treatHint(TREAT_PRICE)}</div>` : `<div class="dim">${P.names.pet_bowl}</div>`;
+    const key = hit.name === 'window' ? (this.office.pokes.open.has(hit.i) ? 'windowOpen' : 'window') : hit.name.startsWith('toy_') ? 'toy' : hit.name.replace(/^(plant|sofa)_.*/, '$1');
+    return `<div class="dim">${P.names[key] || P.generic}</div>`;
   }
 
   /** Мишката е върху дъската (или спуснатия екран пред нея). */
@@ -431,7 +454,9 @@ export class UI {
     // любимец: името му (може да се смени – клик отваря „Любимци“)
     const pet = !a && !html && this.office.petAt(m.x, m.y);
     if (pet) html = `<div class="title">${esc(petTitle(pet.slot, this.office.petNames, pet.look?.id))}</div><div>${T.pets.kinds[pet.kind]} · ${esc(itemName(pet.look))}${pet.look?.by ? ` · ${esc(T.shop.by(pet.look.by))}` : ''}</div><div class="dim">${T.pets.tip}</div>`;
-    this.canvas.style.cursor = a || pet || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
+    const pk = !a && !html && !pet && this.office.pokes.at(m.x, m.y);
+    if (pk) html = this.pokeTip(pk);
+    this.canvas.style.cursor = a || pet || pk || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
     this.tip.hidden = false;
@@ -549,6 +574,8 @@ export class UI {
       // плъзгачът за прозрачност: на живо, докато се влачи
       this.help.addEventListener('input', (e) => {
         const t = e.target;
+        // силата на звуците на офиса: на живо
+        if (t.dataset?.audiorange) { audioPrefs.set('vol', t.value / 100); const o = t.closest('label')?.querySelector('output'); if (o) o.textContent = `${t.value}%`; return; }
         if (!t.dataset?.deskrange) return;
         const out = t.closest('label')?.querySelector('output');
         if (out) out.textContent = `${t.value}%`;
@@ -592,6 +619,8 @@ export class UI {
     else if (t.name === 'mode') prefs.set('focus', t.value === 'focus');
     else if (d.legend != null) { this.legend.hidden = !t.checked; try { localStorage.setItem('po.legend', t.checked ? '1' : '0'); } catch { /* */ } }
     else if (d.sound != null) { setSound(t.checked); this.lastHud = 0; }
+    else if (d.audio) { audioPrefs.set(d.audio, t.checked); if (t.checked && d.audio === 'sfx') sfx('bloop'); }
+    else if (d.audiorange) sfx('bloop'); // пуснат плъзгач: проба на силата
     else if (t.name === 'lang') { if (PARAMS.desktop && this.bridge?.action) this.bridge.action('lang:' + t.value); else setLang(t.value); }
     else if (d.hook != null) this.setHook(t.checked);
     else if (d.lan != null) this.setLan({ enabled: t.checked });

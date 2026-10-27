@@ -91,6 +91,7 @@ function prop(name, w, h, fallback, vari = null) {
     const dx = an ? an[0] : Math.round((w - tw) / 2), dy = an ? an[1] : h - th;
     ctx.drawImage(TILES.img, t.x ?? t[0], t.y ?? t[1], tw, th, dx, dy, tw, th);
   } else fallback(ctx);
+  c.propName = name; // за кликовете по предметите (poke.js)
   return c;
 }
 function patternTile(name) {
@@ -857,9 +858,11 @@ export function drawAquariumFish(ctx, aq, t) {
   }
   const lift = feeding ? Math.sin(Math.min(1, fed / 800, (FEED_MS - fed) / 800) * Math.PI / 2) : 0;
   const fish = [['#f07a30', 0.9, 6, 0], ['#f0d040', 1.3, 10, 2.1], ['#e05a8a', 0.7, 13, 4.2]];
+  // почукано по стъклото (poke.js): рибките се стрелват – времето им за миг избързва с ~2.6 s, после плавно спира
+  const tf = aq.tapBase ? t + aq.tapBase - 2600 * Math.exp(-Math.max(0, t - aq.tapAt) / 260) : t;
   for (const [c, v, fy, ph] of fish) {
-    const k = (Math.sin(t / 1000 * v + ph) + 1) / 2, dir = Math.cos(t / 1000 * v + ph) > 0 ? 1 : -1;
-    const x = Math.round(x0 + 3 + k * (tk.w - 9)), y = Math.round(y0 + fy - lift * (fy - 3) + Math.sin(t / 400 + ph) * 1);
+    const k = (Math.sin(tf / 1000 * v + ph) + 1) / 2, dir = Math.cos(tf / 1000 * v + ph) > 0 ? 1 : -1;
+    const x = Math.round(x0 + 3 + k * (tk.w - 9)), y = Math.round(y0 + fy - lift * (fy - 3) + Math.sin(tf / 400 + ph) * 1);
     R(ctx, c, x, y, 3, 2); R(ctx, shade(c, 0.75), dir > 0 ? x - 1 : x + 3, y, 1, 2); R(ctx, '#1d1626', dir > 0 ? x + 2 : x, y, 1, 1);
   }
   // мехурчета
@@ -885,6 +888,13 @@ export function drawArcadeScreen(ctx, ar, t) {
   for (let i = 0; i < 4; i++) R(ctx, ['#e04a6b', '#4ac26b', '#e0c24a', '#4a8fe0'][i], x0 + 1 + i * 2 + (k % 2), y0 + 1, 1, 1);
   const px = x0 + 1 + (Math.floor(t / 300) % (s.w - 3));
   R(ctx, '#ffffff', px, y0 + s.h - 2, 3, 1);
+  // клик по аркадата (poke.js): „монета“ – екранът премигва в цветове и пише 1UP
+  const pk = ar.pokeAt ? t - ar.pokeAt : Infinity;
+  if (pk >= 0 && pk < 1500) {
+    const cols = ['#e04a6b', '#e0c24a', '#4ac26b', '#4a8fe0'];
+    for (let i = 0; i < s.h; i++) R(ctx, cols[(i + Math.floor(pk / 80)) % 4], x0, y0 + i, s.w, 1);
+    if (Math.floor(pk / 200) % 2) { R(ctx, '#101830', x0 + 1, y0 + 2, s.w - 2, 4); R(ctx, '#ffffff', x0 + 2, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 4, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 5, y0 + 4, 1, 1); R(ctx, '#ffffff', x0 + 6, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 8, y0 + 3, 1, 2); R(ctx, '#ffffff', x0 + 9 > x0 + s.w - 2 ? x0 + 8 : x0 + 9, y0 + 3, 1, 1); }
+  }
   R(ctx, '#f0d040', x0 + ((k * 3) % (s.w - 1)), y0 + 2 + (k % (s.h - 4)), 1, 1);
 }
 // ---------- кътът на любимците: играчки (разхвърляни), купички с храна (по една на любимец), фонтан за вода ----------
@@ -1147,7 +1157,8 @@ export function buildRoom(L, seed = 1, decor = DEFAULT_DECOR) {
   // ---------- мебели като отделни обекти (сортират се по дълбочина) ----------
   const objects = [];
   // sh = сянката на пода под предмета: { w, h, cx? } (cx – отместване на центъра от левия ръб), null = без сянка
-  const add = (img, x, base, key = base, sh = { w: img.width + 2, h: 5 }) => objects.push({ img, x: Math.round(x), y: Math.round(base - img.height), key, sh });
+  // name = името на предмета (prop) – по него poke.js знае какво е щракнато
+  const add = (img, x, base, key = base, sh = { w: img.width + 2, h: 5 }) => { const o = { img, x: Math.round(x), y: Math.round(base - img.height), key, sh, name: img.propName }; objects.push(o); return o; };
   const bs = lo.bookshelf;
   add(prop('bookshelf', bs.w, bs.h, (c) => drawBookshelf(c, bs.w, bs.h)), bs.x, bs.base);
   const ct = lo.counter;

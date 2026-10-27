@@ -4,6 +4,7 @@ import { drawText, textWidth } from './pixelfont.js';
 import { drawCoin } from './tokens.js';
 import { rgba } from './palette.js';
 import { R } from './util.js';
+import { prefs } from './prefs.js';
 
 const CONFETTI = ['#e04a6b', '#e0c24a', '#4ac26b', '#4a8fe0', '#b04ae0', '#e07a4a', '#ffffff'];
 
@@ -11,6 +12,7 @@ export class Particles {
   constructor() { this.list = []; }
 
   add(p) {
+    if (prefs.saver) return p; // пестене на батерията: без частици (сърчицата на погален любимец също)
     if (this.list.length >= CFG.MAX_PARTICLES) this.list.shift();
     p.age = 0;
     this.list.push(p);
