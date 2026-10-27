@@ -46,8 +46,9 @@ export function computeLayout(devW, devH) {
   }
   const { scale, podH } = best;
   // FIXED_ROOM (прозрачен фон): стаята не се разтяга по прозореца – около нея е работният плот (index.html я слага долу вдясно)
-  const W = CFG.FIXED_ROOM ? best.needW : Math.max(best.needW, Math.floor(devW / scale));
-  const H = CFG.FIXED_ROOM ? best.needH : Math.max(best.needH, Math.floor(devH / scale));
+  // MAX_STRETCH: не повече от толкова пъти нужното – останалото е празно поле около стаята (main.js я центрира)
+  const fit = (need, dev) => (CFG.FIXED_ROOM ? need : Math.max(need, Math.min(Math.floor(dev / scale), Math.floor(need * CFG.MAX_STRETCH))));
+  const W = fit(best.needW, devW), H = fit(best.needH, devH);
   const per = CFG.SUB_PER_ROW, rows = 2;
 
   // зоната с бюрата

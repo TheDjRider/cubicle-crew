@@ -123,6 +123,13 @@ function resize() {
   const h = portrait ? Math.min(innerHeight - 140, Math.round(innerWidth * 0.66)) : innerHeight - shopH;
   office.resize(Math.round(Math.max(160, innerWidth - shopW) * dpr), Math.round(Math.max(120, h) * dpr));
   applyCanvas();
+  // стаята е по-малка от мястото (MAX_STRETCH) -> в средата му; прозрачният фон е долу вдясно (index.html), телефонът – горе
+  const stage = document.getElementById('stage');
+  if (!PARAMS.clear) {
+    const dx = Math.max(0, Math.floor((innerWidth - shopW - parseFloat(canvas.style.width)) / 2));
+    const dy = portrait ? 0 : Math.max(0, Math.floor((h - parseFloat(canvas.style.height)) / 2));
+    stage.style.transform = dx || dy ? `translate(${dx}px, ${dy}px)` : '';
+  }
   if (phoneList) document.documentElement.style.setProperty('--office-h', canvas.style.height);
 }
 addEventListener('resize', resize);
