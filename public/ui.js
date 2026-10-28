@@ -357,9 +357,11 @@ export class UI {
       const lx = this.clampX(anc.label.x, it, 'lw', it.label);
       // на дивана и при кафето/водата двама стоят близо – етикетът на втория е ред по-долу, за да не се застъпват
       const ly = this.px(anc.label.y) + (a.mode !== 'walk' && (a.loc.type === 'sofa' || a.loc.type === 'cooler') ? (a.loc.type === 'sofa' ? a.loc.i : 1) * (it.lh ||= (it.label.offsetHeight || 14) + 2) : 0);
-      this.set(it, 'lpos', `${lx},${ly},${Math.round(a.alpha * 10)}`, () => {
-        it.label.style.transform = `translate(${lx}px, ${ly}px) translateX(-50%)`;
-        it.label.style.opacity = hidden ? 0 : Math.min(1, a.alpha * 1.2);
+      const mid = !!anc.label.mid;
+      const dim = !hidden && this.labelCovers(a, it, lx, mid ? ly - (it.lhh ||= it.label.offsetHeight || 14) / 2 : ly);
+      this.set(it, 'lpos', `${lx},${ly},${mid},${dim},${Math.round(a.alpha * 10)}`, () => {
+        it.label.style.transform = `translate(${lx}px, ${ly}px) translate(-50%, ${mid ? '-50%' : '0'})`;
+        it.label.style.opacity = hidden ? 0 : Math.min(1, a.alpha * 1.2) * (dim ? 0.35 : 1);
         it.bubble.style.visibility = hidden ? 'hidden' : '';
       });
       // балонче: инструмент + детайл (само за "работни" състояния)
@@ -395,6 +397,24 @@ export class UI {
     if (!it[key]) it[key] = elm.offsetWidth || 0;
     const half = it[key] / 2 + 2, W = this.overlay.clientWidth;
     return Math.round(Math.max(half, Math.min(W - half, this.px(x))) * this.dpr) / this.dpr;
+  }
+
+  /** Етикетът закрива ли друг герой или любимец? Тогава избледнява – освен при "чака", фокус,
+   *  посочване на някой от двамата или мишка върху самия етикет. lx/top са в CSS px (lx = средата). */
+  labelCovers(a, it, lx, top) {
+    const office = this.office, cs = this.cssScale;
+    if (!cs || a.vstate === 'waiting' || office.focusId === a.id || this.hoverId === a.id) return false;
+    const w = (it.lw || 0) / cs, h = (it.lhh || it.label.offsetHeight || 14) / cs;
+    const x0 = lx / cs - w / 2, y0 = top / cs, x1 = x0 + w, y1 = y0 + h;
+    const m = this.mouse;
+    if (m && m.x >= x0 && m.x <= x1 && m.y >= y0 && m.y <= y1) return false;
+    const hit = (l, t, r, b) => Math.min(x1, r) - Math.max(x0, l) >= 2 && Math.min(y1, b) - Math.max(y0, t) >= 2;
+    for (const o of office.actors.values()) {
+      if (o === a || o.alpha < 0.3 || this.hoverId === o.id) continue;
+      if (hit(o.x - 7, o.y - 28, o.x + 7, o.y - 1)) return true; // тялото, без празните ръбове на 24x32 спрайта
+    }
+    for (const p of office.pets) if (p.placed && hit(p.x - 6, p.y - 10, p.x + 6, p.y)) return true;
+    return false;
   }
 
   set(it, key, val, fn) { if (it.c[key] !== val) { it.c[key] = val; fn(); } }

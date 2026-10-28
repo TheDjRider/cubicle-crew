@@ -15,6 +15,7 @@ export const POD = {
   bulb: { x: 13, y: 24 },
   bell: { x: 36, y: 33 },
   label: { x: 36, y: 51 },
+  plate: { x: 36, y: 44 },       // табелката на лидера: средата на лицето на бюрото (под него вече е столът на долния ред)
   depthChair: 18, depthSeat: 24, depthDesk: 30,
 };
 

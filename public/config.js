@@ -266,6 +266,9 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.5': [
+        ['Имената не пречат', 'Името на агента е табелка на неговото бюро, а не върху стола и главата на съседа отдолу. Етикет, който закрива някого, избледнява – посочи го и пак се вижда ясно.'],
+      ],
       '2.19.4': [
         ['Музиката се чува', 'Lofi фонът е по-силен, а нощните акорди са с октава по-високо – на лаптоп и слушалки вече не изчезват.'],
       ],
@@ -574,6 +577,9 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.5': [
+        ['Names stay out of the way', 'An agent\'s name is now a plate on its own desk, not on the chair and head of the neighbour below. A label that covers someone fades – point at it and it is clear again.'],
+      ],
       '2.19.4': [
         ['You can hear the music', 'The lofi is louder and the night chords are an octave higher – they no longer vanish on laptop speakers and headphones.'],
       ],

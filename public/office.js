@@ -1170,10 +1170,12 @@ export class Office {
   anchors(a) {
     const L = this.L;
     const p = L.pods[a.pod];
-    if (a.isAtDesk(L)) return { label: { x: p.x + POD.label.x, y: p.y + POD.label.y }, bubble: { x: p.cx, y: p.y + 8 }, seated: true };
-    // до собственото бюро (става/сяда/разхожда се) – етикетът остава под бюрото
+    // горният ред: етикетът е табелка на лицето на бюрото (mid = центриран по y); долният – под бюрото, на килима
+    const desk = p && (p.role === 'lead' ? { x: p.x + POD.plate.x, y: p.y + POD.plate.y, mid: true } : { x: p.x + POD.label.x, y: p.y + POD.label.y });
+    if (a.isAtDesk(L)) return { label: desk, bubble: { x: p.cx, y: p.y + 8 }, seated: true };
+    // до собственото бюро (става/сяда/разхожда се) – етикетът остава на бюрото
     if (p && (a.loc.type === 'pace' || a.loc.type === 'seat') && Math.abs(a.x - p.cx) < 20 && a.y >= p.aisleY - 1 && a.y <= p.seatY + 1)
-      return { label: { x: p.x + POD.label.x, y: p.y + POD.label.y }, bubble: { x: a.x, y: a.y - 32 }, seated: false };
+      return { label: desk, bubble: { x: a.x, y: a.y - 32 }, seated: false };
     return { label: { x: a.x, y: a.y + 3 }, bubble: { x: a.x, y: a.y - 32 }, seated: false };
   }
 }
