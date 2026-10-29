@@ -611,6 +611,92 @@ export class Dog extends Pet {
   }
 }
 
+// ======================================================================
+// Екзотични любимци (look.sp): фенек, капибара, вомбат. Размерът е в рамките на кучето; рисуват се по режим
+// (sit / sleep / walk), гледат надясно (flip огледално), както Cat и Dog.
+// ======================================================================
+const SPECIES = {
+  fennec:   { speed: 17, sleepP: 0.3, people: 0 },
+  capybara: { speed: 10, sleepP: 0.5, people: 0.4 },
+  wombat:   { speed: 11, sleepP: 0.6, people: 0 },
+};
+export class Critter extends Pet {
+  constructor(look, start = 0.5) { super(look, start); this.kind = 'exotic'; }
+  get sp() { return SPECIES[this.look.sp] || SPECIES.fennec; }
+  get speed() { return this.sp.speed; }
+  rest() { return Math.random() < this.sp.sleepP ? 'sleep' : 'sit'; }
+  target(area, people = []) {
+    if (people.length && Math.random() < this.sp.people) {
+      const p = people[Math.floor(Math.random() * people.length)];
+      return { x: p.x + (Math.random() < 0.5 ? -12 : 12), y: p.y + 4 };
+    }
+    return super.target(area);
+  }
+  draw(ctx, now) {
+    const x = Math.round(this.x), y = Math.round(this.y) - (this.lift || 0), lk = this.look;
+    const { c: C, hi: H, m: M, e: E, eye: EY } = lk, mode = this.mode;
+    const f = Math.floor(this.dist / 2) % 2;
+    const blink = frameAt(now, 3200, 14) === 0;
+    ctx.save();
+    if (this.flip) { ctx.translate(x * 2, 0); ctx.scale(-1, 1); }
+    R(ctx, 'rgba(16,10,24,0.3)', x - 7, y, 15, 1);
+    if (lk.sp === 'capybara') {
+      if (mode === 'sleep') {
+        R(ctx, C, x - 6, y - 5, 12, 5); R(ctx, H, x - 5, y - 5, 10, 1);
+        R(ctx, C, x + 4, y - 5, 5, 4); R(ctx, M, x + 9, y - 4, 1, 2); R(ctx, E, x + 5, y - 6, 1, 1); R(ctx, E, x + 7, y - 4, 2, 1);
+      } else if (mode === 'sit') {
+        R(ctx, C, x - 5, y - 7, 10, 7); R(ctx, H, x - 4, y - 7, 8, 1);
+        R(ctx, C, x + 3, y - 10, 6, 5); R(ctx, M, x + 8, y - 8, 2, 3); R(ctx, NOSE, x + 9, y - 8, 1, 1);
+        R(ctx, E, x + 4, y - 11, 1, 1); R(ctx, E, x + 6, y - 11, 1, 1);
+        R(ctx, blink ? E : EY, x + 6, y - 8, 1, 1); R(ctx, E, x + 6, y - 9, 1, 1); // полузатворено око
+        R(ctx, M, x + 3, y - 1, 3, 1);
+      } else {
+        R(ctx, C, x - 6, y - 8, 12, 5); R(ctx, H, x - 5, y - 8, 10, 1);
+        for (const [lx, i] of [[x - 5, 0], [x - 3, 1], [x + 2, 1], [x + 4, 0]]) R(ctx, M, lx, y - 3, 1, f === i ? 2 : 3); // крачка: диагонални двойки
+        R(ctx, C, x + 5, y - 10, 5, 5); R(ctx, M, x + 9, y - 8, 2, 3); R(ctx, NOSE, x + 10, y - 8, 1, 1);
+        R(ctx, E, x + 6, y - 11, 1, 1); R(ctx, EY, x + 8, y - 9, 1, 1);
+      }
+    } else if (lk.sp === 'wombat') {
+      if (mode === 'sleep') {
+        R(ctx, C, x - 6, y - 4, 12, 4); R(ctx, H, x - 5, y - 4, 10, 1);
+        R(ctx, C, x + 4, y - 5, 4, 3); R(ctx, NOSE, x + 8, y - 4, 1, 2); R(ctx, E, x + 4, y - 6, 2, 1); R(ctx, E, x + 6, y - 4, 2, 1);
+      } else if (mode === 'sit') {
+        R(ctx, C, x - 4, y - 6, 9, 6); R(ctx, H, x - 3, y - 6, 7, 1);
+        R(ctx, C, x + 2, y - 9, 6, 4); R(ctx, E, x + 2, y - 10, 2, 1); R(ctx, E, x + 6, y - 10, 2, 1);
+        R(ctx, NOSE, x + 7, y - 8, 2, 2); R(ctx, blink ? C : EY, x + 5, y - 8, 1, 1);
+        R(ctx, M, x + 3, y - 1, 3, 1);
+      } else {
+        const by = f ? 1 : 0; // клатушка: тялото потрепва с крачката
+        R(ctx, C, x - 6, y - 7 + by, 11, 5); R(ctx, H, x - 5, y - 7 + by, 9, 1);
+        for (const lx of [x - 5, x - 3, x + 1, x + 3]) R(ctx, M, lx, y - 2, 1, 2);
+        R(ctx, C, x + 4, y - 9 + by, 5, 5); R(ctx, E, x + 4, y - 10 + by, 2, 1);
+        R(ctx, NOSE, x + 9, y - 7 + by, 1, 2); R(ctx, EY, x + 7, y - 8 + by, 1, 1);
+      }
+    } else { // фенек
+      const tip = '#2a2220', tw = frameAt(now, 500) ? 1 : 0, ear = frameAt(now, 2600, 10) === 0 ? 1 : 0;
+      if (mode === 'sleep') {
+        R(ctx, C, x - 5, y - 4, 10, 4); R(ctx, H, x - 4, y - 4, 7, 1); R(ctx, M, x - 2, y - 2, 5, 2);
+        R(ctx, C, x + 3, y - 5, 4, 3); R(ctx, E, x + 3, y - 8, 1, 3); R(ctx, E, x + 5, y - 8, 1, 3);
+        R(ctx, E, x + 5, y - 3, 2, 1); R(ctx, NOSE, x + 7, y - 3, 1, 1);
+        R(ctx, C, x - 6, y - 3, 2, 3); R(ctx, tip, x - 7, y - 2, 1, 2);
+      } else if (mode === 'sit') {
+        R(ctx, C, x - 3, y - 6, 6, 6); R(ctx, H, x - 2, y - 6, 3, 1); R(ctx, M, x + 1, y - 5, 2, 4);
+        R(ctx, C, x, y - 10, 5, 4);
+        R(ctx, E, x, y - 14 + ear, 2, 4 - ear); R(ctx, E, x + 3, y - 14, 2, 4); R(ctx, M, x + 3, y - 13, 1, 2);
+        R(ctx, blink ? C : EY, x + 3, y - 8, 1, 1); R(ctx, M, x + 4, y - 7, 2, 2); R(ctx, NOSE, x + 5, y - 7, 1, 1);
+        R(ctx, C, x - 6, y - 3 - tw, 3, 2); R(ctx, tip, x - 7, y - 3 - tw, 1, 2);
+      } else {
+        R(ctx, C, x - 5, y - 7, 9, 4); R(ctx, H, x - 4, y - 7, 7, 1);
+        for (const lx of [x - 4 + f, x - 1 - f, x + 1 + f, x + 3 - f]) R(ctx, C, lx, y - 3, 1, 3);
+        R(ctx, C, x + 3, y - 9, 4, 4); R(ctx, E, x + 3, y - 13, 1, 4); R(ctx, E, x + 5, y - 13, 1, 4);
+        R(ctx, EY, x + 5, y - 8, 1, 1); R(ctx, NOSE, x + 7, y - 7, 1, 1);
+        R(ctx, C, x - 8, y - 7 - tw, 3, 2); R(ctx, tip, x - 9, y - 7 - tw, 1, 2);
+      }
+    }
+    ctx.restore();
+  }
+}
+
 /** Шарки на кучетата (p = цвят). b0/bw/top = началото, ширината и горният ред на тялото (за седнал: x, 4, редът на главата). */
 function dogPattern(ctx, lk, mode, x, y, b0, bw, top) {
   const P = lk.p;

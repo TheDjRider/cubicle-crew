@@ -226,7 +226,7 @@ const T_BG = {
     groups: {
       wall: 'Боя', wainscot: 'Ламперия', floor: 'Под', rug: 'Килим под бюрата', lrug: 'Килим в зоната за почивка', sofa: 'Диван',
       chair: 'Столове', lamp: 'Лампа', plants: 'Растения', posters: 'Постери', window: 'Изглед през прозорците',
-      cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', season: 'Сезонно', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада', massage: 'Масажен стол',
+      cat: 'Котка', cat2: 'Още една котка', dog: 'Куче', exotic: 'Екзотичен любимец', season: 'Сезонно', neon: 'Неонов надпис', espresso: 'Кафемашина', aquarium: 'Аквариум', arcade: 'Аркада', massage: 'Масажен стол',
     },
     slots: { 'rug.team0': 'Екип 1', 'rug.team1': 'Екип 2', 'chair.team0': 'Под-агенти', 'chair.team1': 'Екип 2', 'chair.lead': '★ Оркестратори' },
     by: (h) => `от ${h.includes(' ') ? h : '@' + h}`, // GitHub акаунт с @, истинско име без
@@ -241,11 +241,12 @@ const T_BG = {
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'отключено',
     pets: {
-      cats: ['Котка 1', 'Котка 2', 'Котка 3'], dog: 'Куче', away: 'Прибери у дома', back: 'Върни в офиса', crew: 'Любимци на контрибютъри',
+      cats: ['Котка 1', 'Котка 2', 'Котка 3'], dog: 'Куче', exotic: ['Екзотичен 1', 'Екзотичен 2', 'Екзотичен 3'], away: 'Прибери у дома', back: 'Върни в офиса', crew: 'Любимци на контрибютъри',
       unlock: (p) => `Идва с шарка „${p}“; после можеш да ѝ избереш всяка купена шарка.`,
       unlockDog: (p) => `Идва като ${p.toLowerCase()}; после можеш да му избереш всяка купена порода.`,
+      unlockExotic: (p) => `Идва като ${p.toLowerCase()}; после можеш да го смениш с всеки друг екзотичен любимец.`,
       home: 'у дома', full: 'Няма място', name: 'Име', rename: 'Преименувай', save: 'Запази',
-      limit: 'Най-много 3 любимци в офиса: до 3 котки или 2 котки и куче. Прибраните остават твои и могат да се върнат.',
+      limit: 'Най-много 3 любимци в офиса: до 3 любимци – котки, куче или екзотични. Прибраните остават твои и могат да се върнат.',
     },
     avatar: {
       body: 'Тяло', male: 'Мъж', female: 'Жена', style: 'Прическа',
@@ -327,9 +328,10 @@ const T_BG = {
   news: { label: 'Ново', bueno: ['Буено е в магазина', 'Безплатна нова порода за кучето ти – Магазин → Любимци'] },
   // офисните любимци: имена по подразбиране (по място) и подсказката при посочване
   pets: {
-    names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Шаро' },
-    breeds: { 'dog.bueno': 'Буено' }, // порода със собствено име (вместо това на мястото)
-    kinds: { cat: 'Офисна котка', dog: 'Офисно куче' },
+    names: { cat: 'Мица', cat2: 'Тигрото', cat3: 'Писана', dog: 'Шаро', exotic: 'Сахара', exotic2: 'Мочи', exotic3: 'Кубчо' },
+    // порода със собствено име (вместо това на мястото)
+    breeds: { 'dog.bueno': 'Буено', 'exotic.fennec': 'Сахара', 'exotic.capybara': 'Мочи', 'exotic.wombat': 'Кубчо' },
+    kinds: { cat: 'Офисна котка', dog: 'Офисно куче', exotic: 'Екзотичен любимец' },
     tip: 'Клик – погали · двоен клик – име и външен вид',
   },
   // начална настройка (първо пускане)
@@ -545,7 +547,7 @@ const T_EN = {
     groups: {
       wall: 'Paint', wainscot: 'Wainscoting', floor: 'Floor', rug: 'Office rug', lrug: 'Lounge rug', sofa: 'Sofa',
       chair: 'Chairs', lamp: 'Lamp', plants: 'Plants', posters: 'Posters', window: 'Window view',
-      cat: 'Cat', cat2: 'One more cat', dog: 'Dog', season: 'Seasonal', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade', massage: 'Massage chair',
+      cat: 'Cat', cat2: 'One more cat', dog: 'Dog', exotic: 'Exotic pet', season: 'Seasonal', neon: 'Neon sign', espresso: 'Coffee machine', aquarium: 'Aquarium', arcade: 'Arcade', massage: 'Massage chair',
     },
     slots: { 'rug.team0': 'Team 1', 'rug.team1': 'Team 2', 'chair.team0': 'Sub-agents', 'chair.team1': 'Team 2', 'chair.lead': '★ Leads' },
     by: (h) => `by ${h.includes(' ') ? h : '@' + h}`,
@@ -560,11 +562,12 @@ const T_EN = {
     progress: (v, g) => `${v} / ${g}`,
     unlocked: 'unlocked',
     pets: {
-      cats: ['Cat 1', 'Cat 2', 'Cat 3'], dog: 'Dog', away: 'Send home', back: 'Bring back', crew: 'Contributor pets',
+      cats: ['Cat 1', 'Cat 2', 'Cat 3'], dog: 'Dog', exotic: ['Exotic 1', 'Exotic 2', 'Exotic 3'], away: 'Send home', back: 'Bring back', crew: 'Contributor pets',
       unlock: (p) => `Comes as a ${p.toLowerCase()}; then you can give it any pattern you own.`,
       unlockDog: (p) => `Comes as a ${p.toLowerCase()}; then you can make it any breed you own.`,
+      unlockExotic: (p) => `Comes as a ${p.toLowerCase()}; then you can swap it for any other exotic pet.`,
       home: 'at home', full: 'No room', name: 'Name', rename: 'Rename', save: 'Save',
-      limit: 'Up to 3 pets in the office: 3 cats, or 2 cats and a dog. Pets sent home stay yours and can come back.',
+      limit: 'Up to 3 pets in the office: any mix of cats, a dog and exotic pets. Pets sent home stay yours and can come back.',
     },
     avatar: {
       body: 'Body', male: 'Man', female: 'Woman', style: 'Hairstyle',
@@ -644,9 +647,9 @@ const T_EN = {
   },
   news: { label: 'New', bueno: ['Bueno is in the shop', 'A free new breed for your dog – Shop → Pets'] },
   pets: {
-    names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex' },
-    breeds: { 'dog.bueno': 'Bueno' },
-    kinds: { cat: 'Office cat', dog: 'Office dog' },
+    names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex', exotic: 'Sahara', exotic2: 'Mochi', exotic3: 'Cubey' },
+    breeds: { 'dog.bueno': 'Bueno', 'exotic.fennec': 'Sahara', 'exotic.capybara': 'Mochi', 'exotic.wombat': 'Cubey' },
+    kinds: { cat: 'Office cat', dog: 'Office dog', exotic: 'Exotic pet' },
     tip: 'Click to pet · double-click to rename or change the look',
   },
   setup: {
@@ -713,6 +716,8 @@ const T_EN = {
     'cat1.extra': 'Cat', 'dog.extra': 'Dog',
     'dog.bueno': 'Bueno Mixed', 'dog.beagle': 'Beagle', 'dog.golden': 'Golden retriever', 'dog.black': 'Black labrador', 'dog.dachshund': 'Dachshund', 'dog.corgi': 'Corgi',
     'dog.husky': 'Husky', 'dog.dalmatian': 'Dalmatian', 'dog.pug': 'Pug',
+    'exotic1.extra': 'Exotic pet', 'exotic2.extra': 'Second exotic', 'exotic3.extra': 'Third exotic',
+    'exotic.fennec': 'Fennec fox', 'exotic.capybara': 'Capybara', 'exotic.wombat': 'Wombat',
     'season.pumpkins': 'Pumpkins', 'season.tree': 'Christmas tree', 'season.tulips': 'Tulips', 'season.fan': 'Standing fan',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',
     'neon.code': 'Neon sign', 'neon.cheers': 'Cheers', 'neon.metal': 'Beer & metal', 'espresso.pro': 'Espresso machine', 'aquarium.reef': 'Aquarium', 'arcade.retro': 'Arcade cabinet', 'massage.chair': 'Massage chair',

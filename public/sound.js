@@ -218,6 +218,8 @@ export const SFX = {
     s.connect(fl).connect(g).connect(panner(ac, p, o)); s.start(t); s.stop(t + 2.3); lfo.start(t); lfo.stop(t + 2.3);
   },
   woof: (ac, o, t, p) => { blip(ac, o, t, 380, 0.12, { vol: 0.08, type: 'sawtooth', f2: 190, pan: p }); burst(ac, o, t, { dur: 0.12, f: 700, q: 1.5, vol: 0.08, pan: p }); },
+  yip: (ac, o, t, p) => { blip(ac, o, t, 900, 0.07, { vol: 0.06, type: 'triangle', f2: 1500, pan: p }); blip(ac, o, t + 0.1, 1100, 0.07, { vol: 0.05, type: 'triangle', f2: 1700, pan: p }); }, // фенек
+  chirp: (ac, o, t, p) => { blip(ac, o, t, 520, 0.1, { vol: 0.05, type: 'triangle', f2: 760, pan: p }); blip(ac, o, t + 0.12, 600, 0.08, { vol: 0.04, type: 'triangle', f2: 480, pan: p }); }, // капибара, вомбат
   munch: (ac, o, t, p) => { for (let i = 0; i < 5; i++) burst(ac, o, t + i * 0.18, { dur: 0.05, f: rr(1200, 2200), q: 2, vol: 0.07, pan: p }); },
   bloop: (ac, o, t, p) => { blip(ac, o, t, 300, 0.12, { vol: 0.07, f2: 900, pan: p }); },
   key: (ac, o, t, p) => { burst(ac, o, t, { dur: rr(0.01, 0.02), f: rr(2200, 4200), q: 2, vol: rr(0.18, 0.32), pan: p }); },

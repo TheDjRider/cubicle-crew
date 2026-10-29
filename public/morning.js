@@ -6,7 +6,7 @@ import { T, STATES } from './config.js';
 import { timeOfDay } from './environment.js';
 import { applyWeather, drawWindowWeather, drawWeatherPlaque } from './weather.js';
 import { CharacterSprites, avatarLook, FW, FH } from './sprites.js';
-import { Cat, Dog } from './characters.js';
+import { Cat, Dog, Critter } from './characters.js';
 import { ENV, mix, shade } from './palette.js';
 import { drawText, textWidth } from './pixelfont.js';
 import { R, rng } from './util.js';
@@ -103,9 +103,9 @@ export class Morning {
     R(ctx, ENV.chairDk, cx - 8, dTop - 17, 16, 14); R(ctx, ENV.chair, cx - 7, dTop - 16, 14, 12); R(ctx, ENV.chairHi, cx - 6, dTop - 16, 12, 2);
     // аватарът: седи или се разхожда
     const first = this.office.pets[0] || null, key = first ? first.look.id || first.kind : '';
-    if (key !== this.petKey) { this.petKey = key; this.pet = first ? new (first.kind === 'dog' ? Dog : Cat)(first.look) : null; }
+    if (key !== this.petKey) { this.petKey = key; this.pet = first ? new ({ dog: Dog, exotic: Critter }[first.kind] || Cat)(first.look) : null; }
     const pet = this.pet;
-    const goal = pet ? petX + (pet.kind === 'dog' ? 15 : 12) : (plq ? plq.x + (plq.w >> 1) : left + 7);
+    const goal = pet ? petX + (pet.kind === 'cat' ? 12 : 15) : (plq ? plq.x + (plq.w >> 1) : left + 7);
     const pose = this.pose(t, cx, goal);
     const look = avatarLook(this.office.avatar, 'morning');
     if (!this.sprites || this.lookKey !== JSON.stringify(this.office.avatar)) { this.sprites = new CharacterSprites(look); this.lookKey = JSON.stringify(this.office.avatar); }
@@ -139,7 +139,7 @@ export class Morning {
       pet.x = petX; pet.y = petY; pet.flip = false;
       R(ctx, mix(ENV.floor[1], '#c04a4a', 0.35), petX - 8, petY - 2, 16, 3); // възглавничка
       pet.draw(ctx, now);
-      if (pet.mode === 'sleep') this.drawZ(ctx, pet.x + (pet.kind === 'dog' ? 9 : 6), pet.y - (pet.kind === 'dog' ? 8 : 11), t * 0.8, true);
+      if (pet.mode === 'sleep') this.drawZ(ctx, pet.x + (pet.kind === 'cat' ? 6 : 9), pet.y - (pet.kind === 'cat' ? 11 : 8), t * 0.8, true);
       if (pose.visit) this.drawHearts(ctx, pet.x + 2, pet.y - 13, pose.visit);
     }
 

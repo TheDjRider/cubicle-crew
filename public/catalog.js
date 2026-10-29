@@ -25,7 +25,11 @@ export const SLOTS = {
   cat2:          { group: 'cat',      def: null, pet: 'cat', need: 'cat2.tabby', after: 'cat' }, // котка 2/3: купуват се след предишната
   cat3:          { group: 'cat',      def: null, pet: 'cat', need: 'cat3.extra', after: 'cat2' },
   dog:           { group: 'dog',      def: null, pet: 'dog', starter: 'dog', need: 'dog.extra' },
-  neon:          { group: 'neon',     def: null },
+  // екзотични любимци (фенек, капибара, вомбат…): всяко ново място е с +350 по-скъпо от предишното
+  exotic:        { group: 'exotic',   def: null, pet: 'exotic', need: 'exotic1.extra' },
+  exotic2:       { group: 'exotic',   def: null, pet: 'exotic', need: 'exotic2.extra', after: 'exotic' },
+  exotic3:       { group: 'exotic',   def: null, pet: 'exotic', need: 'exotic3.extra', after: 'exotic2' },
+  neon:         { group: 'neon',     def: null },
   aquarium:      { group: 'aquarium', def: null },
   arcade:        { group: 'arcade',   def: null },
   massage:       { group: 'massage',  def: null },
@@ -39,7 +43,7 @@ export const TABS = [
   { id: 'floor', groups: ['floor', 'rug', 'lrug'] },
   { id: 'furniture', groups: ['sofa', 'chair', 'lamp'] },
   { id: 'decor', groups: ['plants', 'posters', 'window', 'season'] },
-  { id: 'pets', groups: ['cat', 'catslot', 'dog'] },
+  { id: 'pets', groups: ['cat', 'catslot', 'dog', 'exotic'] },
   { id: 'special', groups: ['neon', 'espresso', 'aquarium', 'arcade', 'massage'], merge: true },
   { id: 'avatar', groups: [] },
   { id: 'stats', groups: [] },
@@ -145,6 +149,14 @@ export const ITEMS = [
   // котка за започналите с куче и куче за започналите с котка (alt: всеки може да купи само едното)
   I('cat1.extra', 'catslot', 600, 'Котка', { slot: 'cat', gives: 'cat.grey', alt: true }),
   I('dog.extra', 'catslot', 600, 'Куче', { slot: 'dog', gives: 'dog.bueno', alt: true }),
+  // екзотични места: 500 / 850 / 1200; всяко идва с по един вид (после може да се смени с всеки от групата)
+  I('exotic1.extra', 'catslot', 500, 'Екзотичен любимец', { slot: 'exotic', gives: 'exotic.fennec' }),
+  I('exotic2.extra', 'catslot', 850, 'Втори екзотичен', { slot: 'exotic2', gives: 'exotic.capybara' }),
+  I('exotic3.extra', 'catslot', 1200, 'Трети екзотичен', { slot: 'exotic3', gives: 'exotic.wombat' }),
+  // видове (sp) – рисуват се от Critter в characters.js; безплатни, по дизайн на контрибютър
+  I('exotic.fennec', 'exotic', 0, 'Фенек', { sp: 'fennec', c: '#d8b27c', hi: '#ecce9c', m: '#f4e8d4', e: '#c89a60', eye: '#1c1410', by: 'TheDjRider' }),
+  I('exotic.capybara', 'exotic', 0, 'Капибара', { sp: 'capybara', c: '#8a5e3c', hi: '#a47650', m: '#6e4a2e', e: '#5e3e26', eye: '#1c1410', by: 'TheDjRider' }),
+  I('exotic.wombat', 'exotic', 0, 'Вомбат', { sp: 'wombat', c: '#7a6a5c', hi: '#968472', m: '#5e5046', e: '#4e4238', eye: '#1c1410', by: 'TheDjRider' }),
   // by = GitHub име на контрибютър, нарисувал предмета (любимец по негов дизайн, вж. CONTRIBUTING.md): името на
   // любимеца е фиксирано в T.pets.breeds, авторът се вижда в магазина и при посочване
   // кучета (породи) – рисуват се от Dog в characters.js. m = муцуна, e = уши, ears flop|up|half, tail long|curl|stub|plume,

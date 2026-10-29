@@ -269,7 +269,7 @@ There are no image assets, fonts, CDNs or frameworks: every pixel, from the char
 
 Issues and pull requests are welcome – see [CONTRIBUTING.md](CONTRIBUTING.md). Contributors can get an office pet of their own design, free in the shop with their name on it.
 
-**Contributor pets:** Bueno, the tricolour mix – [@buensoft](https://github.com/buensoft).
+**Contributor pets:** Bueno, the tricolour mix – [@buensoft](https://github.com/buensoft); Sahara the fennec fox, Mochi the capybara and Cubey the wombat – [@TheDjRider](https://github.com/TheDjRider). The exotic pets are in Pets → Exotic: the first slot costs 500 coins, the next 850, then 1200.
 
 **Contributor decor:** the "Beer & metal" neon sign – Ivan Turtev; the massage chair – Hristiyan Dimov.
 

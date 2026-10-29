@@ -214,7 +214,7 @@ export class Life {
     const free = o.pets.filter((p) => p.placed && !p.busy && !p.hop);
     if (!free.length) return;
     const p = pick(free);
-    const ideas = p.kind === 'dog' ? [() => this.fetch(p, now)] : [() => this.sunbeam(p, now), () => this.deskNap(p, now)];
+    const ideas = p.kind === 'dog' ? [() => this.fetch(p, now)] : p.kind === 'exotic' ? [() => this.sunbeam(p, now)] : [() => this.sunbeam(p, now), () => this.deskNap(p, now)];
     for (const f of ideas.sort(() => Math.random() - 0.5)) if (f()) return;
   }
 

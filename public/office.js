@@ -8,7 +8,7 @@ import { gradeOf, applyGrade, lightCanvas, sunPatches, drawSunPatches, drawSunBe
 const NO_WX = { kind: 'cloudy', temp: null, pop: null };
 import { resolveDecor, AVATAR, SLOTS, PET_SLOTS } from './catalog.js';
 import { drawScreen } from './screens.js';
-import { Actor, Cat, Dog, DART_CYCLE, DART_RELEASE } from './characters.js';
+import { Actor, Cat, Dog, Critter, DART_CYCLE, DART_RELEASE } from './characters.js';
 import { Life } from './life.js';
 import { avatarLook } from './sprites.js';
 import { prefs } from './prefs.js';
@@ -23,7 +23,8 @@ const LOUNGE = new Set(['sofa', 'coffee', 'cooler', 'lounge', 'darts', 'arcade',
 // екипи 0/1 = двете оркестраторски бюра; 2–4 = оркестратори на горещо бюро (3-та+ работеща сесия на под-агентско бюро)
 const TEAM_MUGS = ['#2fa8a8', '#d060b0', '#a8d040', '#9a5a32', '#5a5ad0'], NO_TEAM_MUG = '#e8e4dc';
 // откъде тръгва всеки любимец (част от зоната за почивка), за да не се появят един върху друг
-const PET_START = { cat: 0.5, cat2: 0.2, cat3: 0.82, dog: 0.36 };
+const PET_START = { cat: 0.5, cat2: 0.2, cat3: 0.82, dog: 0.36, exotic: 0.66, exotic2: 0.12, exotic3: 0.92 };
+const PET_CLASS = { cat: Cat, dog: Dog, exotic: Critter };
 
 // примигване при включване: [до мс, яркост]
 const LIGHT_FLICKER = [[60, 0.9], [170, 0], [230, 0.8], [400, 0.08], [460, 1], [580, 0.3], [640, 1], [740, 0.6]];
@@ -174,7 +175,7 @@ export class Office {
       const look = d[slot];
       if (!look) { delete this.petBySlot[slot]; continue; }
       if (!this.petBySlot[slot]) {
-        const p = new (SLOTS[slot].pet === 'dog' ? Dog : Cat)(look, PET_START[slot] ?? 0.5);
+        const p = new PET_CLASS[SLOTS[slot].pet](look, PET_START[slot] ?? 0.5);
         p.slot = slot;
         this.petBySlot[slot] = p;
       }
@@ -185,7 +186,7 @@ export class Office {
   }
 
   /** Галене: любимецът сяда, над него – сърчица. */
-  petPet(p, now = performance.now()) { p.pet(now); this.fx.hearts(p.x, p.y - 16); sfx(p.kind === 'dog' ? 'woof' : 'purr', (p.x / this.room.W) * 1.4 - 0.7); }
+  petPet(p, now = performance.now()) { p.pet(now); this.fx.hearts(p.x, p.y - 16); sfx(p.kind === 'dog' ? 'woof' : p.kind === 'exotic' ? (p.look.sp === 'fennec' ? 'yip' : 'chirp') : 'purr', (p.x / this.room.W) * 1.4 - 0.7); }
 
   /** Лакомство в купичката bowl (обект от room.objects): най-близкият свободен любимец идва да яде. */
   feedPet(bowl) {
@@ -704,7 +705,7 @@ export class Office {
     const nearDoor = now < this.pokes.doorUntil || [...this.actors.values()].some((a) => Math.abs(a.x - L.door.cx) < 10 && a.y < L.door.floorY + 14 && a.mode !== 'seated') || this.life.nearDoor();
     this.room.doorOpen = clamp(this.room.doorOpen + (nearDoor ? dt * 4 : -dt * 2.5), 0, 1);
     // кучето понякога отива при някого, който почива (стои на място в зоната за почивка)
-    const people = this.pets.some((p) => p.kind === 'dog') ? [...this.actors.values()].filter((a) => a.mode === 'idleSpot' && LOUNGE.has(a.loc.type)) : [];
+    const people = this.pets.some((p) => p.kind === 'dog' || p.look.sp === 'capybara') ? [...this.actors.values()].filter((a) => a.mode === 'idleSpot' && LOUNGE.has(a.loc.type)) : [];
     const walkers = this.pets.length ? [...this.actors.values()].filter((a) => a.mode === 'walk') : [];
     for (const c of this.pets) {
       c.avoid = this.room.massage; c.update(dt, now, L, people, walkers);

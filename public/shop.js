@@ -7,7 +7,7 @@ import { ITEMS, ITEM, TABS, SLOTS, GROUP_SLOTS, ACHIEVEMENTS, owns, avatarOf, un
 import { CharacterSprites, avatarLook, AVATAR_TOPS, AVATAR_BOTTOMS, DRESS_TOPS } from './sprites.js';
 import { SKINS, HAIRS } from './palette.js';
 import { thumb } from './environment.js';
-import { Cat, Dog } from './characters.js';
+import { Cat, Dog, Critter } from './characters.js';
 import { coinUrl } from './tokens.js';
 import { makeCanvas, fmtUsd } from './util.js';
 
@@ -21,11 +21,11 @@ const fmtDurationShort = (ms) => { const m = Math.round(ms / 60000); return m < 
 
 /** Любимец на парче под (иначе тъмните котки/кучета не се виждат на тъмната карта); кучето седи, за да личи породата. */
 export function petThumb(it, mode = 'sit') {
-  const dog = it.group === 'dog', w = dog ? 22 : 18, h = dog ? 18 : 14;
+  const dog = it.group === 'dog' || it.group === 'exotic', w = dog ? 22 : 18, h = dog ? 18 : 14;
   const c = makeCanvas(w, h), g = c.getContext('2d');
   g.fillStyle = '#7e5538'; g.fillRect(0, 0, w, h);
   g.fillStyle = '#6f4a30'; for (let y = 6; y < h; y += 6) g.fillRect(0, y, w, 1);
-  const p = dog ? new Dog(it) : new Cat(it);
+  const p = it.group === 'exotic' ? new Critter(it) : dog ? new Dog(it) : new Cat(it);
   p.x = dog ? 10 : 9; p.y = h - 1; p.mode = mode;
   p.draw(g, 0);
   return c;
@@ -312,7 +312,7 @@ export class Shop {
       if (it.by) el('div', 'by', c).textContent = T.shop.by(it.by);
       return c;
     };
-    const catSlots = PET_SLOTS.filter((sl) => SLOTS[sl].pet === 'cat');
+    const catSlots = PET_SLOTS.filter((sl) => SLOTS[sl].pet === 'cat'), exoSlots = PET_SLOTS.filter((sl) => SLOTS[sl].pet === 'exotic');
     // първо безплатният вид (започналите с куче виждат кучето най-горе)
     const order = (s.starter === 'dog') ? [...PET_SLOTS].sort((a, b) => (SLOTS[b].pet === 'dog') - (SLOTS[a].pet === 'dog')) : PET_SLOTS;
     for (const slot of order) {
@@ -320,7 +320,7 @@ export class Shop {
       if (!unlocked(s, slot) && S.after && !unlocked(s, S.after)) continue;
       const sec = el('section', 'pet', this.body);
       sec.dataset.pet = slot;
-      const title = S.pet === 'dog' ? P.dog : P.cats[catSlots.indexOf(slot)];
+      const title = S.pet === 'dog' ? P.dog : S.pet === 'exotic' ? P.exotic[exoSlots.indexOf(slot)] : P.cats[catSlots.indexOf(slot)];
       const h = el('h3', null, sec);
       if (!unlocked(s, slot)) {
         h.textContent = title;
@@ -331,7 +331,7 @@ export class Shop {
         const short = it.price - (this.tokens.tokens ?? 0);
         const b = el('button', 'buy', el('div', 'act', c), full ? P.full : short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
         b.dataset.buy = it.id; b.disabled = short > 0 || full;
-        el('p', 'hint', sec, (S.pet === 'dog' ? P.unlockDog : P.unlock)(itemName(ITEM[it.gives])));
+        el('p', 'hint', sec, (S.pet === 'dog' ? P.unlockDog : S.pet === 'exotic' ? P.unlockExotic : P.unlock)(itemName(ITEM[it.gives])));
         continue;
       }
       const cur = decor[slot]?.id || null;
@@ -477,7 +477,7 @@ export class Shop {
 
   thumb(it) {
     let src = this.thumbs.get(it.id);
-    if (!src) { src = it.group === 'cat' || it.group === 'dog' ? petThumb(it) : it.group === 'catslot' ? petThumb(ITEM[it.gives]) : thumb(it); this.thumbs.set(it.id, src); }
+    if (!src) { src = it.group === 'cat' || it.group === 'dog' || it.group === 'exotic' ? petThumb(it) : it.group === 'catslot' ? petThumb(ITEM[it.gives]) : thumb(it); this.thumbs.set(it.id, src); }
     // цяло число пъти увеличение (пиксел арт), около 116x88 (в малък прозорец ~76x58)
     const [tw, th] = SMALL.matches ? [76, 58] : [116, 88];
     const k = Math.max(1, Math.min(6, Math.round(Math.min(tw / src.width, th / src.height))));
