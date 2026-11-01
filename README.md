@@ -269,7 +269,7 @@ There are no image assets, fonts, CDNs or frameworks: every pixel, from the char
 
 Issues and pull requests are welcome – see [CONTRIBUTING.md](CONTRIBUTING.md). Contributors can get an office pet of their own design, free in the shop with their name on it.
 
-**Contributor pets:** Bueno, the tricolour mix – [@buensoft](https://github.com/buensoft); the fennec fox, capybara and wombat, 12 colours in all – [@TheDjRider](https://github.com/TheDjRider). They live in Pets → Exotic: each of the three slots costs 1000 coins and you choose the animal for it yourself, even three of the same.
+**Contributor pets:** Bueno, the tricolour mix – [@buensoft](https://github.com/buensoft); the fennec fox, capybara and wombat, 12 colours in all – [@TheDjRider](https://github.com/TheDjRider). They live in Pets → Exotic: each of the three slots costs 1000 coins and you choose the animal for it yourself, even three of the same. One colour of each animal is free, the others cost 300–500.
 
 **Contributor decor:** the "Beer & metal" neon sign – Ivan Turtev; the massage chair – Hristiyan Dimov.
 

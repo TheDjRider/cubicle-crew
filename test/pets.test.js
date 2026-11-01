@@ -8,7 +8,8 @@ import { petName } from '../public/config.js';
 
 const EXO = ['exotic', 'exotic2', 'exotic3'];
 const ANIMALS = ITEMS.filter((it) => it.group === 'exotic');
-const fresh = (over = {}) => ({ tokens: 10000, owned: [], equipped: {}, starter: 'cat', ...over });
+const FREE = ['exotic.fennec', 'exotic.capybara', 'exotic.wombat'];
+const fresh = (over = {}) => ({ tokens: 20000, owned: [], equipped: {}, starter: 'cat', ...over });
 const buySlots = (s, n = 3) => { for (let i = 1; i <= n; i++) assert.equal(buyItem(s, `exotic${i}.extra`).ok, true); };
 
 test('екзотични места: три, подредени, всяко струва 1000 и не идва с готово животно', () => {
@@ -26,7 +27,7 @@ test('екзотични места: второто е заключено, до�
   const s = fresh();
   assert.equal(buyItem(s, 'exotic2.extra').error, 'locked');
   assert.equal(buyItem(s, 'exotic1.extra').ok, true);
-  assert.equal(s.tokens, 10000 - 1000);
+  assert.equal(s.tokens, 20000 - 1000);
   assert.equal(unlocked(s, 'exotic'), true);
   assert.equal(s.equipped.exotic, null, 'никое животно не се появява само');
   assert.equal(resolveDecor(s.equipped).exotic, null);
@@ -47,10 +48,40 @@ test('екзотични места: място се купува и при пъ
   assert.equal(petCount(s), 3);
 });
 
-test('екзотични животни: всяко стои на всяко място – и три еднакви; грешна група и заключено място се отказват', () => {
+test('екзотични животни: цени – по един безплатен цвят на вид, останалите 300 / 500', () => {
+  const price = (sp) => ANIMALS.filter((it) => it.sp === sp).map((it) => it.price);
+  assert.deepEqual(ANIMALS.filter((it) => it.price === 0).map((it) => it.id), FREE);
+  for (const sp of ['fennec', 'capybara', 'wombat']) assert.equal(price(sp).filter((p) => p === 0).length, 1, `${sp}: точно един безплатен`);
+  assert.deepEqual(ANIMALS.filter((it) => it.price === 300).length, 5);
+  assert.deepEqual(ANIMALS.filter((it) => it.price === 500).map((it) => it.id).sort(),
+    ['exotic.capybara.yellow', 'exotic.fennec.pale', 'exotic.wombat.black', 'exotic.wombat.cream']);
+  const s = fresh();
+  for (const id of FREE) assert.equal(owns(s, id), true);
+  assert.equal(owns(s, 'exotic.wombat.black'), false, 'платените не са налични, докато не се купят');
+});
+
+test('екзотични животни: купеният цвят отива на избраното място и важи за всички места', () => {
   const s = fresh();
   buySlots(s);
   equipItem(s, 'cat', null); // иначе с трите екзотични би станало 4 любимеца
+  assert.equal(equipItem(s, 'exotic', 'exotic.wombat.black').error, 'locked', 'непокупен цвят не се слага');
+  const r = buyItem(s, 'exotic.wombat.black', 'exotic2');
+  assert.deepEqual([r.ok, r.slot], [true, 'exotic2']);
+  assert.equal(s.tokens, 20000 - 3000 - 500);
+  assert.equal(s.equipped.exotic2, 'exotic.wombat.black', 'купеното влиза в избраното място');
+  assert.equal(s.equipped.exotic, null);
+  assert.equal(buyItem(s, 'exotic.wombat.black', 'exotic').error, 'owned');
+  for (const sl of EXO) assert.equal(equipItem(s, sl, 'exotic.wombat.black').ok, true, `същият цвят на ${sl}`);
+  assert.equal(buyItem(fresh({ tokens: 1200 }), 'exotic1.extra').ok, true);
+  const poor = fresh({ tokens: 1100 }); buyItem(poor, 'exotic1.extra');
+  assert.equal(buyItem(poor, 'exotic.fennec.cream', 'exotic').error, 'funds');
+});
+
+test('екзотични животни: всеки стои на всяко място – и три еднакви; грешна група и заключено място се отказват', () => {
+  const s = fresh();
+  buySlots(s);
+  equipItem(s, 'cat', null);
+  for (const it of ANIMALS) if (it.price > 0) assert.equal(buyItem(s, it.id, 'exotic').ok, true, `купува се ${it.id}`);
   for (const it of ANIMALS) for (const sl of EXO) assert.equal(equipItem(s, sl, it.id).ok, true, `${it.id} на ${sl}`);
   for (const sl of EXO) assert.equal(equipItem(s, sl, 'exotic.capybara.red').ok, true);
   const d = resolveDecor(s.equipped);
@@ -63,7 +94,7 @@ test('екзотични животни: всяко стои на всяко м�
 test('екзотични места: прибрано животно е null, а стар запис без екзотични ключове не се променя', () => {
   const s = fresh();
   buySlots(s, 1);
-  equipItem(s, 'exotic', 'exotic.wombat.black');
+  buyItem(s, 'exotic.wombat.black', 'exotic');
   assert.equal(resolveDecor(s.equipped).exotic.id, 'exotic.wombat.black');
   assert.equal(equipItem(s, 'exotic', null).ok, true);
   assert.equal(resolveDecor(s.equipped).exotic, null);
@@ -81,18 +112,28 @@ test('екзотични места: прибрано животно е null, а
   assert.equal(petCount(old), 2);
 });
 
-test('екзотични животни: 12 цвята (3 / 4 / 5), безплатни, с автор, с валидни цветове', () => {
+test('котки: до три – третата се купува след втората (и е видима като заключено място)', () => {
+  assert.equal(SLOTS.cat3.after, 'cat2');
+  assert.equal(ITEM[SLOTS.cat2.need].price, 600);
+  assert.equal(ITEM[SLOTS.cat3.need].price, 900);
+  const s = fresh();
+  assert.equal(buyItem(s, 'cat3.extra').error, 'locked', 'първо втората');
+  assert.equal(buyItem(s, 'cat2.tabby').ok, true);
+  assert.equal(buyItem(s, 'cat3.extra').ok, true);
+  assert.equal(petCount(s), 3);
+  assert.equal(buyItem(s, 'dog.extra').error, 'pets', 'три котки пълнят офиса');
+});
+
+test('екзотични животни: 12 цвята (3 / 4 / 5), с автор и с валидни цветове', () => {
   assert.equal(ANIMALS.length, 12);
   const per = (sp) => ANIMALS.filter((it) => it.sp === sp).map((it) => it.id);
   assert.equal(per('fennec').length, 3);
   assert.equal(per('capybara').length, 4);
   assert.equal(per('wombat').length, 5);
-  assert.deepEqual([per('fennec')[0], per('capybara')[0], per('wombat')[0]], ['exotic.fennec', 'exotic.capybara', 'exotic.wombat'], 'първите са старите id-та');
+  assert.deepEqual([per('fennec')[0], per('capybara')[0], per('wombat')[0]], FREE, 'първите са старите id-та');
   assert.equal(new Set(ANIMALS.map((it) => it.id)).size, 12);
   for (const it of ANIMALS) {
-    assert.equal(it.price, 0);
     assert.equal(it.by, 'TheDjRider');
-    assert.equal(owns(fresh(), it.id), true, `${it.id} е безплатно`);
     for (const k of ['c', 'hi', 'm', 'e', 'eye', 'p']) assert.match(it[k], /^#[0-9a-f]{6}$/i, `${it.id}.${k}`);
     if (it.nose) assert.match(it.nose, /^#[0-9a-f]{6}$/i);
   }
@@ -111,7 +152,7 @@ test('имена и преводи: всяко животно има собст�
   const breeds = [...src.matchAll(/breeds: \{([^}]*)\}/g)].map((m) => m[1]);
   assert.equal(breeds.length, 2, 'breeds в двата езика');
   for (const b of breeds) for (const it of ANIMALS) assert.ok(b.includes(`'${it.id}'`), `breeds: ${it.id}`);
-  for (const key of ['kinds:', 'about:', 'inOffice:', 'species:', 'colours:', 'pickOne:', 'inSlot:', 'unlockExotic:']) {
+  for (const key of ['kinds:', 'about:', 'more:', 'inOffice:', 'pickOne:', 'empty:', 'inSlot:', 'chooseFor:', 'needSlot:', 'needPrev:', 'unlockCat:', 'exoPreview:', 'unlockExotic:']) {
     assert.equal(src.split(key).length - 1 >= 2, true, `${key} е и в двата езика`);
   }
   for (const id of [...ANIMALS.map((it) => it.id), 'exotic1.extra', 'exotic2.extra', 'exotic3.extra']) assert.ok(src.includes(`'${id}': '`), `T_EN.items: ${id}`);
