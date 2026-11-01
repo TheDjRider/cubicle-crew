@@ -314,6 +314,7 @@ export class Shop {
       return c;
     };
     const slotsOf = (kind) => PET_SLOTS.filter((sl) => SLOTS[sl].pet === kind);
+    const exoSpecies = [...new Set(ITEMS.filter((x) => x.group === 'exotic').map((x) => x.sp))]; // фенек, капибара, вомбат
     const titleOf = (slot) => {
       const k = SLOTS[slot].pet, i = slotsOf(k).indexOf(slot);
       return k === 'dog' ? P.dog : k === 'exotic' ? P.exotic[i] : P.cats[i];
@@ -339,13 +340,14 @@ export class Shop {
         if (!unlocked(s, slot)) {
           h.textContent = title;
           const it = ITEM[S.need];
-          if (kind === 'exotic') { // кои любимци има в групата и с кой идва мястото
+          if (kind === 'exotic') { // кои животни има (вид + колко цвята); мястото само се отключва, животното се избира после
             const strip = el('div', 'species', sec);
-            for (const sp of ITEMS.filter((x) => x.group === 'exotic')) {
-              const f = el('div', `sp${sp.id === it.gives ? ' gives' : ''}`, strip);
-              f.appendChild(this.thumb(sp, true));
-              el('span', null, f, itemName(sp));
-              if (sp.id === it.gives) el('small', null, f, P.comesWith);
+            for (const sp of exoSpecies) {
+              const list = ITEMS.filter((x) => x.group === 'exotic' && x.sp === sp);
+              const f = el('div', 'sp', strip);
+              f.appendChild(this.thumb(list[0], true));
+              el('span', null, f, P.species[sp]);
+              el('small', null, f, P.colours(list.length));
             }
           }
           const grid = el('div', 'grid', sec);
@@ -354,13 +356,16 @@ export class Shop {
           const short = it.price - (this.tokens.tokens ?? 0);
           const b = el('button', 'buy', el('div', 'act', c), full ? P.full : short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
           b.dataset.buy = it.id; b.disabled = short > 0 || full;
-          el('p', 'hint', sec, (kind === 'dog' ? P.unlockDog : kind === 'exotic' ? P.unlockExotic : P.unlock)(itemName(ITEM[it.gives])));
+          const gives = it.gives ? itemName(ITEM[it.gives]) : '';
+          el('p', 'hint', sec, kind === 'dog' ? P.unlockDog(gives) : kind === 'exotic' ? P.unlockExotic() : P.unlock(gives));
           continue;
         }
         const cur = decor[slot]?.id || null;
-        h.textContent = `${title} · ${petTitle(slot, s.petNames, cur)}${cur ? '' : ` (${P.home})`}`;
+        const emptyExo = kind === 'exotic' && !cur; // купено място, още без животно: без име, докато не се избере
+        h.textContent = emptyExo ? `${title} · ${P.noAnimal}` : `${title} · ${petTitle(slot, s.petNames, cur)}${cur ? '' : ` (${P.home})`}`;
         // име
         const form = el('form', 'pname', sec);
+        if (emptyExo) form.style.display = 'none';
         const inp = el('input', null, form);
         inp.name = `pet-${slot}`; inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(slot, null, cur); inp.value = s.petNames?.[slot] || '';
         inp.setAttribute('aria-label', P.name);
@@ -372,11 +377,8 @@ export class Shop {
           if (r && !r.ok) this.flash(T.shop.errors[r.error] || r.error);
         };
         const all = ITEMS.filter((x) => x.group === S.group), crew = all.filter((x) => x.by);
-        const grid = el('div', 'grid', sec);
-        let crewGrid = null;
-        if (crew.length) { el('h4', null, sec, P.crew); crewGrid = el('div', 'grid', sec); }
-        for (const it of [...all.filter((x) => !x.by), ...crew]) {
-          const c = card(it.by ? crewGrid : grid, it, slot, cur === it.id);
+        const addCard = (grid, it) => {
+          const c = card(grid, it, slot, cur === it.id);
           const have = owns(s, it.id);
           el('div', 'pr', c, it.price === 0 ? T.shop.free : have ? T.shop.owned : `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
           // вече е на друго място от същия вид (позволено е, но личи)
@@ -391,12 +393,27 @@ export class Shop {
             const b = el('button', cur === it.id ? 'on' : '', act, cur === it.id ? T.shop.equipped : T.shop.equip);
             b.dataset.equip = it.id; b.dataset.slot = slot; b.disabled = cur === it.id || (!cur && full);
           }
+        };
+        if (kind === 'exotic') { // свободен избор: видовете един по един, всеки с цветовете си; на всяко място – кое да е
+          if (!cur) el('p', 'hint', sec, P.pickOne);
+          for (const sp of exoSpecies) {
+            el('h4', null, sec, P.species[sp]);
+            const g = el('div', 'grid', sec);
+            for (const it of all.filter((x) => x.sp === sp)) addCard(g, it);
+          }
+        } else {
+          const grid = el('div', 'grid', sec);
+          let crewGrid = null;
+          if (crew.length) { el('h4', null, sec, P.crew); crewGrid = el('div', 'grid', sec); }
+          for (const it of [...all.filter((x) => !x.by), ...crew]) addCard(it.by ? crewGrid : grid, it);
         }
-        // у дома / обратно в офиса (връща се с безплатната шарка/порода)
-        const b = el('button', null, el('div', 'act', sec), cur ? P.away : P.back);
-        b.dataset.slot = slot;
-        if (cur) b.dataset.remove = '1';
-        else { b.dataset.equip = S.def || ITEM[S.need].gives; b.disabled = full; }
+        // у дома / обратно в офиса (връща се с безплатната шарка/порода); при екзотичните животното се избира с бутоните горе
+        if (cur || kind !== 'exotic') {
+          const b = el('button', null, el('div', 'act', sec), cur ? P.away : P.back);
+          b.dataset.slot = slot;
+          if (cur) b.dataset.remove = '1';
+          else { b.dataset.equip = S.def || ITEM[S.need].gives; b.disabled = full; }
+        }
       }
     }
     el('p', 'hint', el('section', null, this.body), P.limit);
@@ -504,7 +521,7 @@ export class Shop {
 
   thumb(it, small = false) {
     let src = this.thumbs.get(it.id);
-    if (!src) { src = it.group === 'cat' || it.group === 'dog' || it.group === 'exotic' ? petThumb(it) : it.group === 'catslot' ? petThumb(ITEM[it.gives]) : thumb(it); this.thumbs.set(it.id, src); }
+    if (!src) { src = it.group === 'cat' || it.group === 'dog' || it.group === 'exotic' ? petThumb(it) : it.group === 'catslot' ? petThumb(ITEM[it.gives || 'exotic.fennec']) : thumb(it); this.thumbs.set(it.id, src); }
     // цяло число пъти увеличение (пиксел арт), около 116x88 (в малък прозорец ~76x58)
     const [tw, th] = small || SMALL.matches ? [76, 58] : [116, 88];
     const k = Math.max(1, Math.min(6, Math.round(Math.min(tw / src.width, th / src.height))));
@@ -522,7 +539,7 @@ export class Shop {
     this.hoverId = id;
     if (!id) { this.tokens.setPreview(null); return; }
     const it = ITEMS.find((x) => x.id === id), eq = this.tokens.save.equipped || {};
-    if (it.slot) { this.tokens.setPreview({ ...eq, [it.slot]: it.gives }); return; } // отключване на котка
+    if (it.slot) { this.tokens.setPreview(it.gives ? { ...eq, [it.slot]: it.gives } : null); return; } // отключване на котка (екзотично място – без животно)
     const slot = card.dataset.slot; // котка 1/2/3
     if (slot) { this.tokens.setPreview(eq[slot] === id || (!eq[slot] && SLOTS[slot].def === id) ? null : { ...eq, [slot]: id }); return; }
     const slots = GROUP_SLOTS[it.group];
