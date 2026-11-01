@@ -411,7 +411,7 @@ class Pet {
   /** Пуснат е: пада към (x1, y1) – пода или бюрото/дивана (arc > 0 = малка дъга, когато целта не е точно под него). */
   release(now, x1, y1, o = {}) {
     this.held = null; this.away = true; // извън зоната си не се „телепортира“ обратно, а се връща пеша (вж. update)
-    this.fall = { t0: now, x0: this.x, y0: this.y, l0: this.lift || 0, x1, y1, dur: o.dur || 280, arc: o.arc || 0, then: o.then, hit: false };
+    this.fall = { t0: now, x0: this.x, y0: this.y, l0: this.lift || 0, x1, y1, dur: o.dur || 280, arc: o.arc || 0, then: o.then, key: o.key, hit: false };
   }
   /** Накъде да тръгне (people = хората в зоната за почивка – кучето понякога отива при тях). */
   target(area) { return { x: area.x0 + Math.random() * (area.x1 - area.x0), y: area.y0 + Math.random() * (area.y1 - area.y0) }; }
@@ -471,7 +471,10 @@ class Pet {
         const k = Math.min(1, (now - f.t0) / f.dur);
         this.x = f.x0 + (f.x1 - f.x0) * k; this.y = f.y0 + (f.y1 - f.y0) * k;
         this.lift = Math.max(0, f.l0 * (1 - k * k)) + (f.arc ? Math.sin(k * Math.PI) * f.arc : 0);
-        if (k >= 1) { f.hit = true; f.t1 = now; this.x = f.x1; this.y = f.y1; this.lift = 0; this.mode = 'sit'; this.landed = { at: now }; }
+        if (k >= 1) {
+          f.hit = true; f.t1 = now; this.x = f.x1; this.y = f.y1; this.lift = 0; this.mode = 'sit'; this.landed = { at: now };
+          if (f.key != null) this.keyOverride = f.key; // на бюро/диван: рисува се над плота/седалката още от удара
+        }
       } else {
         const b = Math.min(1, (now - f.t1) / 170);
         this.lift = Math.round(Math.sin(b * Math.PI) * 3);
@@ -509,7 +512,7 @@ class Pet {
       this.tx = clamp(this.tx, area.x0, area.x1); this.ty = clamp(this.ty, area.y0, area.y1);
       const dx = this.tx - this.x, dy = this.ty - this.y, d = Math.hypot(dx, dy);
       if (d < 0.5) { this.mode = this.rest(); this.until = now + 6000 + Math.random() * 14000; return; }
-      const m = Math.min(d, this.speed * dt);
+      const m = Math.min(d, this.speed * dt * (this.away ? 1.6 : 1)); // на път обратно към зоната си (след влачене/лакомство) – по-бързо
       this.x += dx / d * m; this.y += dy / d * m; this.dist += m;
       if (Math.abs(dx) > 0.2) this.flip = dx < 0;
     } else if (now > this.until) {

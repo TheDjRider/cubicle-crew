@@ -25,6 +25,15 @@ export class ShakeDetector {
   }
 }
 
+/** Първата свободна повърхност (бюро, място на дивана), която съдържа точката (x, y).
+ *  surfaces = [{ rect: {x0, y0, x1, y1}, free: true|false, … }]; заетите (някой седи там) не се броят – падането е на пода. */
+export function surfaceAt(x, y, surfaces) {
+  return surfaces.find((s) => s.free && x >= s.rect.x0 && x <= s.rect.x1 && y >= s.rect.y0 && y <= s.rect.y1) || null;
+}
+
+/** Точката е в правоъгълника r = {x0, y0, x1, y1}. */
+export const inRect = (pt, r) => pt.x >= r.x0 && pt.x <= r.x1 && pt.y >= r.y0 && pt.y <= r.y1;
+
 /** Най-близката свободна точка до (x, y): първо вътре в границите bounds = {x0, x1, y0, y1}, после извън „блокираните“ места
  *  (blocked(pt) -> true, напр. масажният стол). Търси в разширяващи се пръстени; ако нищо не е свободно, връща ограничената точка. */
 export function nearestFree(x, y, bounds, blocked = () => false) {

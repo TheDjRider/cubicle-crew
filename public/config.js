@@ -281,6 +281,7 @@ const T_BG = {
       '2.20.0': [
         ['Екзотични любимци', 'Фенек, капибара и вомбат – общо 12 цвята. В „Любимци“ има три екзотични места по 1000 монети; купуваш мястото, а животното (вид и цвят) избираш сам, дори три еднакви. По един цвят от животно е безплатен, останалите струват 300 или 500 монети. Фенекът рови и върви след хората, капибарата сяда до фонтанчето, вомбатът тича на изблици.'],
         ['По-ясна страница „Любимци“', 'Любимците са по видове – котки, кучета, екзотични – с брояч „В офиса: 2/3“ и бутони за бърз преход. Местата са в един ред, а всички животни се виждат с картинка и цена още преди да купиш място. Заключените места на котките са заедно – вижда се и третата котка.'],
+        ['Носи любимците', 'Задръж любимец с мишката и го носи – за главата, за тялото (като банан) или за опашката; всяка хватка има своя поза. Остави го на пода (връща се сам), на свободно бюро или на дивана. Разклати го и ще се замае.'],
       ],
       '2.19.9': [['/clear не е срив', 'След /clear старата сесия просто си тръгва, вместо да остане посивяла и заспала на бюрото.']],
       '2.19.8': [['По-чист изход', 'Приложението вече не записва грешка в лога, когато инсталатор или обновяване го затвори, докато е включен прозрачният фон.']],
@@ -616,6 +617,7 @@ const T_EN = {
       '2.20.0': [
         ['Exotic pets', 'A fennec fox, a capybara and a wombat – 12 colours in all. Pets has three exotic slots at 1000 coins each; you buy a slot and choose the animal (species and colour) yourself – one colour of each animal is free, the others cost 300 or 500, even three of the same. The fennec digs and follows people around, the capybara sits by the fountain and the wombat runs in sudden bursts.'],
         ['A clearer Pets page', 'Pets are grouped by kind – cats, dogs, exotic – with an "In the office: 2/3" counter and quick-jump buttons. The slots sit in one row, and every animal is visible with its picture and price even before you buy a slot. The locked slots of each kind are shown together – so the third cat is visible too.'],
+        ['Pick pets up', 'Hold a pet with the mouse and carry it – by the head, by the body (banana style) or by the tail; each grip has its own pose. Put it down on the floor (it walks back by itself), on a free desk or on the sofa. Shake it and it gets dizzy.'],
       ],
       '2.19.9': [['/clear is not a crash', 'After /clear the old session simply leaves instead of staying greyed out and asleep at its desk.']],
       '2.19.8': [['Cleaner exit', 'The app no longer writes an error to its log when an installer or update closes it while the transparent background is on.']],

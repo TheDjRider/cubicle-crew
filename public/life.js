@@ -287,6 +287,19 @@ export class Life {
     return true;
   }
 
+  /** Любимец, оставен върху бюро или място на дивана (влачене с мишката): стои там и дреме, докато не дойде човек
+   *  (както котката, която сама се качва на бюро) или не мине много време; после слиза и се връща в зоната си. */
+  perch(p, s, now) {
+    const o = this.o, lo = o.L.lounge;
+    const taken = s.kind === 'desk' ? () => [...o.actors.values()].some((a) => a.pod === s.q.i) : () => [...o.actors.values()].some((a) => a.loc.type === 'sofa' && a.loc.i === s.i);
+    const down = s.kind === 'desk' ? { x: s.q.cx, y: s.q.aisleY } : { x: s.spot.x, y: lo.sofa.base + 8 }; // накъде скача, като слезе
+    const leave = (c, t) => { c.jump(down.x, down.y, t); c.keyOverride = null; c.perched = false; c.away = true; o._petJumpAt = t; };
+    if (taken()) { leave(p, now); return; } // междувременно някой го е заел – слиза веднага
+    p.perched = true; p.keyOverride = s.key; p.path = []; p.mode = 'sit';
+    p.job = { rest: 'sit', sleepAfter: 1600, ms: rnd(90000, 180000), end: taken, since: now, back: [], onLeave: leave };
+    if (s.kind === 'desk') p.job.pod = s.q.i; else p.job.sofa = s.i;
+  }
+
   /** Куче: взима топката от играчките и я носи на някого, който почива; той се радва. */
   fetch(p, now) {
     const o = this.o, lo = o.L.lounge;
