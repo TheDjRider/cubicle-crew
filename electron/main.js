@@ -295,7 +295,7 @@ function toggleWindow(force) {
 let peekUntil = 0, needAt = 0;
 function peek(ms) { peekUntil = Math.max(peekUntil, Date.now() + ms); }
 function autoHideTick() {
-  if (!win || !settings.autoHide || quitting) return;
+  if (!winAlive() || !settings.autoHide || quitting) return;
   const now = Date.now();
   const asks = stats.waiting.length > 0 || !!stats.prompt;
   if (asks || stats.hold || shopOpen) needAt = now;
@@ -442,8 +442,11 @@ ipcMain.on('settings:set', (_e, key, v) => applyDesktop(String(key), typeof v ==
 // Не разчитаме на препратените от Windows движения на мишката: над лентата горе (drag) ги няма,
 // а при мащаб на екрана ≠ 100% се разминават – прозорецът оставаше „прозрачен за кликове“ навсякъде.
 let clearSolid = null, clearIn = false;
+/** Прозорецът още съществува – таймерите (clearTick, autoHideTick) може да тръгнат между затварянето му и изхода
+ *  (инсталатор/ъпдейт, rebuildWindow): „Object has been destroyed“ в desktop.log. */
+const winAlive = () => !!win && !win.isDestroyed() && !win.webContents.isDestroyed();
 function clearTick() {
-  if (!win || !settings.clear || waiting || settings.strip || settings.through || shopOpen || !win.isVisible()) return;
+  if (!winAlive() || !settings.clear || waiting || settings.strip || settings.through || shopOpen || !win.isVisible()) return;
   const p = screen.getCursorScreenPoint(), b = win.getBounds();
   if (p.x < b.x || p.y < b.y || p.x >= b.x + b.width || p.y >= b.y + b.height) {
     // излезе: при пропуснати кликове страницата не получава mouseleave и :hover остава (лентата горе не се скрива) –
@@ -455,7 +458,7 @@ function clearTick() {
   win.webContents.send('clear-probe', p.x - b.x, p.y - b.y);
 }
 ipcMain.on('clear-hit', (_e, solid) => {
-  if (!win || !settings.clear || settings.through || shopOpen || solid === clearSolid) return;
+  if (!winAlive() || !settings.clear || settings.through || shopOpen || solid === clearSolid) return;
   clearSolid = solid;
   win.setIgnoreMouseEvents(!solid, { forward: true });
 });
