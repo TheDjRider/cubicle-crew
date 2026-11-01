@@ -14,7 +14,7 @@ A few house rules (they keep the app small and offline):
 ## Your own office pet
 
 Everyone with a merged contribution (code, a translation, docs, a bug report with a fix) can have
-**one office pet of their own design** – a cat, a dog or an exotic animal (group `exotic`, drawn by `Critter` in `characters.js` from `look.sp`: fennec, capybara and wombat so far – add a new `sp` branch there). It is free in the shop under
+**one office pet of their own design** – a cat, a dog or an exotic animal (group `exotic`, drawn by `Critter` in `characters.js` from `look.sp`: fennec, capybara and wombat so far – add a new `sp` branch there; `p`/`p2` are optional marking colours, e.g. a tail tip or inner ears, and draw `sit`, `sleep` and `walk`; check them at 8× on a canvas and in `?demo`). It is free in the shop under
 **Pets → Contributor pets**, keeps its name, and shows who made it ("by @you") in the shop and
 when someone hovers it in the office.
 
