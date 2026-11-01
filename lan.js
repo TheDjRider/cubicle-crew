@@ -45,7 +45,7 @@ export class Lan {
     this.state = { enabled: false, pin: newPin(), port: DEF_PORT, tokens: [] };
     try { Object.assign(this.state, JSON.parse(fs.readFileSync(this.file, 'utf8'))); } catch { /* няма файл */ }
     if (!/^\d{6}$/.test(String(this.state.pin))) this.state.pin = newPin();
-    this.tries = new Map();        // адрес -> { n, until }
+    this.tries = new Map();        // адрес -> { n, until, last }
     this.server = null; this.wss = null; this.error = null;
   }
 
@@ -110,7 +110,7 @@ export class Lan {
   filter(m) {
     if (!m || typeof m !== 'object') return null;
     if (m.type === 'wallet' || m.type === 'weather') return m;
-    if (m.type === 'sessions') return { type: 'sessions', list: (m.list || []).map(({ agent, label, status, provider }) => ({ agent, label, status, ...(provider ? { provider } : {}) })) };
+    if (m.type === 'sessions') return { type: 'sessions', list: (m.list || []).map(({ agent, label, status, provider, ctx, ctxMax }) => ({ agent, label, status, ...(provider ? { provider } : {}), ...(ctx ? { ctx, ctxMax } : {}) })) };
     if (!m.agent) return null; // permission, update, agents… – не
     const { detail, desc, ...rest } = m;
     return rest;
@@ -136,7 +136,12 @@ export class Lan {
     if (urlPath === '/lan/me') { json(200, { ok: this.authed(req) }); return; }
     if (urlPath === '/lan/login') {
       if (req.method !== 'POST' || !this.sameOrigin(req) || !/^application\/json/.test(req.headers['content-type'] || '')) { res.writeHead(403).end(); return; }
-      const ip = req.socket.remoteAddress || '?', now = Date.now(), t = this.tries.get(ip) || { n: 0, until: 0 };
+      const ip = req.socket.remoteAddress || '?', now = Date.now();
+      if (this.tries.size > 64) {
+        for (const [k, v] of this.tries) if (v.until < now && now - (v.last || 0) > LOCK_MS * 2) this.tries.delete(k);
+        while (this.tries.size > 200) this.tries.delete(this.tries.keys().next().value);
+      }
+      const t = this.tries.get(ip) || { n: 0, until: 0, last: now };
       if (t.until > now) { json(429, { ok: false, error: 'locked', wait: Math.ceil((t.until - now) / 1000) }); return; }
       let body = '';
       req.on('data', (d) => { body += d; if (body.length > 256) req.destroy(); });
@@ -145,7 +150,7 @@ export class Lan {
         try { pin = String(JSON.parse(body || '{}').pin || ''); } catch { /* */ }
         const good = pin.length === 6 && crypto.timingSafeEqual(Buffer.from(pin.padEnd(6)), Buffer.from(String(this.state.pin)));
         if (!good) {
-          t.n += 1; if (t.n >= MAX_TRIES) { t.n = 0; t.until = now + LOCK_MS; }
+          t.n += 1; t.last = now; if (t.n >= MAX_TRIES) { t.n = 0; t.until = now + LOCK_MS; }
           this.tries.set(ip, t);
           json(401, { ok: false, error: t.until > now ? 'locked' : 'pin' });
           return;

@@ -53,7 +53,7 @@ const el = (tag, cls, parent) => { const e = document.createElement(tag); if (cl
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /** Кратко id без префикса на агента (codex:…, oc:…). */
-const shortId = (id, n) => String(id).replace(/^(codex|oc|gemini):/, '').slice(0, n);
+const shortId = (id, n) => String(id).replace(/^(codex|oc|gemini|agy|antigravity):/, '').slice(0, n);
 
 /** Детайлът на инструмента (вече escape-нат) – в червено с ⚠, ако командата е рискова; в private режим остава само ⚠. */
 function dangerHtml(t, html) {

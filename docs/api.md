@@ -1,6 +1,6 @@
 # Open API: bring any agent into the office
 
-Claude Code, Codex, Gemini CLI and OpenCode are read directly from their files. Anything else – another coding agent, a
+Claude Code, Codex, Gemini CLI, Antigravity CLI and OpenCode are read directly from their files. Anything else – another coding agent, a
 build script, a long data job – can walk into the office through one local endpoint:
 
 ```

@@ -1,6 +1,6 @@
 {
   "name": "cubicle-crew",
-  "version": "2.19.5",
+  "version": "2.19.6",
   "type": "module",
   "bin": {
     "cubicle-crew": "bin/cubicle-crew.js"
@@ -23,6 +23,7 @@
   ],
   "scripts": {
     "start": "node server.js",
+    "test": "node --test test/*.test.js",
     "debug": "node server.js --debug",
     "desktop": "electron .",
     "icon": "node scripts/make-icon.mjs",
@@ -48,6 +49,7 @@
     "claude-code",
     "codex",
     "gemini-cli",
+    "antigravity",
     "opencode",
     "ai-agents",
     "pixel-art",

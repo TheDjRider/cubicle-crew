@@ -1,10 +1,12 @@
-// Други агенти освен Claude Code: Codex (OpenAI) и OpenCode. Само четем техните локални записи, нищо не
-// пишем и не пипаме настройки. Събитията са същите като от Claude Code (+ незадължително поле `provider`).
+// Други агенти освен Claude Code: Codex (OpenAI), OpenCode, Gemini CLI и Antigravity. Само четем техните локални
+// записи, нищо не пишем и не пипаме настройки. Събитията са същите като от Claude Code (+ незадължително поле `provider`).
 //
-// Codex:    ~/.codex/sessions/YYYY/MM/DD/rollout-<време>-<uuid>.jsonl ($CODEX_HOME), ред по ред като транскриптите
-//           на Claude – server.js го следи със същия механизъм и вика codexLine() за всеки нов ред.
-// OpenCode: SQLite база ($XDG_DATA_HOME|~/.local/share)/opencode/opencode.db ($OPENCODE_DB); таблиците session,
-//           message, part (JSON в `data`). Четем само новите/променените части веднъж в секунда (read-only).
+// Codex:       ~/.codex/sessions/YYYY/MM/DD/rollout-<време>-<uuid>.jsonl ($CODEX_HOME), ред по ред като транскриптите
+//              на Claude – server.js го следи със същия механизъм и вика codexLine() за всеки нов ред.
+// OpenCode:    SQLite база ($XDG_DATA_HOME|~/.local/share)/opencode/opencode.db ($OPENCODE_DB); таблиците session,
+//              message, part (JSON в `data`). Четем само новите/променените части веднъж в секунда (read-only).
+// Gemini CLI:  ~/.gemini/tmp/<проект>/chats/session-*.jsonl ($GEMINI_DIR).
+// Antigravity: ~/.gemini/antigravity-cli/brain/<id>/.system_generated/logs/transcript.jsonl (и ~/.gemini/antigravity/brain).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -13,11 +15,13 @@ import { execFile } from 'node:child_process';
 // ---------------------------------------------------------------- общи
 const clip = (s, n = 60) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
 
-/** Командата без обвивката bash -lc "…" / powershell -Command "…". */
+/** Командата без обвивката bash -lc "…" / powershell -Command "…" и без водещо cd <път> &&. */
 export function unwrapShell(cmd) {
-  const c = String(cmd || '').trim();
+  let c = String(cmd || '').trim();
   const m = c.match(/^(?:\S*[\\/])?(?:bash|sh|zsh|pwsh|powershell(?:\.exe)?|cmd(?:\.exe)?)\s+(?:-\w+\s+)*(?:\/c\s+)?["']?([\s\S]*?)["']?$/i);
-  return m && m[1] ? m[1] : c;
+  if (m && m[1]) c = m[1].trim();
+  const cd = c.match(/^(?:cd|pushd|set-location|sl)\s+(?:\/d\s+)?(?:"[^"]+"|'[^']+'|\S+)\s*(?:&&|;)\s*([\s\S]+)$/i);
+  return cd && cd[1] ? cd[1].trim() : c;
 }
 
 /** Командата от шел -> кой инструмент би бил при Claude (чете ли, търси ли или пуска нещо). */
@@ -500,4 +504,397 @@ export function geminiLine(file, line, emit, usage, setCtx = () => {}) {
     }
   }
   if (g.calls.size > 5000) for (const k of [...g.calls.keys()].slice(0, 2500)) g.calls.delete(k);
+}
+
+// ================================================================ Antigravity CLI (agy)
+// ~/.gemini/antigravity-cli/brain/<convId>/.system_generated/logs/transcript.jsonl ($ANTIGRAVITY_DIR = папката brain).
+// Редове: { step_index, source: 'USER_EXPLICIT'|'MODEL'|'SYSTEM', type: 'USER_INPUT'|'PLANNER_RESPONSE'|'GENERIC',
+//           created_at, content?, thinking?, tool_calls?: [{name, args}], input_tokens?, cache_read_tokens?, output_tokens? }.
+// Проектът идва от ../history.jsonl ({display, timestamp, workspace} на всеки промпт – по времето на първия промпт).
+// (~/.gemini/antigravity/brain на IDE-то има само .md планове, без транскрипти – не го следим.)
+export const AGY_ROOTS = [process.env.ANTIGRAVITY_DIR ? path.resolve(process.env.ANTIGRAVITY_DIR) : path.join(GEMINI_HOME, 'antigravity-cli', 'brain')];
+export const AGY_ON = process.env.ANTIGRAVITY !== '0' && (!process.env.CLAUDE_PROJECTS_DIR || !!process.env.ANTIGRAVITY_DIR);
+export const isAgyFile = (file) =>
+  path.basename(file) === 'transcript.jsonl' &&
+  file.includes(`${path.sep}.system_generated${path.sep}logs${path.sep}`) &&
+  AGY_ROOTS.some((r) => file.startsWith(r + path.sep));
+
+const AGY_LIVE_MS = 45 * 60e3;
+const AGY_BUSY_CAP_MS = 3 * 60e3;
+const AGY_PROCS_MS = 15000;
+const AGY_SUB_MS = 15000;        // под-агент без точна връзка: нов разговор до толкова след invoke_subagent
+// Колко пуснати agy има (процеси от най-горно ниво); 'pending' до първото преброяване, null = не знаем (тестове,
+// грешка) -> без таван. Транскриптът няма флаг „затворен“, а presence/*.lock остават и след изход – без това всяка
+// сесия, пипната в последните 45 мин, седеше в офиса и без пуснат CLI.
+let agyProcs = null;
+
+/** Брои agy.exe от най-горно ниво – без езиковия сървър (дете на agy) и `agy agentapi`. cb(брой | null). */
+export function countAgyProcs(cb) {
+  const parse = (rows) => {
+    const isAgy = (exe) => /^agy(\.exe)?$/i.test(exe || '');
+    const byPid = new Map(rows.map((r) => [r.pid, r]));
+    let n = 0;
+    for (const r of rows) {
+      if (!isAgy(r.exe) || /\sagentapi(\s|$)/i.test(r.cmd)) continue;
+      if (isAgy(byPid.get(r.ppid)?.exe)) continue;
+      n++;
+    }
+    return n;
+  };
+  if (process.platform === 'win32') {
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+      "Get-CimInstance Win32_Process -Filter \"Name='agy.exe'\" | ForEach-Object { \"$($_.ProcessId)`t$($_.ParentProcessId)`t$($_.Name)`t$($_.CommandLine)\" }"],
+    { timeout: 8000, windowsHide: true }, (err, out) => {
+      if (err) return cb(null);
+      cb(parse(String(out || '').split(/\r?\n/).filter(Boolean).map((l) => {
+        const [pid, ppid, exe, ...cmd] = l.split('\t');
+        return { pid: +pid, ppid: +ppid, exe, cmd: cmd.join('\t') };
+      })));
+    });
+  } else {
+    execFile('ps', ['-eo', 'pid=,ppid=,args='], { timeout: 5000 }, (err, out) => {
+      if (err) return cb(null);
+      cb(parse(String(out || '').split(/\r?\n/).map((l) => l.trim().match(/^(\d+)\s+(\d+)\s+(\S+)(.*)$/)).filter(Boolean)
+        .map((m) => ({ pid: +m[1], ppid: +m[2], exe: m[3].split('/').pop(), cmd: m[4] }))));
+    });
+  }
+}
+
+/** Брои на всеки 15 s (само докато има кандидат-сесии). Вика се от startServer, ако AGY_ON. */
+export function watchAgyProcs() {
+  agyProcs = 'pending';
+  let busy = false;
+  const tick = () => {
+    const now = Date.now();
+    if (busy || ![...agyState.values()].some((g) => now - g.lastAt < AGY_LIVE_MS)) return;
+    busy = true;
+    countAgyProcs((n) => { agyProcs = n; busy = false; });
+  };
+  tick();
+  setInterval(tick, AGY_PROCS_MS).unref?.();
+}
+
+const agyState = new Map();      // файл -> { id, convId, label, labelSrc, promptAt, first, model, parent, …, open: [], step, ask, lastAt }
+const agyChildOf = new Map();    // convId на под-агент -> { parent, toolUseId, desc }
+const agyTasks = [];             // { parent, toolUseId, desc, ts } – евристика за под-агент преди да се върне UUID-то му
+const agyProjCache = new Map();  // папка -> име на проекта
+const agyHist = new Map();       // history.jsonl -> { mtime, size, rows: [{t, ws}] }
+
+/** Работната папка на промпта от history.jsonl до транскрипта (по времето ±5 s); null ако я няма (още). */
+function agyWorkspace(file, at) {
+  if (!at) return null;
+  const root = AGY_ROOTS.find((r) => file.startsWith(r + path.sep));
+  if (!root) return null;
+  const hf = path.join(path.dirname(root), 'history.jsonl');
+  let h = agyHist.get(hf);
+  try {
+    const st = fs.statSync(hf);
+    if (!h || h.mtime !== st.mtimeMs || h.size !== st.size) {
+      // само последните ~256 KB – стари промптове не ни трябват
+      const len = Math.min(st.size, 262144), buf = Buffer.alloc(len), fd = fs.openSync(hf, 'r');
+      try { fs.readSync(fd, buf, 0, len, st.size - len); } finally { fs.closeSync(fd); }
+      const rows = [];
+      for (const ln of buf.toString('utf8').split('\n')) {
+        try { const o = JSON.parse(ln); if (o && typeof o.workspace === 'string' && o.timestamp) rows.push({ t: +o.timestamp, ws: o.workspace }); } catch { /* отрязан ред */ }
+      }
+      h = { mtime: st.mtimeMs, size: st.size, rows };
+      agyHist.set(hf, h);
+    }
+  } catch { return null; }
+  let best = null;
+  for (const r of h.rows) if (Math.abs(r.t - at) < 5000 && (!best || Math.abs(r.t - at) < Math.abs(best.t - at))) best = r;
+  return best ? best.ws : null;
+}
+
+const AGY_TOOLS = {
+  read_file: 'Read', view_file: 'Read', view_file_outline: 'Read', view_code_item: 'Read', read_many_files: 'Read',
+  write_file: 'Write', write_to_file: 'Write', create_file: 'Write',
+  edit_file: 'Edit', replace_file_content: 'Edit', multi_replace_file_content: 'MultiEdit',
+  grep_search: 'Grep', search_file_content: 'Grep',
+  find_by_name: 'Glob', list_dir: 'Glob', list_directory: 'Glob',
+  search_web: 'WebSearch', google_web_search: 'WebSearch',
+  read_url_content: 'WebFetch', web_fetch: 'WebFetch', browser_subagent: 'WebFetch',
+  invoke_subagent: 'Agent', define_subagent: 'Agent', manage_subagents: 'Agent', send_message: 'Agent',
+  ask_question: 'AskUserQuestion', notify_user: 'AskUserQuestion',
+  manage_task: 'Bash', command_status: 'Bash', send_command_input: 'Bash', schedule: 'Bash',
+};
+
+/** В transcript.jsonl стойностите в args са сериализирани като JSON низове (напр. "\"C:\\\\...\""). */
+function agyUnquote(v) {
+  if (typeof v !== 'string') return v;
+  const s = v.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith('[') && s.endsWith(']')) || (s.startsWith('{') && s.endsWith('}'))) {
+    try { return JSON.parse(s); } catch { /* суров низ */ }
+  }
+  return v;
+}
+
+function agyArgs(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) out[k] = agyUnquote(v);
+  return out;
+}
+
+/** Намира името на проекта по път до файл в работната папка (прескача ~/.gemini и системните папки). */
+function agyProjectOf(p) {
+  if (typeof p !== 'string' || !p) return null;
+  const clean = agyUnquote(p);
+  if (typeof clean !== 'string' || clean.length < 3) return null;
+  const norm = path.normalize(clean.replace(/^["']|["']$/g, ''));
+  if (norm.includes(`${path.sep}.gemini${path.sep}`) || norm.includes(`${path.sep}AppData${path.sep}`) || norm.startsWith('/tmp/')) return null;
+  const dir = path.extname(norm) ? path.dirname(norm) : norm;
+  if (agyProjCache.has(dir)) return agyProjCache.get(dir);
+  let cur = dir;
+  for (let i = 0; i < 6; i++) {
+    try {
+      if (fs.existsSync(path.join(cur, '.git')) || fs.existsSync(path.join(cur, 'package.json'))) {
+        const name = path.basename(cur);
+        if (agyProjCache.size > 500) agyProjCache.clear();
+        agyProjCache.set(dir, name);
+        return name;
+      }
+    } catch { /* */ }
+    const up = path.dirname(cur);
+    if (!up || up === cur) break;
+    cur = up;
+  }
+  const fb = path.basename(dir);
+  return fb && fb.length > 1 && !/^[a-z]:\\?$/i.test(fb) ? fb : null;
+}
+
+function agyTool(name, rawArgs) {
+  const a = agyArgs(rawArgs);
+  if (name === 'run_command' || name === 'run_shell_command') {
+    const cmd = String(a.CommandLine || a.command || a.cmd || '');
+    return [cmd ? shellTool(cmd) : 'Bash', clip(cmd ? unwrapShell(cmd) : a.toolSummary || ''), false, false];
+  }
+  if (name === 'ask_question' || name === 'notify_user') {
+    const q = Array.isArray(a.questions) && a.questions[0]?.question ? a.questions[0].question : a.question || a.Message || '';
+    return ['AskUserQuestion', clip(q), name === 'ask_question', false];
+  }
+  if (name === 'invoke_subagent') {
+    return ['Agent', clip(a.Role || a.Prompt || a.TypeName || ''), false, true];
+  }
+  const tool = AGY_TOOLS[name] || (/subagent|agent/i.test(name) ? 'Agent' : name ? name[0].toUpperCase() + name.slice(1) : 'Tool');
+  const det = a.Path || a.AbsolutePath || a.TargetFile || a.DirectoryPath || a.File || a.Query || a.Pattern || a.query || a.Url || a.Prompt || a.Action || '';
+  return [tool, clip(det), false, false];
+}
+
+/** Обновява метаданните (модел, проект, контекст, стъпка) от един ред на transcript.jsonl. */
+function agyApplyMeta(g, o, setCtx) {
+  if (!o || typeof o !== 'object') return;
+  if (g.first === null) g.first = String(o.source || '');
+  if (o.type === 'USER_INPUT' && typeof o.content === 'string') {
+    // „…changed setting `Model Selection` from X to Gemini 3.8 Flash (Medium). No need…“ – точката в 3.8 не е край
+    const m = o.content.match(/`Model Selection` from .*? to (.+?)\.(?:\s|$)/);
+    if (m && m[1]) g.model = m[1].trim().slice(0, 60);
+    if (o.source === 'USER_EXPLICIT' && !g.promptAt) g.promptAt = Date.parse(o.created_at) || 0;
+  } else if (o.type === 'PLANNER_RESPONSE') {
+    if (o.input_tokens || o.cache_read_tokens) {
+      g.ctx = (o.input_tokens || 0) + (o.cache_read_tokens || 0);
+      setCtx?.(g.id, g.ctx, 1000000);
+    }
+    if (Array.isArray(o.tool_calls)) {
+      for (const c of o.tool_calls) {
+        const a = agyArgs(c?.args);
+        const p = a.Path || a.AbsolutePath || a.TargetFile || a.DirectoryPath || a.File;
+        const proj = !g.labelSrc && p && agyProjectOf(p);
+        if (proj) { g.label = proj; g.labelSrc = 'path'; }
+      }
+    }
+  }
+}
+
+/** Етикетът се избира веднъж: папката от history.jsonl, иначе (само докато там я няма) първият пипнат проект. */
+function agyLabel(g, file) {
+  if (g.labelSrc === 'history' || !g.promptAt) return;
+  const ws = agyWorkspace(file, g.promptAt);
+  const name = ws && path.basename(ws.replace(/[\\/]+$/, ''));
+  if (name) { g.label = name; g.labelSrc = 'history'; }
+}
+
+/** Стъпката и „чака ли те“ по последния ред (при заварване на вече започната сесия). */
+function agyStepFrom(g, o) {
+  if (o.type === 'USER_INPUT' || o.type === 'GENERIC') { g.step = 'THINKING'; g.ask = false; }
+  else if (o.type === 'PLANNER_RESPONSE') {
+    const calls = Array.isArray(o.tool_calls) ? o.tool_calls : [];
+    g.step = calls.length ? 'TOOLS' : 'DONE';
+    g.ask = calls.some((c) => c?.name === 'ask_question');
+  }
+}
+
+function agyOf(file, setCtx = null) {
+  let g = agyState.get(file);
+  if (g) return g;
+  const convId = path.basename(path.dirname(path.dirname(path.dirname(file)))) || path.basename(file, '.jsonl');
+  const link = agyChildOf.get(convId);
+  g = {
+    id: 'agy:' + convId, convId, label: 'antigravity', labelSrc: null, promptAt: 0, first: null, model: null, ctx: 0,
+    parent: link?.parent || null, parentToolUseId: link?.toolUseId || null, desc: link?.desc || null,
+    open: [], step: 'DONE', ask: false, lastAt: 0,
+  };
+  // При заварване на вече започната сесия четем началото и края на файла (без да излъчваме старата история),
+  // за да знаем веднага проекта, модела, контекста и дали сесията в момента мисли или почива.
+  try {
+    const stat = fs.statSync(file);
+    g.lastAt = stat.mtimeMs;
+    const fd = fs.openSync(file, 'r');
+    try {
+      const headLen = Math.min(stat.size, 65536);
+      const head = Buffer.alloc(headLen);
+      fs.readSync(fd, head, 0, headLen, 0);
+      for (const ln of head.toString('utf8').split('\n')) {
+        if (!ln.trim()) continue;
+        try { agyApplyMeta(g, JSON.parse(ln), setCtx); } catch { /* отрязан ред */ }
+      }
+      if (stat.size > headLen) {
+        const tailLen = Math.min(stat.size - headLen, 131072);
+        const tail = Buffer.alloc(tailLen);
+        fs.readSync(fd, tail, 0, tailLen, stat.size - tailLen);
+        const lines = tail.toString('utf8').split('\n');
+        lines.shift(); // първият ред в опашката може да е отрязан
+        for (const ln of lines) {
+          if (!ln.trim()) continue;
+          try { const o = JSON.parse(ln); agyApplyMeta(g, o, setCtx); agyStepFrom(g, o); } catch { /* */ }
+        }
+      } else {
+        // малък файл – последната стъпка вече е в head
+        const lines = head.toString('utf8').split('\n').filter((s) => s.trim());
+        try { if (lines.length) agyStepFrom(g, JSON.parse(lines[lines.length - 1])); } catch { /* отрязан ред */ }
+      }
+    } finally { fs.closeSync(fd); }
+  } catch { /* */ }
+  agyLabel(g, file);
+  if (agyState.size >= 300) { // първо заспалите, после най-отдавна пипнатите – живите остават
+    const now = Date.now();
+    for (const [k, v] of [...agyState].sort((x, y) => x[1].lastAt - y[1].lastAt)) {
+      if (agyState.size < 200) break;
+      if (now - v.lastAt > AGY_LIVE_MS || agyState.size >= 300) agyState.delete(k);
+    }
+  }
+  agyState.set(file, g);
+  return g;
+}
+
+/** Вика се от consider() в server.js при откриване/събуждане на transcript.jsonl – регистрира живата сесия веднага. */
+export function agyTouch(file, mtimeMs, setCtx) {
+  const g = agyOf(file, setCtx);
+  if (mtimeMs > g.lastAt) g.lastAt = mtimeMs;
+}
+
+/** Живите сесии на Antigravity (за scanSessions() в server.js – като ocLive). procs: брой пуснати agy | 'pending' | null. */
+export function agyLiveList(now = Date.now(), procs = agyProcs) {
+  if (procs === 'pending' || procs === 0) return []; // не е пуснат (или още не знаем – никой не влиза, за да не излезе веднага)
+  const cands = [];
+  for (const g of agyState.values()) {
+    const idle = now - g.lastAt;
+    if (idle > AGY_LIVE_MS) continue;
+    const status = g.ask ? 'waiting'
+      : (g.step !== 'DONE' || g.open.length > 0) && idle < AGY_BUSY_CAP_MS ? 'busy'
+      : 'idle';
+    if (g.parent && status === 'idle') continue;
+    cands.push({ g, status });
+  }
+  // таван: най-много толкова главни сесии, колкото пуснати agy (заетите първо, после най-скоро пипнатите);
+  // под-агентите остават само ако родителят им е вътре
+  let keep = cands;
+  if (typeof procs === 'number') {
+    const ids = new Set(cands.filter((c) => !c.g.parent)
+      .sort((a, b) => (a.status === 'idle') - (b.status === 'idle') || b.g.lastAt - a.g.lastAt)
+      .slice(0, procs).map((c) => c.g.id));
+    keep = cands.filter((c) => ids.has(c.g.parent || c.g.id));
+  }
+  return keep.map(({ g, status }) => {
+    const e = { agent: g.id, label: g.label, status, provider: 'antigravity' };
+    if (g.model) e.model = g.model;
+    if (status === 'waiting') e.waitingFor = 'question';
+    return e;
+  });
+}
+
+/** Един ред от transcript.jsonl на Antigravity -> събития към офиса. */
+export function agyLine(file, line, emit, usage, setCtx = () => {}) {
+  let o;
+  try { o = JSON.parse(line); } catch { return; }
+  const g = agyOf(file, setCtx);
+  const now = Date.now();
+  g.lastAt = now;
+  agyApplyMeta(g, o, setCtx);
+  agyLabel(g, file);
+  // Ако сесията е под-агент, чиято връзка е дошла малко по-късно (от invoke_subagent). Евристиката по време – само за
+  // разговор, който не е започнат от човек (първият ред не е USER_EXPLICIT): иначе втори прозорец на agy, отворен
+  // до 15 s след invoke_subagent, ставаше „под-агент“.
+  if (!g.parent) {
+    const link = agyChildOf.get(g.convId);
+    if (link) { g.parent = link.parent; g.parentToolUseId = link.toolUseId; g.desc = link.desc; }
+    else if (agyTasks.length && g.first !== null && g.first !== 'USER_EXPLICIT') {
+      const recent = agyTasks.findLast((t) => !t.claimed && t.parent !== g.id && now - t.ts < AGY_SUB_MS);
+      if (recent) { recent.claimed = true; g.parent = recent.parent; g.parentToolUseId = recent.toolUseId; g.desc = recent.desc; }
+    }
+  }
+  const base = () => {
+    const b = { agent: g.id, label: g.label, subagent: !!g.parent, provider: 'antigravity', ts: now };
+    if (g.model) b.model = g.model;
+    if (g.parent) b.parent = g.parent;
+    if (g.parentToolUseId) b.parent_tool_use_id = g.parentToolUseId;
+    if (g.desc) b.desc = g.desc;
+    return b;
+  };
+  if (o.type === 'USER_INPUT') {
+    for (const it of g.open.splice(0)) emit({ ...base(), type: 'tool_end', tool_use_id: it.id });
+    g.step = 'THINKING'; g.ask = false;
+    emit({ ...base(), type: 'user_prompt' });
+  } else if (o.type === 'PLANNER_RESPONSE') {
+    for (const it of g.open.splice(0)) emit({ ...base(), type: 'tool_end', tool_use_id: it.id });
+    g.ask = false;
+    if (o.input_tokens || o.output_tokens || o.cache_read_tokens) {
+      const inp = o.input_tokens || 0, cr = o.cache_read_tokens || 0, out = o.output_tokens || 0;
+      usage(g.id, g.label, !!g.parent, {
+        id: `agy:${g.convId}:${o.step_index ?? now}`,
+        model: g.model || undefined,
+        usage: { input_tokens: inp, output_tokens: out, cache_read_input_tokens: cr, cache_creation_input_tokens: 0 },
+      });
+    }
+    const calls = Array.isArray(o.tool_calls) ? o.tool_calls : [];
+    if (calls.length) {
+      g.step = 'TOOLS';
+      calls.forEach((c, i) => {
+        if (!c?.name) return;
+        const [tool, detail, isAsk, isSub] = agyTool(c.name, c.args);
+        const id = c.id || `${g.convId}:${o.step_index ?? 0}:${i}`;
+        if (isAsk) g.ask = true;
+        if (isSub) {
+          agyTasks.push({ parent: g.id, toolUseId: id, desc: detail || null, ts: now, claimed: false });
+          while (agyTasks.length > 50) agyTasks.shift();
+        }
+        g.open.push({ id, isSub, desc: detail || null });
+        emit({ ...base(), type: 'tool_start', id, tool, detail });
+      });
+    } else {
+      g.step = 'DONE';
+      emit({ ...base(), type: 'say' });
+    }
+  } else if (o.type === 'GENERIC') {
+    g.ask = false;
+    const done = g.open.shift();
+    if (done) {
+      if (done.isSub && typeof o.content === 'string') {
+        const m = o.content.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+        if (m && m[0] !== g.convId) {
+          agyChildOf.set(m[0], { parent: g.id, toolUseId: done.id, desc: done.desc });
+          while (agyChildOf.size > 200) agyChildOf.delete(agyChildOf.keys().next().value);
+        }
+      }
+      emit({ ...base(), type: 'tool_end', tool_use_id: done.id });
+    }
+    if (!g.open.length) g.step = 'THINKING';
+  }
+}
+
+/** Освобождава кешираните данни за заспал/изтрит файл (вика се от server.js). */
+export function pruneProviders(file) {
+  codexMeta.delete(file);
+  geminiState.delete(file);
+  agyState.delete(file);
 }

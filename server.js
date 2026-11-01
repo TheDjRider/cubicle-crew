@@ -17,7 +17,7 @@ import { execFile } from 'node:child_process';
 import { Permissions } from './permissions.js';
 import { Lan } from './lan.js';
 import { Folders } from './folders.js';
-import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine } from './providers.js';
+import { CODEX_ON, CODEX_ROOT, isCodexFile, codexLine, watchOpencode, GEMINI_ON, GEMINI_ROOT, isGeminiFile, geminiLine, AGY_ON, AGY_ROOTS, isAgyFile, agyTouch, agyLine, agyLiveList, watchAgyProcs, pruneProviders, unwrapShell } from './providers.js';
 
 const PORT = Number(process.env.PORT) || 4317;
 const ROOT = process.env.CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
@@ -38,7 +38,8 @@ const COWORK_ON = process.env.CLAUDE_COWORK !== '0' && (!process.env.CLAUDE_PROJ
 const folders = new Folders({ home: HOME, extra: EXTRA, cowork: COWORK_ON, onChange: () => { lastFull = 0; }, log: (m) => console.log(m) });
 const WSL_MS = 60000;
 let wslRoots = [];
-const roots = () => [ROOT, ...folders.roots().map((r) => r.projects), ...wslRoots, ...(CODEX_ON ? [CODEX_ROOT] : []), ...(GEMINI_ON ? [GEMINI_ROOT] : [])];
+const fastRoots = () => [ROOT, ...folders.roots().map((r) => r.projects), ...(CODEX_ON ? [CODEX_ROOT] : []), ...(GEMINI_ON ? [GEMINI_ROOT] : []), ...(AGY_ON ? AGY_ROOTS : [])];
+const roots = () => [...fastRoots(), ...wslRoots];
 /** Допълнителният корен (Docker, Cowork…), в който е файлът – за етикета и доставчика. */
 const rootOfFile = (file) => folders.roots().find((r) => file.startsWith(r.projects + path.sep));
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
@@ -313,6 +314,7 @@ function scanSessions() {
   const files = read(SESSIONS).map((f) => ({ f, r: null }));
   for (const r of folders.roots()) for (const f of read(r.sessions)) files.push({ f, r });
   const list = [];
+  const seenPids = new Set();
   for (const { f, r } of files) {
     let s, mtime = 0;
     try { s = JSON.parse(fs.readFileSync(f, 'utf8')); mtime = fs.statSync(f).mtimeMs; } catch { continue; }
@@ -326,7 +328,7 @@ function scanSessions() {
       if (now - fresh > (s.status === 'busy' ? FOREIGN_BUSY_MS : FOREIGN_IDLE_MS)) continue;
     }
     if (list.some((x) => x.agent === s.sessionId)) continue;
-    if (!r || ownDomain(dom)) pidOf.set(s.sessionId, s.pid); // „Към терминала“ – само за наш процес
+    if (!r || ownDomain(dom)) { pidOf.set(s.sessionId, s.pid); seenPids.add(s.sessionId); } // „Към терминала“ – само за наш процес
     const item = { agent: s.sessionId, label: r?.label || (s.cwd ? path.basename(s.cwd) : s.sessionId.slice(0, 8)), status: s.status || null };
     if (r?.provider) item.provider = r.provider;
     // status "waiting" + waitingFor ("permission prompt", …) – Claude Code чака теб (молба за разрешение и т.н.)
@@ -335,8 +337,14 @@ function scanSessions() {
     if (typeof s.name === 'string' && s.name) item.name = s.name.slice(0, 40);
     list.push(item);
   }
+  for (const k of pidOf.keys()) if (!seenPids.has(k)) pidOf.delete(k);
   for (const x of external.list()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   for (const x of ocLive.list) if (!list.some((y) => y.agent === x.agent)) list.push(x);
+  for (const x of agyLiveList()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
+  for (const x of list) {
+    const c = ctxNow.get(x.agent);
+    if (c && !x.ctx) { x.ctx = c[0]; x.ctxMax = c[1]; }
+  }
   list.sort((x, y) => (x.agent < y.agent ? -1 : 1));
   const key = JSON.stringify(list);
   if (key === liveKey) return;
@@ -348,27 +356,46 @@ function scanSessions() {
 }
 
 // ---------- следене на файлове ----------
-const tracked = new Map(); // file -> { pos, rest: Buffer, mtime }
+const tracked = new Map(); // file -> { pos, rest: Buffer, mtime, skipLine?: boolean }
 // стари/заспали файлове -> { mtime, size, st? }; проверяват се само при пълното обхождане,
 // за да не викаме statSync за стотици стари транскрипти 2.5 пъти в секунда
 const dormant = new Map();
-let firstScan = true, lastFull = 0;
+let firstScan = true, lastFull = 0, slowScanBusy = false;
+const SKIP_DIRS = new Set(['chunks', 'steps', 'scratch', '.user_uploaded', 'node_modules', '.git']);
 
 function listJsonl(dir, out = [], depth = 0) {
   if (depth > 5) return out;
   let entries;
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
   for (const e of entries) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) listJsonl(p, out, depth + 1);
-    else if (e.name.endsWith('.jsonl')) out.push(p);
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name)) listJsonl(path.join(dir, e.name), out, depth + 1);
+    } else if (e.name.endsWith('.jsonl') && e.name !== 'transcript_full.jsonl') {
+      out.push(path.join(dir, e.name));
+    }
   }
   return out;
 }
 
-const brief = (input = {}) =>
-  String(input.file_path || input.command || input.pattern || input.description || input.url || input.query || '')
+async function listJsonlAsync(dir, out = [], depth = 0) {
+  if (depth > 5) return out;
+  let entries;
+  try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch { return out; }
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name)) await listJsonlAsync(path.join(dir, e.name), out, depth + 1);
+    } else if (e.name.endsWith('.jsonl') && e.name !== 'transcript_full.jsonl') {
+      out.push(path.join(dir, e.name));
+    }
+  }
+  return out;
+}
+
+const brief = (input = {}) => {
+  const cmd = input.command ? unwrapShell(String(input.command)) : '';
+  return String(input.file_path || cmd || input.pattern || input.description || input.url || input.query || '')
     .replace(/\s+/g, ' ').slice(0, 60);
+};
 
 // ---------- връзка под-агент -> родител ----------
 // Ред на източниците (от най-сигурен към най-несигурен):
@@ -426,10 +453,11 @@ function linkFor(file, obj, agent) {
   return L;
 }
 
-/** Едно събитие към страницата и портфейла (от Claude Code, Codex или OpenCode). */
+/** Едно събитие към страницата и портфейла (от Claude Code, Codex, OpenCode или Antigravity). */
 function emitEvt(evt) {
   const c = ctxNow.get(evt.agent);
   if (c && ctxSent.get(evt.agent) !== c) { evt.ctx = c[0]; evt.ctxMax = c[1]; ctxSent.set(evt.agent, c); }
+  while (ctxSent.size > 500) ctxSent.delete(ctxSent.keys().next().value);
   if (DEBUG) console.log(evt.agent.slice(0, 14).padEnd(14), evt.type.padEnd(11), evt.tool || '', evt.detail || '', evt.parent ? `↑${evt.parent.slice(0, 8)} (${evt.link || evt.provider || ''})` : '');
   broadcast(evt);
   wallet.ingest(evt);
@@ -442,12 +470,15 @@ function setCtx(agent, ctx, max) {
   // прозорецът, ако агентът не го казва: най-малкият от обичайните, в който контекстът се побира
   max = max > 0 ? max : [200000, 272000, 400000, 1000000, 2000000].find((m) => m >= ctx) || ctx;
   ctxNow.set(agent, [Math.round(ctx), Math.round(max)]);
+  while (ctxNow.size > 500) ctxNow.delete(ctxNow.keys().next().value);
 }
 
 function handleLine(file, line) {
+  if (isAgyFile(file)) { agyLine(file, line, emitEvt, usageOf, setCtx); return; }
   if (isCodexFile(file)) { codexLine(file, line, emitEvt, usageOf, setCtx); return; }
   if (isGeminiFile(file)) { geminiLine(file, line, emitEvt, usageOf, setCtx); return; }
   if (file.startsWith(GEMINI_ROOT + path.sep)) return; // други .jsonl в ~/.gemini/tmp (не са разговори)
+  if (line.length > 2048 && line.includes('"api-request-blob"')) return;
   let obj;
   try { obj = JSON.parse(line); } catch { return; }
   // само разговорът: от Claude Code 2.1.3xx има и "api-request-blob" (копие на заявката към API-то със същите
@@ -502,33 +533,48 @@ function handleLine(file, line) {
   }
 }
 
+const MAX_READ_BYTES = 512 * 1024;       // до 512 KB на едно четене, за да не блокираме при огромни файлове
+const MAX_LINE_BYTES = 2 * 1024 * 1024;  // таван 2 MB на ред (огромни base64/blob редове се прескачат)
+
 function readNew(file, st) {
   let size;
-  try { const stat = fs.statSync(file); size = stat.size; st.mtime = stat.mtimeMs; } catch { tracked.delete(file); return; }
-  if (size < st.pos) { st.pos = 0; st.rest = Buffer.alloc(0); } // файлът е пренаписан
+  try { const stat = fs.statSync(file); size = stat.size; st.mtime = stat.mtimeMs; } catch {
+    tracked.delete(file); links.delete(file); pruneProviders(file); return;
+  }
+  if (size < st.pos) { st.pos = 0; st.rest = Buffer.alloc(0); st.skipLine = false; } // файлът е пренаписан
   if (size === st.pos) return;
+  const toRead = Math.min(size - st.pos, MAX_READ_BYTES);
+  const buf = Buffer.alloc(toRead);
   const fd = fs.openSync(file, 'r');
-  const buf = Buffer.alloc(size - st.pos);
-  fs.readSync(fd, buf, 0, buf.length, st.pos);
-  fs.closeSync(fd);
-  st.pos = size;
-  const all = Buffer.concat([st.rest, buf]);
+  let n = 0;
+  try { n = fs.readSync(fd, buf, 0, toRead, st.pos); } finally { fs.closeSync(fd); }
+  st.pos += n;
+  const chunk = n < toRead ? buf.subarray(0, n) : buf;
+  const all = st.rest.length ? Buffer.concat([st.rest, chunk]) : chunk;
   const lastNl = all.lastIndexOf(0x0a);
-  if (lastNl === -1) { st.rest = all; return; }
-  st.rest = all.subarray(lastNl + 1);
-  for (const line of all.subarray(0, lastNl).toString('utf8').split('\n')) {
-    if (line.trim()) handleLine(file, line);
+  if (lastNl === -1) {
+    if (all.length > MAX_LINE_BYTES) { st.rest = Buffer.alloc(0); st.skipLine = true; }
+    else st.rest = all;
+    return;
+  }
+  const rest = all.subarray(lastNl + 1);
+  if (rest.length > MAX_LINE_BYTES) { st.rest = Buffer.alloc(0); st.skipLine = true; }
+  else st.rest = Buffer.from(rest);
+  const lines = all.subarray(0, lastNl).toString('utf8').split('\n');
+  if (st.skipLine) { lines.shift(); st.skipLine = false; }
+  for (const line of lines) {
+    if (line.trim() && line.length <= MAX_LINE_BYTES) handleLine(file, line);
   }
 }
 
 function listDir(dir) {
-  try { return fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl')).map((n) => path.join(dir, n)); } catch { return []; }
+  try { return fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl') && n !== 'transcript_full.jsonl').map((n) => path.join(dir, n)); } catch { return []; }
 }
 
 // нов или събуден файл -> tracked; стар (непипан от час) -> dormant
-function consider(file, now) {
-  let stat;
-  try { stat = fs.statSync(file); } catch { return; }
+function consider(file, now, statArg = null) {
+  let stat = statArg;
+  if (!stat) { try { stat = fs.statSync(file); } catch { return; } }
   const d = dormant.get(file);
   if (d && d.mtime === stat.mtimeMs) return;
   if (now - stat.mtimeMs > ACTIVE_WINDOW_MS) { dormant.set(file, { mtime: stat.mtimeMs, size: stat.size, st: d?.st }); return; }
@@ -538,16 +584,38 @@ function consider(file, now) {
     // при старт не пускаме историята отново; възобновен стар файл – от размера, с който заспа
     // (нищо от новото не се губи); нови файлове четем от началото
     const old = firstScan || (stat.birthtimeMs || stat.ctimeMs) < STARTED - 5000;
-    st = { pos: d ? d.size : old ? stat.size : 0, rest: Buffer.alloc(0) };
+    st = { pos: d ? d.size : old ? stat.size : 0, rest: Buffer.alloc(0), mtime: stat.mtimeMs };
     if (DEBUG) console.log('следя', file);
   }
   tracked.set(file, st);
+  if (isAgyFile(file)) agyTouch(file, stat.mtimeMs, setCtx);
+}
+
+/** Асинхронно обхождане (за WSL и периодичните пълни сканирания след старта), за да не блокира главната нишка. */
+async function scanRootsAsync(rootList) {
+  if (slowScanBusy || !rootList.length) return;
+  slowScanBusy = true;
+  try {
+    for (const root of rootList) {
+      const files = await listJsonlAsync(root);
+      const now = Date.now();
+      for (const file of files) {
+        if (tracked.has(file)) continue;
+        try {
+          const stat = await fs.promises.stat(file);
+          consider(file, now, stat);
+        } catch { /* изтрит файл */ }
+      }
+    }
+  } finally {
+    slowScanBusy = false;
+  }
 }
 
 /** Пуснатите WSL дистрибуции с ~/.claude/projects (само Windows; без CLAUDE_PROJECTS_DIR и без CLAUDE_WSL=0). */
 function detectWsl() {
   if (process.platform !== 'win32' || process.env.CLAUDE_PROJECTS_DIR || process.env.CLAUDE_WSL === '0') return;
-  execFile('wsl.exe', ['-l', '--running', '-q'], { encoding: 'buffer', timeout: 5000, windowsHide: true }, (err, out) => {
+  execFile('wsl.exe', ['-l', '--running', '-q'], { encoding: 'buffer', timeout: 5000, windowsHide: true }, async (err, out) => {
     if (err || !out) return;
     const names = out.toString('utf16le').replace(/\uFEFF/g, '').split(/\r?\n/).map((s) => s.replace(/\0/g, '').trim()).filter(Boolean);
     const found = [];
@@ -555,8 +623,8 @@ function detectWsl() {
       if (!/^[\w.-]+$/.test(n)) continue;
       const base = `\\\\wsl.localhost\\${n}`;
       const homes = [path.join(base, 'root')];
-      try { for (const u of fs.readdirSync(path.join(base, 'home'))) homes.push(path.join(base, 'home', u)); } catch { /* няма /home */ }
-      for (const h of homes) { const p = path.join(h, '.claude', 'projects'); try { if (fs.statSync(p).isDirectory()) found.push(p); } catch { /* */ } }
+      try { for (const u of await fs.promises.readdir(path.join(base, 'home'))) homes.push(path.join(base, 'home', u)); } catch { /* няма /home */ }
+      for (const h of homes) { const p = path.join(h, '.claude', 'projects'); try { if ((await fs.promises.stat(p)).isDirectory()) found.push(p); } catch { /* */ } }
     }
     if (found.join('|') !== wslRoots.join('|')) { wslRoots = found; for (const p of found) console.log(`WSL: следя ${p}`); }
   });
@@ -566,8 +634,13 @@ function poll() {
   const now = Date.now();
   if (now - lastFull >= SCAN_MS) {
     lastFull = now;
-    for (const root of roots()) for (const file of listJsonl(root)) if (!tracked.has(file)) consider(file, now);
-    firstScan = false;
+    if (firstScan) {
+      for (const root of fastRoots()) for (const file of listJsonl(root)) if (!tracked.has(file)) consider(file, now);
+      firstScan = false;
+      if (wslRoots.length) scanRootsAsync(wslRoots).catch(() => {});
+    } else {
+      scanRootsAsync(roots()).catch(() => {});
+    }
   } else {
     // между пълните обхождания – само папките на проектите (нова сесия) и на активните сесии (нов под-агент);
     // readdir без statSync на старите файлове
@@ -582,7 +655,12 @@ function poll() {
   }
   for (const [file, st] of tracked) {
     readNew(file, st);
-    if (st.mtime && now - st.mtime > ACTIVE_WINDOW_MS) { tracked.delete(file); dormant.set(file, { mtime: st.mtime, size: st.pos, st }); }
+    if (st.mtime && now - st.mtime > ACTIVE_WINDOW_MS) {
+      tracked.delete(file);
+      links.delete(file);
+      pruneProviders(file);
+      dormant.set(file, { mtime: st.mtime, size: st.pos, st });
+    }
   }
 }
 
@@ -619,6 +697,8 @@ export async function startServer(port = PORT, { reuse = true } = {}) {
   setInterval(scanSessions, SESSIONS_MS);
   if (CODEX_ON) console.log(`Codex: watching ${CODEX_ROOT}`);
   if (GEMINI_ON) console.log(`Gemini CLI: watching ${GEMINI_ROOT}`);
+  if (AGY_ON) console.log(`Antigravity: watching ${AGY_ROOTS.join(', ')}`);
+  if (AGY_ON) watchAgyProcs();
   watchOpencode(emitEvt, usageOf, (m) => console.log(m), setCtx, ocLive).catch(() => {});
   lan.start().catch(() => {});
   scanSessions();

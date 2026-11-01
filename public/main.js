@@ -21,7 +21,7 @@ import { Ambience } from './ambience.js';
 import { GLView } from './gl/engine.js';
 
 const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d', { alpha: !!PARAMS.clear });
+const ctx = canvas.getContext('2d', { alpha: !!PARAMS.clear, willReadFrequently: !!PARAMS.clear });
 // „Премиум осветление (GPU)“ (prefs.gl или ?gl): WebGL2 платно над #c (събитията минават към #c), офисът рисува в
 // неговия буфер. Включва се/изключва в движение – syncGl() по-долу.
 let glView = null;
@@ -31,7 +31,7 @@ if (PARAMS.clear) { document.documentElement.classList.add('clear'); clearHits()
 function clearHits() {
   const bridge = window.pixelOffice;
   if (!bridge?.clearHit || !bridge.onClearProbe) return;
-  const g = canvas.getContext('2d');
+  const g = canvas.getContext('2d', { alpha: true, willReadFrequently: true });
   const solidAt = (x, y) => {
     if (y < 26 || x < 6 || y > innerHeight - 6 || x > innerWidth - 6) return true;
     const el = document.elementFromPoint(x, y);

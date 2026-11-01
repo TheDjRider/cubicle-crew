@@ -6,7 +6,7 @@
 
 [English](README.md) · [日本語](README.ja.md) · **简体中文**
 
-每个 Claude Code 会话都会变成一位坐在工位上的同事，**Codex**、**Gemini CLI** 和 **OpenCode** 的会话也一样。**Copilot CLI、Cursor 或任何脚本**也可以通过一个小型本地 API（[docs/api.md](docs/api.md)，英文）走进来。子智能体从门口进来，接过任务，坐到自己团队的位置上。有人需要你的时候，整间屋子都会提醒你。
+每个 Claude Code 会话都会变成一位坐在工位上的同事，**Codex**、**Gemini CLI**、**Antigravity CLI** 和 **OpenCode** 的会话也一样。**Copilot CLI、Cursor 或任何脚本**也可以通过一个小型本地 API（[docs/api.md](docs/api.md)，英文）走进来。子智能体从门口进来，接过任务，坐到自己团队的位置上。有人需要你的时候，整间屋子都会提醒你。
 
 [**🕹 在浏览器中试玩在线演示**](https://rezored.github.io/cubicle-crew/) · [**▶ 观看预告片**](https://rezored.github.io/cubicle-crew/media/trailer.mp4) · [**⬇ 下载**](https://github.com/rezored/cubicle-crew/releases/latest) · [快速开始](#快速开始) · [工作原理](#工作原理)
 
@@ -162,13 +162,14 @@ Cubicle Crew 是一个免费的业余项目，靠大家的反馈成长。想法�
 ~/.claude/sessions/<pid>.json  ──poll──▶     │                         │
 ~/.codex/sessions/**/*.jsonl   ──tail──▶     │
 ~/.gemini/tmp/*/chats/*.jsonl  ──tail──▶     │
+~/.gemini/antigravity-cli/**   ──tail──▶     │
 opencode.db（只读）            ──poll──▶     │
                                          wallet.js                  canvas 场景
                                   (~/.pixel-office/save.json)     (vanilla ES modules)
 ```
 
 - **服务器**（`server.js`）：轮询最近一小时内有改动的会话记录，把每一行转换成小事件（`tool_start`、`tool_end`、`say`、`user_prompt`）。它先通过 `subagents/agent-<id>.meta.json`，再通过会话 ID，最后通过时间推断，把子智能体关联到父会话。它还每秒读取 `~/.claude/sessions`，以了解哪些会话仍然打开、哪些在忙、哪些在等你。启动时不会重放旧的历史。
-- **Codex、Gemini CLI 和 OpenCode**（`providers.js`）：Codex 的 rollout 文件和 Gemini CLI 的聊天日志会像 Claude Code 的会话记录一样被跟踪（Gemini 的子智能体会以子智能体的身份进来）；shell 命令被分为读取（`rg`、`cat`、`Get-Content`……）和运行，`apply_patch` 算作 typing。OpenCode 的 SQLite 数据库每秒以只读方式读取一次。它们的标签带有 `· Codex` / `· Gemini` / `· OpenCode`。它们没有实时会话文件，所以权限提示时还不会变红，「跳转到终端」也只支持 Claude Code。
+- **Codex、Gemini CLI 和 OpenCode**（`providers.js`）：Codex 的 rollout 文件和 Gemini CLI 的聊天日志会像 Claude Code 的会话记录一样被跟踪（Gemini 的子智能体会以子智能体的身份进来）；shell 命令被分为读取（`rg`、`cat`、`Get-Content`……）和运行，`apply_patch` 算作 typing。OpenCode 的 SQLite 数据库每秒以只读方式读取一次。它们的标签带有 `· Codex` / `· Gemini` / `· OpenCode`。**Antigravity CLI**（`agy`）的会话记录（`~/.gemini/antigravity-cli/brain/*/.system_generated/logs/`）也以同样方式跟踪：标签是项目文件夹名（来自 `history.jsonl`），卡片显示你在 `agy` 中选择的模型，只有在 `agy` 进程运行时它才会留在办公室里。它们没有实时会话文件，所以权限提示时还不会变红，「跳转到终端」也只支持 Claude Code。
 - **工具 → 状态：** `Edit`/`Write` → typing，`Read`/`Grep`/`WebFetch` → reading，`Bash` → running，`Task`/`Agent` → delegating，`AskUserQuestion` → waiting。8 秒没有新记录 → idle，除非 Claude Code 仍报告该会话正忙（在思考或写很长的回复）。映射关系可以在 `public/rules.js` 中修改。
 - **权限提示** 不会写入会话记录，但它在屏幕上显示期间，Claude Code 会把会话标记为 `waiting`（`waitingFor: "permission prompt"`）。最后启动工具的那个智能体会一直是红色，直到你回答；点击 Allow 的那一刻它就回去工作。
 - **客户端**（`public/`）：不需要构建步骤的原生 ES 模块。场景画在低分辨率的 canvas 上，再按整数倍设备像素放大，所以在任何 DPI 下都清晰。所有文字都是叠在 canvas 上的 HTML。

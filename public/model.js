@@ -5,6 +5,10 @@ import { CFG, TOOL_STATE, DELEGATE_TOOLS } from './config.js';
 
 const CRASH_STAY_MS = 15 * 60e3; // прекъсната сесия стои посивяла най-много толкова
 const QUESTION_STAY_MS = 30 * 60e3; // неотговорен въпрос (OpenCode question…) държи „чака те“ най-много толкова
+// временно име, докато доставчикът не разбере проекта – само то се сменя с истинското (иначе името стои, както е дошло:
+// статистиката и портфейлът се водят по него, а Claude Code сменя cwd в транскрипта при всяко `cd`)
+const GENERIC_LABELS = new Set(['codex', 'gemini', 'opencode', 'antigravity']);
+const betterLabel = (cur, nxt) => !!nxt && nxt !== cur && (!cur || GENERIC_LABELS.has(cur)) && !GENERIC_LABELS.has(nxt);
 
 export class Model {
   constructor() {
@@ -41,7 +45,7 @@ export class Model {
         pending: new Map(), lastEvent: now, firstSeen: now, toolCalls: 0,
         children: new Set(), state: 'thinking', stateSince: now, busySince: now,
         done: false, doneAt: 0, leaving: false, lastTool: null,
-        provider: e.provider || null, // 'codex' | 'opencode'; Claude Code = null
+        provider: e.provider || null, // 'codex' | 'opencode' | 'gemini' | 'antigravity'; Claude Code = null
       };
       if (e.type === 'presence') { // жива сесия без скорошни събития -> идва и направо почива
         a.lastEvent = now - CFG.IDLE_MS - 1; a.state = 'idle'; a.stateSince = now - CFG.WANDER_AFTER_MS; a.busySince = 0;
@@ -57,6 +61,8 @@ export class Model {
       const waiting = this.pendingLinks.get(a.id);
       if (waiting) { for (const cid of waiting) this.link(cid, a.id); this.pendingLinks.delete(a.id); }
     }
+    if (betterLabel(a.label, e.label)) a.label = e.label;
+    if (e.provider && !a.provider) a.provider = e.provider;
     if (e.subagent) a.subagent = true;
     if (e.desc && !a.desc) a.desc = e.desc;
     if (e.model) a.model = e.model;
@@ -121,9 +127,19 @@ export class Model {
     for (const s of Array.isArray(list) ? list : []) {
       if (!s || typeof s.agent !== 'string') continue;
       ids.add(s.agent);
-      if (!this.agents.has(s.agent)) this.ingest({ agent: s.agent, label: s.label, type: 'presence', provider: typeof s.provider === 'string' ? s.provider.slice(0, 20) : undefined, model: typeof s.model === 'string' ? s.model.slice(0, 60) : undefined }, now);
+      if (!this.agents.has(s.agent)) {
+        this.ingest({
+          agent: s.agent, label: s.label, type: 'presence',
+          provider: typeof s.provider === 'string' ? s.provider.slice(0, 20) : undefined,
+          model: typeof s.model === 'string' ? s.model.slice(0, 60) : undefined,
+          ctx: s.ctx, ctxMax: s.ctxMax,
+        }, now);
+      }
       const a = this.agents.get(s.agent);
       a.live = true; a.ended = false;
+      if (betterLabel(a.label, s.label)) a.label = s.label;
+      if (typeof s.model === 'string' && s.model) a.model = s.model.slice(0, 60);
+      if (s.ctx > 0) { a.ctx = s.ctx; a.ctxMax = s.ctxMax || a.ctxMax || 200000; }
       if (typeof s.name === 'string' && s.name) a.sessionName = s.name;
       a.busy = s.status === 'busy';   // Claude Code: "busy" докато мисли/работи (в транскрипта може да няма редове), "idle" – чака промпт
       // "waiting" (+ waitingFor: "permission prompt"…) – чака теб; щом стане пак "busy"/"idle", е отговорено

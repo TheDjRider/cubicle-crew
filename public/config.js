@@ -37,10 +37,10 @@ export const CFG = {
 
 // Цветовете на състоянията са част от визуалния език — не ги променяй без причина.
 /** Други агенти освен Claude Code (имената са еднакви на двата езика). */
-export const PROVIDERS = { cowork: 'Cowork', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
+export const PROVIDERS = { cowork: 'Cowork', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini', antigravity: 'Antigravity', copilot: 'Copilot', cursor: 'Cursor', windsurf: 'Windsurf', cline: 'Cline', aider: 'Aider', amp: 'Amp', kiro: 'Kiro', zed: 'Zed' };
 
 /** Бранд цветове + пиксел символ за заставката на монитора при idle (агент без активност); липсващ запис = звездичката на Claude. */
-export const PROVIDER_MARK = { opencode: { c: '#fab283', g: 'ring' }, codex: { c: '#10a37f', g: 'gear' }, gemini: { c: '#4285f4', g: 'star4' }, copilot: { c: '#a371f7', g: 'eyes' }, cursor: { c: '#7f8ea3', g: 'bar' } };
+export const PROVIDER_MARK = { opencode: { c: '#fab283', g: 'ring' }, codex: { c: '#10a37f', g: 'gear' }, gemini: { c: '#4285f4', g: 'star4' }, antigravity: { c: '#7c6af7', g: 'star4' }, copilot: { c: '#a371f7', g: 'eyes' }, cursor: { c: '#7f8ea3', g: 'bar' } };
 
 export const STATES = {
   idle:       { color: '#6b6b80' },
@@ -66,7 +66,7 @@ const T_BG = {
   wait: { morning: 'Добро утро!', day: 'Добър ден!', evening: 'Добър вечер!', msg: 'Чакам първия агент…', hint: 'Кликни, за да отвориш офиса' },
   reconnecting: 'връзката падна, опитвам пак…',
   demo: 'ДЕМО',
-  web: { live: 'Демо на живо – агентите са измислени.', try: 'Приложението показва истинските ти сесии на Claude Code, Codex, Gemini CLI и OpenCode.', get: 'Изтегли', or: 'или', star: 'GitHub', hide: 'Скрий', app: 'Това работи в приложението, с истинските ти сесии.' },
+  web: { live: 'Демо на живо – агентите са измислени.', try: 'Приложението показва истинските ти сесии на Claude Code, Codex, Gemini CLI, Antigravity и OpenCode.', get: 'Изтегли', or: 'или', star: 'GitHub', hide: 'Скрий', app: 'Това работи в приложението, с истинските ти сесии.' },
   agents: 'Агенти',
   subagents: 'Под-агенти',
   toolCalls: 'Извиквания',
@@ -143,7 +143,7 @@ const T_BG = {
     openStats: 'Статистика', openWeather: 'Времето навън', security: 'Какво се чете и записва',
     place: 'Размер и място', resetSize: 'Нулирай размера', resetPlace: 'Върни над трея', browser: 'Отвори в браузъра',
     keysTitle: 'Клавиши',
-    agentsTitle: 'Други агенти', agentsHint: 'Claude Code, Codex, Gemini CLI и OpenCode се виждат сами. Copilot CLI, Cursor или собствен скрипт влизат през малък локален API.', agentsLink: 'Как да ги включиш (API)',
+    agentsTitle: 'Други агенти', agentsHint: 'Claude Code, Codex, Gemini CLI, Antigravity и OpenCode се виждат сами. Copilot CLI, Cursor или собствен скрипт влизат през малък локален API.', agentsLink: 'Как да ги включиш (API)',
     keys: [['?', 'тези настройки'], ['B', 'магазинът'], ['L', 'легендата на цветовете'], ['Esc', 'затваря / маха фокуса'], ['Y / N', 'Разреши / Откажи'], ['Ctrl+Alt+P', 'покажи / скрий прозореца'], ['Ctrl+Alt+Y / N', 'разреши / откажи от всеки прозорец']],
     // всяка настройка с по едно изречение какво прави
     look: 'Как изглежда',
@@ -266,6 +266,10 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.6': [
+        ['Antigravity CLI в офиса', 'Сесиите на agy идват сами – с проекта, модела, който си избрал в agy (напр. Gemini 3.8 Flash), инструментите и контекста. Стоят в офиса само докато agy е пуснат.'],
+        ['По-леко с големите файлове', 'Огромните транскрипти се четат на части и не спират офиса; двоен клик на „Към терминала“ пуска само един помощен процес.'],
+      ],
       '2.19.5': [
         ['Имената не пречат', 'Името на агента е табелка на неговото бюро, а не върху стола и главата на съседа отдолу. Етикет, който закрива някого, избледнява – посочи го и пак се вижда ясно.'],
       ],
@@ -381,7 +385,7 @@ const T_EN = {
   wait: { morning: 'Good morning!', day: 'Good afternoon!', evening: 'Good evening!', msg: 'Waiting for the first agent…', hint: 'Click to open the office' },
   reconnecting: 'connection lost, retrying…',
   demo: 'DEMO',
-  web: { live: 'Live demo – the agents are simulated.', try: 'The app shows your real Claude Code, Codex, Gemini CLI and OpenCode sessions.', get: 'Download', or: 'or', star: 'GitHub', hide: 'Hide', app: 'This works in the app, with your real sessions.' },
+  web: { live: 'Live demo – the agents are simulated.', try: 'The app shows your real Claude Code, Codex, Gemini CLI, Antigravity and OpenCode sessions.', get: 'Download', or: 'or', star: 'GitHub', hide: 'Hide', app: 'This works in the app, with your real sessions.' },
   agents: 'Agents',
   subagents: 'Sub-agents',
   toolCalls: 'Tool calls',
@@ -456,7 +460,7 @@ const T_EN = {
     openStats: 'Stats', openWeather: 'Weather outside', security: 'What is read and written',
     place: 'Size and place', resetSize: 'Reset size', resetPlace: 'Move back above the tray', browser: 'Open in browser',
     keysTitle: 'Keys',
-    agentsTitle: 'Other agents', agentsHint: 'Claude Code, Codex, Gemini CLI and OpenCode show up by themselves. Copilot CLI, Cursor or your own script come in through a small local API.', agentsLink: 'How to connect them (API)',
+    agentsTitle: 'Other agents', agentsHint: 'Claude Code, Codex, Gemini CLI, Antigravity and OpenCode show up by themselves. Copilot CLI, Cursor or your own script come in through a small local API.', agentsLink: 'How to connect them (API)',
     keys: [['?', 'these settings'], ['B', 'the shop'], ['L', 'the colour legend'], ['Esc', 'close / clear the focus'], ['Y / N', 'Allow / Deny'], ['Ctrl+Alt+P', 'show / hide the window'], ['Ctrl+Alt+Y / N', 'allow / deny from any window']],
     look: 'Look',
     office: 'Office', officeHint: 'The whole game: coins and the shop, pets, coffee breaks, handheld games and darts, effects and achievements.',
@@ -577,6 +581,10 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.6': [
+        ['Antigravity CLI in the office', 'agy sessions walk in by themselves – with the project, the model you picked in agy (e.g. Gemini 3.8 Flash), tools and the context gauge. They stay only while agy is running.'],
+        ['Lighter on big files', 'Huge transcripts are read in chunks and no longer stall the office; double-clicking "Jump to the terminal" starts only one helper process.'],
+      ],
       '2.19.5': [
         ['Names stay out of the way', 'An agent\'s name is now a plate on its own desk, not on the chair and head of the neighbour below. A label that covers someone fades – point at it and it is clear again.'],
       ],
@@ -724,7 +732,7 @@ export function setLang(l) {
 }
 
 // ---- URL параметри ----
-const Q = new URLSearchParams(location.search);
+const Q = new URLSearchParams(globalThis.location?.search || '');
 // демото в интернет (GitHub Pages): scripts/pages.mjs слага window.CC_WEB в index.html – без сървър, винаги демо
 const WEB = Q.has('web') || !!globalThis.CC_WEB;
 export const PARAMS = {
@@ -745,7 +753,7 @@ export const PARAMS = {
   gl: Q.has('gl') ? (Q.get('gl') || 'on') : null, // ?gl – WebGL2 рендер със светлини (опит); ?gl=geo|sun|norm – буферите; без WebGL2 – 2D
   strip: Q.has('strip'),       // ?strip – тънка лента: по един ред на сесия вместо офиса (Electron го слага от менюто)
   // отворено през адреса в локалната мрежа (изгледът за телефон): само за гледане, винаги без команди и пътища
-  lan: !WEB && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname),
+  lan: !WEB && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(globalThis.location?.hostname || 'localhost'),
 };
 // прозрачен фон: стената я няма – по-ниска „стена“ (колкото да се събере библиотеката): стаята е 356×166 (обичайната – 356×182)
 if (PARAMS.clear) Object.assign(CFG, { WALL_H: 44, MIN_H: 160, LOUNGE_UP: true, FIXED_ROOM: true });

@@ -49,10 +49,18 @@ async function focusMac(pid) {
   return null;
 }
 
+const inFlight = new Map(); // pid -> Promise (предпазва от паралелни PowerShell процеси при двоен клик)
+
 /** Изкарва отпред прозореца на процеса (или негов родител). Връща името на приложението или null. */
 export async function focusPid(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return null;
-  if (process.platform === 'win32') return run('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', PS(pid)]);
-  if (process.platform === 'darwin') return focusMac(pid);
-  return null; // Linux: прозоречните мениджъри са твърде различни – засега не
+  if (inFlight.has(pid)) return inFlight.get(pid);
+  const job = (process.platform === 'win32'
+    ? run('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', PS(pid)])
+    : process.platform === 'darwin'
+      ? focusMac(pid)
+      : Promise.resolve(null) // Linux: прозоречните мениджъри са твърде различни – засега не
+  ).finally(() => inFlight.delete(pid));
+  inFlight.set(pid, job);
+  return job;
 }

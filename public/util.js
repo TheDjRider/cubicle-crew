@@ -76,7 +76,7 @@ const DANGER = [
   /\brm\b(?=[^|;&]*\s-\w*r)(?=[^|;&]*\s-\w*f)/i,                    // rm -rf, rm -r -f, rm -fR
   /\bRemove-Item\b(?=[^|;]*\s-Recurse)(?=[^|;]*\s-Force)/i,        // Remove-Item -Recurse -Force
   /\b(?:rmdir|rd|del)\s+\/s\b/i,                                    // cmd: rmdir /s, del /s
-  /\bgit\s+push\b[^|;&]*\s(?:--force|-f\b|--delete\b)/i,
+  /\bgit\s+push\b[^|;&]*\s(?:--force(?:-with-lease)?|-f\b|--delete\b)/i,
   /\bgit\s+(?:reset\s+--hard|clean\s+-\w*f|branch\s+-D\b|filter-(?:branch|repo)\b)/,
   /\b(?:terraform|tofu|pulumi)\s+(?:apply|destroy|up)\b/i,
   /\bkubectl\s+(?:delete|apply|drain)\b|\bhelm\s+(?:uninstall|delete)\b/i,

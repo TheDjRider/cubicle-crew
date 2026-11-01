@@ -6,7 +6,7 @@
 
 [English](README.md) · **日本語** · [简体中文](README.zh-CN.md)
 
-Claude Code のセッションはひとつずつ、デスクに座る同僚になります。**Codex**、**Gemini CLI**、**OpenCode** のセッションも同じです。**Copilot CLI、Cursor、自作スクリプト**も小さなローカル API（[docs/api.md](docs/api.md)、英語）から参加できます。サブエージェントはドアから入ってきてタスクを受け取り、チームの席に着きます。誰かがあなたを待っていれば、部屋全体がそれを知らせます。
+Claude Code のセッションはひとつずつ、デスクに座る同僚になります。**Codex**、**Gemini CLI**、**Antigravity CLI**、**OpenCode** のセッションも同じです。**Copilot CLI、Cursor、自作スクリプト**も小さなローカル API（[docs/api.md](docs/api.md)、英語）から参加できます。サブエージェントはドアから入ってきてタスクを受け取り、チームの席に着きます。誰かがあなたを待っていれば、部屋全体がそれを知らせます。
 
 [**🕹 ブラウザでライブデモを試す**](https://rezored.github.io/cubicle-crew/) · [**▶ トレーラーを見る**](https://rezored.github.io/cubicle-crew/media/trailer.mp4) · [**⬇ ダウンロード**](https://github.com/rezored/cubicle-crew/releases/latest) · [クイックスタート](#クイックスタート) · [仕組み](#仕組み)
 
@@ -162,13 +162,14 @@ Cubicle Crew が時間の節約になっているなら、[コーヒーをおご
 ~/.claude/sessions/<pid>.json  ──poll──▶     │                         │
 ~/.codex/sessions/**/*.jsonl   ──tail──▶     │
 ~/.gemini/tmp/*/chats/*.jsonl  ──tail──▶     │
+~/.gemini/antigravity-cli/**   ──tail──▶     │
 opencode.db（読み取り専用）    ──poll──▶     │
                                          wallet.js                  canvas のシーン
                                   (~/.pixel-office/save.json)     (vanilla ES modules)
 ```
 
 - **サーバー**（`server.js`）：直近 1 時間に更新されたトランスクリプトを監視し、各行を小さなイベント（`tool_start`、`tool_end`、`say`、`user_prompt`）に変換します。サブエージェントは、まず `subagents/agent-<id>.meta.json`、次にセッション ID、最後にタイミングから親に結び付けます。また毎秒 `~/.claude/sessions` を読み、どのセッションがまだ開いているか、作業中か、あなたを待っているかを把握します。起動時に過去の履歴は再生しません。
-- **Codex、Gemini CLI、OpenCode**（`providers.js`）：Codex のロールアウトファイルと Gemini CLI のチャットログは、Claude Code のトランスクリプトと同じように監視します（Gemini のサブエージェントはサブエージェントとして入ってきます）。シェルコマンドは読み取り（`rg`、`cat`、`Get-Content`…）と実行に分類し、`apply_patch` は typing になります。OpenCode の SQLite データベースは毎秒 1 回、読み取り専用で読みます。ラベルには `· Codex` / `· Gemini` / `· OpenCode` が付きます。これらにはライブセッションのファイルがないため、許可プロンプトで赤くなることはまだなく、ターミナルへのジャンプも Claude Code だけです。
+- **Codex、Gemini CLI、OpenCode**（`providers.js`）：Codex のロールアウトファイルと Gemini CLI のチャットログは、Claude Code のトランスクリプトと同じように監視します（Gemini のサブエージェントはサブエージェントとして入ってきます）。シェルコマンドは読み取り（`rg`、`cat`、`Get-Content`…）と実行に分類し、`apply_patch` は typing になります。OpenCode の SQLite データベースは毎秒 1 回、読み取り専用で読みます。ラベルには `· Codex` / `· Gemini` / `· OpenCode` が付きます。**Antigravity CLI**（`agy`）のトランスクリプト（`~/.gemini/antigravity-cli/brain/*/.system_generated/logs/`）も同じように監視します。ラベルはプロジェクトのフォルダー名（`history.jsonl` から）、カードには `agy` で選んだモデルが表示され、`agy` のプロセスが動いている間だけオフィスに残ります。これらにはライブセッションのファイルがないため、許可プロンプトで赤くなることはまだなく、ターミナルへのジャンプも Claude Code だけです。
 - **ツール → 状態：** `Edit`/`Write` → typing、`Read`/`Grep`/`WebFetch` → reading、`Bash` → running、`Task`/`Agent` → delegating、`AskUserQuestion` → waiting。8 秒間何もなければ idle になりますが、Claude Code がセッションを作業中と報告している間（考えている、長い返答を書いている）は別です。対応は `public/rules.js` で変更できます。
 - **許可プロンプト** はトランスクリプトには記録されませんが、画面に表示されている間、Claude Code はセッションを `waiting`（`waitingFor: "permission prompt"`）にします。最後にツールを開始したエージェントが、答えるまで赤くなり、Allow をクリックした瞬間に作業に戻ります。
 - **クライアント**（`public/`）：ビルド不要の素の ES モジュール。シーンは低解像度の canvas に描かれ、デバイスピクセルの整数倍で拡大されるので、どの DPI でもくっきり表示されます。文字はすべて canvas の上に重ねた HTML です。

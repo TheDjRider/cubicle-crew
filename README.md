@@ -6,7 +6,7 @@
 
 **English** · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
 
-Every Claude Code session becomes a coworker at a desk – and so does every **Codex**, **Gemini CLI** and **OpenCode** session. **Copilot CLI, Cursor or any script** can walk in too through a small local API ([docs/api.md](docs/api.md)). Sub-agents walk in through the door, pick up the task
+Every Claude Code session becomes a coworker at a desk – and so does every **Codex**, **Gemini CLI**, **Antigravity CLI** and **OpenCode** session. **Copilot CLI, Cursor or any script** can walk in too through a small local API ([docs/api.md](docs/api.md)). Sub-agents walk in through the door, pick up the task
 and sit down with their team. When someone needs you, the whole room lets you know.
 
 [**🕹 Try the live demo in your browser**](https://rezored.github.io/cubicle-crew/) · [**▶ Watch the trailer**](https://rezored.github.io/cubicle-crew/media/trailer.mp4) · [**⬇ Download**](https://github.com/rezored/cubicle-crew/releases/latest) · [Quick start](#quick-start) · [How it works](#how-it-works)
@@ -211,6 +211,7 @@ Everything stays on your machine. [docs/security.md](docs/security.md) lists exa
 ~/.claude/sessions/<pid>.json  ──poll──▶     │                         │
 ~/.codex/sessions/**/*.jsonl   ──tail──▶     │
 ~/.gemini/tmp/*/chats/*.jsonl  ──tail──▶     │
+~/.gemini/antigravity-cli/**   ──tail──▶     │
 opencode.db (read-only)        ──poll──▶     │
                                          wallet.js                  canvas scene
                                   (~/.pixel-office/save.json)     (vanilla ES modules)
@@ -220,7 +221,7 @@ opencode.db (read-only)        ──poll──▶     │
   (`tool_start`, `tool_end`, `say`, `user_prompt`). It links sub-agents to their parent through
   `subagents/agent-<id>.meta.json` first, then the session id, then a timing heuristic. It also reads
   `~/.claude/sessions` every second to know which sessions are still open, which are busy and which are waiting for you. Old history isn't replayed on start.
-- **Codex, Gemini CLI and OpenCode** (`providers.js`): Codex rollout files and Gemini CLI chat logs are tailed like Claude Code transcripts (Gemini's sub-agents come in as sub-agents); shell commands are sorted into reading (`rg`, `cat`, `Get-Content`…) and running, `apply_patch` is typing. OpenCode's SQLite database is read once a second (read-only), and its sub-sessions (the `task` tool) walk in as sub-agents. Their labels say `· Codex` / `· Gemini` / `· OpenCode`. OpenCode (including the new v2 database format) also reports live status from the database – working, idle, or waiting while a question is open – and only as many idle OpenCode sessions stay in the office as there are open `opencode` terminals. Codex and Gemini have no live-session file, so they don't turn red on permission prompts yet, and "Jump to the terminal" works only for Claude Code.
+- **Codex, Gemini CLI and OpenCode** (`providers.js`): Codex rollout files and Gemini CLI chat logs are tailed like Claude Code transcripts (Gemini's sub-agents come in as sub-agents); shell commands are sorted into reading (`rg`, `cat`, `Get-Content`…) and running, `apply_patch` is typing. OpenCode's SQLite database is read once a second (read-only), and its sub-sessions (the `task` tool) walk in as sub-agents. Their labels say `· Codex` / `· Gemini` / `· OpenCode`. OpenCode (including the new v2 database format) also reports live status from the database – working, idle, or waiting while a question is open – and only as many idle OpenCode sessions stay in the office as there are open `opencode` terminals. **Antigravity CLI** (`agy`) transcripts in `~/.gemini/antigravity-cli/brain/*/.system_generated/logs/` are tailed the same way: the label is the project folder (from `history.jsonl`), the card shows the model you picked in `agy` (e.g. `Gemini 3.8 Flash`), the paper stack shows the context, an open `ask_question` turns the agent red, and an Antigravity session only stays in the office while an `agy` process is running. Codex, Gemini and Antigravity have no live-session file, so they don't turn red on permission prompts yet, and "Jump to the terminal" works only for Claude Code.
 - **Tool → state:** `Edit`/`Write` → typing, `Read`/`Grep`/`WebFetch` → reading, `Bash` → running,
   `Task`/`Agent` → delegating, `AskUserQuestion` → waiting. 8 seconds of silence → idle, unless Claude Code still reports the session as busy (it's thinking or writing a long reply). You can change the mapping in `public/rules.js`.
 - **Permission prompts** never reach the transcript, but Claude Code marks the session as `waiting` (`waitingFor: "permission prompt"`)

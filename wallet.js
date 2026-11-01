@@ -78,6 +78,7 @@ export class Wallet {
     this.earner.setLive(ids, busy);
     this.waiting = new Set(waiting);
     for (const id of ids) if (labels[id] && !this.info.has(id)) this.info.set(id, { label: labels[id], sub: false });
+    while (this.info.size > 500) this.info.delete(this.info.keys().next().value);
   }
 
   /** message.usage от ред на асистента – истинските токени (само за статистиката). */
@@ -88,7 +89,10 @@ export class Wallet {
 
   /** Всяко събитие от транскриптите. */
   ingest(evt) {
-    if (evt?.agent) this.info.set(evt.agent, { label: evt.label, sub: !!evt.subagent });
+    if (evt?.agent) {
+      this.info.set(evt.agent, { label: evt.label, sub: !!evt.subagent });
+      while (this.info.size > 500) this.info.delete(this.info.keys().next().value);
+    }
     if (this.owner) this.stats.event(evt);
     for (const b of this.earner.ingest(evt)) this.add(b.amount, b.reason, b.src);
   }
@@ -140,12 +144,23 @@ export class Wallet {
   async act(kind, body) {
     if (!this.owner) {
       const l = readJson(LOCK);
-      if (!l?.port) return { ok: false, error: 'busy' };
-      try {
-        const r = await fetch(`http://127.0.0.1:${l.port}/api/${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json());
-        if (r.save) { this.save = load(r.save); delete this.save.owner; delete this.save.catalog; this.broadcast(this.msg(0, kind, null, null, true)); }
-        return r;
-      } catch { return { ok: false, error: 'busy' }; }
+      if (l?.port) {
+        try {
+          const r = await fetch(`http://127.0.0.1:${l.port}/api/${kind}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(3000),
+          }).then((x) => x.json());
+          if (r.save) { this.save = load(r.save); delete this.save.owner; delete this.save.catalog; this.broadcast(this.msg(0, kind, null, null, true)); }
+          return r;
+        } catch {
+          this.claim();
+        }
+      } else {
+        this.claim();
+      }
+      if (!this.owner) return { ok: false, error: 'busy' };
     }
     const r = kind === 'buy' ? buyItem(this.save, String(body.item), body.slot ? String(body.slot) : null)
       : kind === 'avatar' ? setAvatar(this.save, body)
