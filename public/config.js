@@ -246,7 +246,14 @@ const T_BG = {
       unlockDog: (p) => `Идва като ${p.toLowerCase()}; после можеш да му избереш всяка купена порода.`,
       unlockExotic: (p) => `Идва като ${p.toLowerCase()}; после можеш да го смениш с всеки друг екзотичен любимец.`,
       home: 'у дома', full: 'Няма място', name: 'Име', rename: 'Преименувай', save: 'Запази',
-      limit: 'Най-много 3 любимци в офиса: до 3 любимци – котки, куче или екзотични. Прибраните остават твои и могат да се върнат.',
+      kinds: { cat: 'Котки', dog: 'Кучета', exotic: 'Екзотични' },
+      about: {
+        cat: 'До 3 котки – на всяка избираш шарка.',
+        dog: 'Едно куче – избираш му порода.',
+        exotic: 'Фенек, капибара и вомбат (още идват). Всяко място е за един екзотичен любимец и му избираш вида; можеш да имаш и трите.',
+      },
+      inOffice: (n, max) => `В офиса: ${n}/${max}`, comesWith: 'идва с мястото', inSlot: (t) => `в: ${t}`,
+      limit: 'Най-много 3 любимци в офиса – всякаква комбинация от котки, куче и екзотични. Прибраните остават твои и могат да се върнат.',
     },
     avatar: {
       body: 'Тяло', male: 'Мъж', female: 'Жена', style: 'Прическа',
@@ -267,6 +274,10 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.20.0': [
+        ['Екзотични любимци', 'Фенек, капибара и вомбат: три екзотични места в „Любимци“ (500, 850 и 1200 монети), всяко със свой вид, който избираш. Фенекът рови и върви след хората, капибарата сяда до фонтанчето, вомбатът тича на изблици.'],
+        ['По-ясна страница „Любимци“', 'Любимците са по видове – котки, кучета, екзотични – с брояч „В офиса: 2/3“ и бутони за бърз преход. Заключено екзотично място показва всички видове, които може да получи.'],
+      ],
       '2.19.9': [['/clear не е срив', 'След /clear старата сесия просто си тръгва, вместо да остане посивяла и заспала на бюрото.']],
       '2.19.8': [['По-чист изход', 'Приложението вече не записва грешка в лога, когато инсталатор или обновяване го затвори, докато е включен прозрачният фон.']],
       '2.19.7': [['Под-агентите на Antigravity си тръгват', 'Под-агентите влизат като под-агенти, мислят, докато главният агент ги чака, и си тръгват, щом свършат – вече не остават посивели на бюрата. Главният агент е лилав (делегира), докато те работят.']],
@@ -567,6 +578,13 @@ const T_EN = {
       unlockDog: (p) => `Comes as a ${p.toLowerCase()}; then you can make it any breed you own.`,
       unlockExotic: (p) => `Comes as a ${p.toLowerCase()}; then you can swap it for any other exotic pet.`,
       home: 'at home', full: 'No room', name: 'Name', rename: 'Rename', save: 'Save',
+      kinds: { cat: 'Cats', dog: 'Dogs', exotic: 'Exotic' },
+      about: {
+        cat: 'Up to 3 cats – pick a pattern for each.',
+        dog: 'One dog – pick a breed.',
+        exotic: 'Fennec fox, capybara and wombat (more are coming). Each slot holds one exotic pet and you choose its species; you can have all three.',
+      },
+      inOffice: (n, max) => `In the office: ${n}/${max}`, comesWith: 'comes with the slot', inSlot: (t) => `in ${t}`,
       limit: 'Up to 3 pets in the office: any mix of cats, a dog and exotic pets. Pets sent home stay yours and can come back.',
     },
     avatar: {
@@ -587,6 +605,10 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.20.0': [
+        ['Exotic pets', 'A fennec fox, a capybara and a wombat: three exotic slots in Pets (500, 850 and 1200 coins), each holding the species you pick. The fennec digs and follows people around, the capybara sits by the fountain and the wombat runs in sudden bursts.'],
+        ['A clearer Pets page', 'Pets are grouped by kind – cats, dogs, exotic – with an "In the office: 2/3" counter and quick-jump buttons. A locked exotic slot shows every species it can hold.'],
+      ],
       '2.19.9': [['/clear is not a crash', 'After /clear the old session simply leaves instead of staying greyed out and asleep at its desk.']],
       '2.19.8': [['Cleaner exit', 'The app no longer writes an error to its log when an installer or update closes it while the transparent background is on.']],
       '2.19.7': [['Antigravity sub-agents leave', 'Sub-agents walk in as sub-agents, keep thinking while the main agent waits for them and leave once they are done – no more greyed-out leftovers at the desks. The main agent is purple (delegating) while they work.']],
@@ -716,7 +738,7 @@ const T_EN = {
     'cat1.extra': 'Cat', 'dog.extra': 'Dog',
     'dog.bueno': 'Bueno Mixed', 'dog.beagle': 'Beagle', 'dog.golden': 'Golden retriever', 'dog.black': 'Black labrador', 'dog.dachshund': 'Dachshund', 'dog.corgi': 'Corgi',
     'dog.husky': 'Husky', 'dog.dalmatian': 'Dalmatian', 'dog.pug': 'Pug',
-    'exotic1.extra': 'Exotic pet', 'exotic2.extra': 'Second exotic', 'exotic3.extra': 'Third exotic',
+    'exotic1.extra': 'Exotic slot 1', 'exotic2.extra': 'Exotic slot 2', 'exotic3.extra': 'Exotic slot 3',
     'exotic.fennec': 'Fennec fox', 'exotic.capybara': 'Capybara', 'exotic.wombat': 'Wombat',
     'season.pumpkins': 'Pumpkins', 'season.tree': 'Christmas tree', 'season.tulips': 'Tulips', 'season.fan': 'Standing fan',
     'window.city': 'City', 'window.sea': 'Sea', 'window.mountains': 'Mountains',

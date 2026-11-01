@@ -636,61 +636,75 @@ export class Critter extends Pet {
     const x = Math.round(this.x), y = Math.round(this.y) - (this.lift || 0), lk = this.look;
     const { c: C, hi: H, m: M, e: E, eye: EY } = lk, mode = this.mode;
     const f = Math.floor(this.dist / 2) % 2;
-    const blink = frameAt(now, 3200, 14) === 0;
     ctx.save();
     if (this.flip) { ctx.translate(x * 2, 0); ctx.scale(-1, 1); }
     R(ctx, 'rgba(16,10,24,0.3)', x - 7, y, 15, 1);
     if (lk.sp === 'capybara') {
+      const BELLY = lk.p || M, shut = frameAt(now, 4200, 22) === 0; // бавно мигане
       if (mode === 'sleep') {
-        R(ctx, C, x - 6, y - 5, 12, 5); R(ctx, H, x - 5, y - 5, 10, 1);
-        R(ctx, C, x + 4, y - 5, 5, 4); R(ctx, M, x + 9, y - 4, 1, 2); R(ctx, E, x + 5, y - 6, 1, 1); R(ctx, E, x + 7, y - 4, 2, 1);
+        R(ctx, C, x - 6, y - 5, 12, 5); R(ctx, E, x - 5, y - 5, 10, 1); R(ctx, BELLY, x - 4, y - 2, 8, 1);
+        R(ctx, C, x + 4, y - 5, 5, 4); R(ctx, M, x + 9, y - 4, 1, 2); R(ctx, E, x + 4, y - 6, 2, 1);
+        R(ctx, E, x + 6, y - 4, 2, 1); R(ctx, M, x + 5, y - 1, 3, 1);
       } else if (mode === 'sit') {
-        R(ctx, C, x - 5, y - 7, 10, 7); R(ctx, H, x - 4, y - 7, 8, 1);
+        R(ctx, C, x - 5, y - 7, 10, 7); R(ctx, E, x - 4, y - 7, 8, 1); R(ctx, BELLY, x - 3, y - 3, 6, 2);
         R(ctx, C, x + 3, y - 10, 6, 5); R(ctx, M, x + 8, y - 8, 2, 3); R(ctx, NOSE, x + 9, y - 8, 1, 1);
-        R(ctx, E, x + 4, y - 11, 1, 1); R(ctx, E, x + 6, y - 11, 1, 1);
-        R(ctx, blink ? E : EY, x + 6, y - 8, 1, 1); R(ctx, E, x + 6, y - 9, 1, 1); // полузатворено око
-        R(ctx, M, x + 3, y - 1, 3, 1);
+        R(ctx, E, x + 3, y - 11, 2, 2);                                  // малко ухо, високо на главата
+        R(ctx, shut ? E : EY, x + 6, y - 8, 1, 1); R(ctx, E, x + 6, y - 9, 1, 1); // полузатворено око
+        R(ctx, M, x + 2, y - 1, 3, 1); R(ctx, M, x - 4, y - 1, 3, 1);
       } else {
-        R(ctx, C, x - 6, y - 8, 12, 5); R(ctx, H, x - 5, y - 8, 10, 1);
-        for (const [lx, i] of [[x - 5, 0], [x - 3, 1], [x + 2, 1], [x + 4, 0]]) R(ctx, M, lx, y - 3, 1, f === i ? 2 : 3); // крачка: диагонални двойки
+        R(ctx, C, x - 6, y - 8, 12, 5); R(ctx, E, x - 5, y - 8, 10, 1); R(ctx, BELLY, x - 4, y - 5, 8, 1);
+        for (const [lx, i] of [[x - 5, 0], [x - 3, 1], [x + 2, 1], [x + 4, 0]]) R(ctx, M, lx, y - 3, 2, f === i ? 2 : 3); // крачка: диагонални двойки
         R(ctx, C, x + 5, y - 10, 5, 5); R(ctx, M, x + 9, y - 8, 2, 3); R(ctx, NOSE, x + 10, y - 8, 1, 1);
-        R(ctx, E, x + 6, y - 11, 1, 1); R(ctx, EY, x + 8, y - 9, 1, 1);
+        R(ctx, E, x + 5, y - 11, 2, 2); R(ctx, EY, x + 8, y - 9, 1, 1);
       }
     } else if (lk.sp === 'wombat') {
+      const CLAW = lk.p || '#d8d0c0';
       if (mode === 'sleep') {
-        R(ctx, C, x - 6, y - 4, 12, 4); R(ctx, H, x - 5, y - 4, 10, 1);
+        R(ctx, C, x - 6, y - 4, 12, 4); R(ctx, H, x - 5, y - 4, 10, 1); R(ctx, M, x - 4, y - 1, 8, 1);
         R(ctx, C, x + 4, y - 5, 4, 3); R(ctx, NOSE, x + 8, y - 4, 1, 2); R(ctx, E, x + 4, y - 6, 2, 1); R(ctx, E, x + 6, y - 4, 2, 1);
       } else if (mode === 'sit') {
-        R(ctx, C, x - 4, y - 6, 9, 6); R(ctx, H, x - 3, y - 6, 7, 1);
-        R(ctx, C, x + 2, y - 9, 6, 4); R(ctx, E, x + 2, y - 10, 2, 1); R(ctx, E, x + 6, y - 10, 2, 1);
-        R(ctx, NOSE, x + 7, y - 8, 2, 2); R(ctx, blink ? C : EY, x + 5, y - 8, 1, 1);
-        R(ctx, M, x + 3, y - 1, 3, 1);
+        R(ctx, C, x - 4, y - 6, 9, 6); R(ctx, H, x - 3, y - 6, 7, 1); R(ctx, M, x - 3, y - 2, 7, 2);
+        R(ctx, C, x + 2, y - 9, 6, 4); R(ctx, E, x + 2, y - 10, 2, 2); R(ctx, E, x + 6, y - 10, 2, 2); // малки кръгли уши
+        R(ctx, NOSE, x + 7, y - 8, 2, 2); R(ctx, frameAt(now, 3600, 16) === 0 ? C : EY, x + 5, y - 8, 1, 1);
+        R(ctx, M, x + 3, y - 1, 3, 1); R(ctx, CLAW, x + 6, y - 1, 1, 1);
       } else {
         const by = f ? 1 : 0; // клатушка: тялото потрепва с крачката
-        R(ctx, C, x - 6, y - 7 + by, 11, 5); R(ctx, H, x - 5, y - 7 + by, 9, 1);
+        R(ctx, C, x - 6, y - 7 + by, 11, 5); R(ctx, H, x - 5, y - 7 + by, 9, 1); R(ctx, M, x - 5, y - 3 + by, 9, 1);
         for (const lx of [x - 5, x - 3, x + 1, x + 3]) R(ctx, M, lx, y - 2, 1, 2);
-        R(ctx, C, x + 4, y - 9 + by, 5, 5); R(ctx, E, x + 4, y - 10 + by, 2, 1);
+        R(ctx, CLAW, x + 4, y - 1, 1, 1);
+        R(ctx, C, x + 4, y - 9 + by, 5, 5); R(ctx, E, x + 4, y - 10 + by, 2, 2);
         R(ctx, NOSE, x + 9, y - 7 + by, 1, 2); R(ctx, EY, x + 7, y - 8 + by, 1, 1);
       }
     } else { // фенек
-      const tip = '#2a2220', tw = frameAt(now, 500) ? 1 : 0, ear = frameAt(now, 2600, 10) === 0 ? 1 : 0;
+      const TIP = lk.p || '#2a2220', INNER = lk.p2 || '#e8b0a0', tw = frameAt(now, 500) ? 1 : 0, ear = frameAt(now, 2600, 10) === 0 ? 1 : 0;
       if (mode === 'sleep') {
         R(ctx, C, x - 5, y - 4, 10, 4); R(ctx, H, x - 4, y - 4, 7, 1); R(ctx, M, x - 2, y - 2, 5, 2);
-        R(ctx, C, x + 3, y - 5, 4, 3); R(ctx, E, x + 3, y - 8, 1, 3); R(ctx, E, x + 5, y - 8, 1, 3);
+        R(ctx, C, x + 3, y - 5, 4, 3); R(ctx, C, x + 3, y - 8, 1, 3); R(ctx, INNER, x + 4, y - 7, 1, 1); R(ctx, C, x + 5, y - 8, 1, 3);
         R(ctx, E, x + 5, y - 3, 2, 1); R(ctx, NOSE, x + 7, y - 3, 1, 1);
-        R(ctx, C, x - 6, y - 3, 2, 3); R(ctx, tip, x - 7, y - 2, 1, 2);
+        R(ctx, C, x - 6, y - 3, 2, 3); R(ctx, TIP, x - 7, y - 2, 1, 2);
       } else if (mode === 'sit') {
-        R(ctx, C, x - 3, y - 6, 6, 6); R(ctx, H, x - 2, y - 6, 3, 1); R(ctx, M, x + 1, y - 5, 2, 4);
-        R(ctx, C, x, y - 10, 5, 4);
-        R(ctx, E, x, y - 14 + ear, 2, 4 - ear); R(ctx, E, x + 3, y - 14, 2, 4); R(ctx, M, x + 3, y - 13, 1, 2);
-        R(ctx, blink ? C : EY, x + 3, y - 8, 1, 1); R(ctx, M, x + 4, y - 7, 2, 2); R(ctx, NOSE, x + 5, y - 7, 1, 1);
-        R(ctx, C, x - 6, y - 3 - tw, 3, 2); R(ctx, tip, x - 7, y - 3 - tw, 1, 2);
+        R(ctx, C, x - 3, y - 7, 6, 7); R(ctx, H, x - 2, y - 7, 3, 1); R(ctx, M, x + 1, y - 6, 2, 5);
+        R(ctx, C, x + 2, y - 3, 1, 3); R(ctx, M, x + 2, y - 1, 2, 1);   // предна лапа
+        R(ctx, C, x, y - 11, 6, 4); R(ctx, M, x + 3, y - 9, 3, 2);      // глава, светло лице
+        R(ctx, C, x, y - 15 + ear, 2, 4 - ear); R(ctx, INNER, x + 1, y - 14 + ear, 1, 2 - ear); // големи уши
+        R(ctx, C, x + 3, y - 15, 2, 4); R(ctx, INNER, x + 3, y - 14, 1, 2);
+        R(ctx, frameAt(now, 3200, 14) === 0 ? C : EY, x + 3, y - 10, 1, 1); R(ctx, NOSE, x + 6, y - 9, 1, 1);
+        R(ctx, C, x - 6, y - 4 - tw, 3, 3); R(ctx, TIP, x - 7, y - 4 - tw, 1, 3); // рунтава опашка
+      } else if (mode === 'dig') {
+        const d = frameAt(now, 150) ? 1 : 0;                              // рови: предните лапи драскат, пясъкът хвърчи назад
+        R(ctx, C, x - 5, y - 6, 8, 4); R(ctx, H, x - 4, y - 6, 6, 1); R(ctx, C, x - 5, y - 2, 2, 2); R(ctx, C, x - 1, y - 2, 2, 2);
+        R(ctx, C, x + 2, y - 6, 4, 4); R(ctx, M, x + 4, y - 4, 2, 2); R(ctx, NOSE, x + 6, y - 3, 1, 1); R(ctx, EY, x + 4, y - 5, 1, 1);
+        R(ctx, C, x + 2, y - 10, 2, 4); R(ctx, INNER, x + 3, y - 9, 1, 2); R(ctx, C, x + 5, y - 10, 2, 4);
+        R(ctx, C, x + 3 + d, y - 2, 2, 2);                               // драскаща лапа
+        R(ctx, C, x - 8, y - 6 - tw, 3, 3); R(ctx, TIP, x - 9, y - 6 - tw, 1, 3);
+        R(ctx, '#d8c08a', x - 3 - d * 2, y - 3 - d, 1, 1); R(ctx, '#c8aa70', x - 5 + d, y - 4 - d * 2, 1, 1); R(ctx, '#d8c08a', x - 1, y - 1, 1, 1);
       } else {
-        R(ctx, C, x - 5, y - 7, 9, 4); R(ctx, H, x - 4, y - 7, 7, 1);
-        for (const lx of [x - 4 + f, x - 1 - f, x + 1 + f, x + 3 - f]) R(ctx, C, lx, y - 3, 1, 3);
-        R(ctx, C, x + 3, y - 9, 4, 4); R(ctx, E, x + 3, y - 13, 1, 4); R(ctx, E, x + 5, y - 13, 1, 4);
-        R(ctx, EY, x + 5, y - 8, 1, 1); R(ctx, NOSE, x + 7, y - 7, 1, 1);
-        R(ctx, C, x - 8, y - 7 - tw, 3, 2); R(ctx, tip, x - 9, y - 7 - tw, 1, 2);
+        R(ctx, C, x - 5, y - 6, 9, 4); R(ctx, H, x - 4, y - 6, 7, 1); R(ctx, M, x - 3, y - 3, 5, 1);
+        for (const lx of [x - 4 + f, x - 1 - f, x + 1 + f, x + 3 - f]) { R(ctx, C, lx, y - 2, 1, 2); R(ctx, E, lx, y - 1, 1, 1); }
+        R(ctx, C, x + 3, y - 9, 5, 4); R(ctx, M, x + 5, y - 7, 3, 2);   // глава, светло лице
+        R(ctx, C, x + 3, y - 13, 2, 4); R(ctx, INNER, x + 4, y - 12, 1, 2); R(ctx, C, x + 6, y - 13, 2, 4); R(ctx, INNER, x + 6, y - 12, 1, 2);
+        R(ctx, EY, x + 6, y - 8, 1, 1); R(ctx, NOSE, x + 8, y - 7, 1, 1);
+        R(ctx, C, x - 8, y - 6 - tw, 3, 3); R(ctx, TIP, x - 9, y - 6 - tw, 1, 3);
       }
     }
     ctx.restore();
