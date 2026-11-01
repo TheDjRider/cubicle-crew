@@ -135,7 +135,7 @@ export class Shop {
     // пълно прерисуване само ако нещо видимо се е променило (иначе посочването "мига")
     const afford = ITEMS.filter((it) => tab.groups.includes(it.group) && !owns(s, it.id) && it.price <= t.tokens).map((it) => it.id).join();
     const key = [this.tab, JSON.stringify(s.owned), JSON.stringify(s.equipped), JSON.stringify(s.achievements), afford,
-      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', tab.id === 'stats' ? 'stats' : '', JSON.stringify(s.avatar), tab.id === 'weather' ? JSON.stringify(this.weather) : '', JSON.stringify(s.petNames)].join('|');
+      tab.id === 'trophies' ? JSON.stringify(s.stats) + s.lifetime : '', tab.id === 'stats' ? 'stats' : '', JSON.stringify(s.avatar), tab.id === 'weather' ? JSON.stringify(this.weather) : '', JSON.stringify(s.petNames), this.exoSel].join('|');
     if (key === this.key) return;
     this.key = key;
     const scroll = this.body.scrollTop;
@@ -157,11 +157,11 @@ export class Shop {
       if (inp) { inp.value = typing.value; inp.focus(); try { inp.setSelectionRange(typing.at, typing.at); } catch { /* */ } }
     }
     // клик върху любимец в офиса -> неговият ред
-    if (this.focusPet && tab.id === 'pets') { this.body.querySelector(`section[data-pet="${this.focusPet}"]`)?.scrollIntoView({ block: 'start' }); this.focusPet = null; }
+    if (this.focusPet && tab.id === 'pets') { this.body.querySelector(`[data-pet="${this.focusPet}"]`)?.scrollIntoView({ block: 'start' }); this.focusPet = null; }
   }
 
   /** Отваря „Любимци“ на реда на дадения любимец (клик върху него в офиса). */
-  openPet(slot) { this.focusPet = slot; this.open('pets'); }
+  openPet(slot) { this.focusPet = slot; if (SLOTS[slot]?.pet === 'exotic') this.exoSel = slot; this.open('pets'); }
 
   renderGroup(groups, title) {
     const s = this.tokens.save, eq = s.equipped || {};
@@ -299,25 +299,70 @@ export class Shop {
     el('p', 'hint', opts, A.hint);
   }
 
-  /** Любимци по видове (котки, куче, екзотични): горе обобщение (колко са в офиса), после за всеки вид по един ред за
-   *  всяко място – име, шарка/порода/вид, прибиране у дома. Следващото място от вида се показва, щом предишното е
-   *  отключено; заключено екзотично място показва всички видове, които може да получи. В офиса са най-много MAX_PETS. */
+  /** Любимци по видове (котки, куче, екзотични): горе обобщение (колко са в офиса), после за всеки вид:
+   *  – котки/куче: по един ред за всяко отключено място (име, шарка/порода, у дома); заключените места на вида са заедно
+   *    в един ред от карти за покупка (така се вижда и третата котка);
+   *  – екзотични: един ред с трите места (избираш мястото) и ЕДНА обща решетка с всички животни, чиито бутони действат
+   *    върху избраното място. В офиса са най-много MAX_PETS. */
   renderPets() {
     const s = this.tokens.save, eq = s.equipped || {}, P = T.shop.pets, decor = resolveDecor(eq);
     const full = petCount(s) >= MAX_PETS;
-    const card = (grid, it, slot, on, plain = false) => {
-      const c = el('div', `card${owns(s, it.id) ? ' owned' : ''}${on ? ' on' : ''}`, grid);
-      c.dataset.id = it.id; c.dataset.slot = slot;
-      if (!plain) c.appendChild(this.thumb(it));
-      el('div', 'nm', c, itemName(it));
-      if (it.by) el('div', 'by', c).textContent = T.shop.by(it.by);
-      return c;
-    };
+    const coin = (n) => `<i style="background-image:url(${this.coin})"></i>${fmt(n)}`;
     const slotsOf = (kind) => PET_SLOTS.filter((sl) => SLOTS[sl].pet === kind);
-    const exoSpecies = [...new Set(ITEMS.filter((x) => x.group === 'exotic').map((x) => x.sp))]; // фенек, капибара, вомбат
     const titleOf = (slot) => {
       const k = SLOTS[slot].pet, i = slotsOf(k).indexOf(slot);
       return k === 'dog' ? P.dog : k === 'exotic' ? P.exotic[i] : P.cats[i];
+    };
+    // карта на шарка / порода / животно; slot = мястото, за което са бутоните ('' – още няма място: само преглед)
+    const card = (grid, it, slot, cur, kind) => {
+      const have = owns(s, it.id);
+      const c = el('div', `card${have ? ' owned' : ''}${slot && cur === it.id ? ' on' : ''}`, grid);
+      c.dataset.id = it.id; if (slot) c.dataset.slot = slot;
+      c.appendChild(this.thumb(it));
+      el('div', 'nm', c, itemName(it));
+      if (it.by) el('div', 'by', c).textContent = T.shop.by(it.by);
+      el('div', 'pr', c, it.price === 0 ? T.shop.free : have ? T.shop.owned : coin(it.price));
+      // вече е на друго място от същия вид (позволено е, но личи)
+      const other = slot && slotsOf(kind).find((sl) => sl !== slot && decor[sl]?.id === it.id);
+      if (other) el('div', 'in', c).textContent = P.inSlot(titleOf(other));
+      const act = el('div', 'act', c);
+      if (!slot) { const b = el('button', null, act, P.needSlot); b.disabled = true; } // преглед: първо се купува място
+      else if (!have) {
+        const short = it.price - (this.tokens.tokens ?? 0);
+        const b = el('button', 'buy', act, short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
+        b.dataset.buy = it.id; b.dataset.slot = slot; b.disabled = short > 0;
+      } else {
+        const b = el('button', cur === it.id ? 'on' : '', act, cur === it.id ? T.shop.equipped : T.shop.equip);
+        b.dataset.equip = it.id; b.dataset.slot = slot; b.disabled = cur === it.id || (!cur && full);
+      }
+      return c;
+    };
+    // име на любимеца от дадено място (скрито, докато екзотичното място няма животно)
+    const nameForm = (parent, slot, cur, hidden = false) => {
+      const form = el('form', 'pname', parent);
+      if (hidden) form.style.display = 'none';
+      const inp = el('input', null, form);
+      inp.name = `pet-${slot}`; inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(slot, null, cur); inp.value = s.petNames?.[slot] || '';
+      inp.setAttribute('aria-label', P.name);
+      el('button', null, form, P.rename).type = 'submit';
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        if (!this.tokens.backend.pet) return;
+        const r = await this.tokens.backend.pet(slot, inp.value);
+        if (r && !r.ok) this.flash(T.shop.errors[r.error] || r.error);
+      };
+    };
+    // карта на заключено място: цена + „Купи“; следващото е изключено, докато предишното не е купено
+    const lockedCard = (row, slot) => {
+      const S = SLOTS[slot], it = ITEM[S.need], prev = S.after && !unlocked(s, S.after) ? S.after : null;
+      const c = el('div', 'card slotcard locked', row);
+      c.dataset.id = it.id; c.dataset.pet = slot;
+      if (it.gives) c.appendChild(this.thumb(it)); else el('div', 'ph', c, '+');
+      el('div', 'nm', c, itemName(it));
+      el('div', 'pr', c, coin(it.price));
+      const short = it.price - (this.tokens.tokens ?? 0), blocked = !!it.gives && full;
+      const b = el('button', 'buy', el('div', 'act', c), prev ? P.needPrev(titleOf(prev)) : blocked ? P.full : short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
+      b.dataset.buy = it.id; b.disabled = !!prev || blocked || short > 0;
     };
     // първо безплатният вид (започналите с куче виждат кучето най-горе)
     const kinds = s.starter === 'dog' ? ['dog', 'cat', 'exotic'] : ['cat', 'dog', 'exotic'];
@@ -325,95 +370,67 @@ export class Shop {
     const sum = el('div', 'petsum', this.body);
     el('span', full ? 'all' : '', sum, P.inOffice(petCount(s), MAX_PETS));
     const chips = {};
-    for (const k of kinds) { const b = el('button', null, sum, `${P.kinds[k]} ${worn(k)}/${slotsOf(k).length}`); b.type = 'button'; chips[k] = b; }
+    for (const k of kinds) { const b = el('button', null, sum, `${P.kinds[k]} ${worn(k)}`); b.type = 'button'; chips[k] = b; }
+
     for (const kind of kinds) {
       const head = el('h2', 'kind', this.body, P.kinds[kind]);
       chips[kind].onclick = () => head.scrollIntoView({ block: 'start', behavior: 'smooth' }); // бърз преход към вида
       el('p', 'hint', this.body, P.about[kind]);
+
+      if (kind === 'exotic') {
+        const slots = slotsOf('exotic'), mine = slots.filter((sl) => unlocked(s, sl));
+        if (!this.exoSel || !mine.includes(this.exoSel)) this.exoSel = mine[0] || null; // избраното място
+        const sel = this.exoSel, cur = sel ? decor[sel]?.id || null : null;
+        const sec = el('section', 'pet exo', this.body);
+        const row = el('div', 'slotrow', sec);
+        for (const slot of slots) {
+          if (!unlocked(s, slot)) { lockedCard(row, slot); continue; }
+          const at = decor[slot]?.id || null, c = el('div', `slotcard${slot === sel ? ' sel' : ''}`, row);
+          c.dataset.pet = slot;
+          const pick = el('button', 'pick', c); pick.type = 'button'; pick.dataset.sel = slot; pick.setAttribute('aria-pressed', String(slot === sel));
+          if (at) pick.appendChild(this.thumb(ITEM[at], true)); else el('div', 'ph', pick, '?');
+          el('b', null, pick, titleOf(slot));
+          el('span', null, pick, at ? petTitle(slot, s.petNames, at) : P.empty);
+          if (at) { const b = el('button', 'home', c, P.away); b.type = 'button'; b.dataset.slot = slot; b.dataset.remove = '1'; }
+        }
+        if (sel) {
+          el('h4', null, sec, P.chooseFor(titleOf(sel)));
+          nameForm(sec, sel, cur, !cur);
+          if (!cur) el('p', 'hint', sec, P.pickOne);
+        } else el('p', 'hint', sec, P.exoPreview);
+        const grid = el('div', 'grid', sec);
+        for (const it of ITEMS.filter((x) => x.group === 'exotic')) card(grid, it, sel || '', cur, 'exotic');
+        el('p', 'hint', sec, P.unlockExotic());
+        continue;
+      }
+
+      const locked = [];
       for (const slot of slotsOf(kind)) {
         const S = SLOTS[slot];
-        if (!unlocked(s, slot) && S.after && !unlocked(s, S.after)) continue;
+        if (!unlocked(s, slot)) { locked.push(slot); continue; }
         const sec = el('section', 'pet', this.body);
         sec.dataset.pet = slot;
-        const title = titleOf(slot);
-        const h = el('h3', null, sec);
-        if (!unlocked(s, slot)) {
-          h.textContent = title;
-          const it = ITEM[S.need];
-          if (kind === 'exotic') { // кои животни има (вид + колко цвята); мястото само се отключва, животното се избира после
-            const strip = el('div', 'species', sec);
-            for (const sp of exoSpecies) {
-              const list = ITEMS.filter((x) => x.group === 'exotic' && x.sp === sp);
-              const f = el('div', 'sp', strip);
-              f.appendChild(this.thumb(list[0], true));
-              el('span', null, f, P.species[sp]);
-              el('small', null, f, P.colours(list.length));
-            }
-          }
-          const grid = el('div', 'grid', sec);
-          const c = card(grid, it, slot, false, kind === 'exotic');
-          el('div', 'pr', c, `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
-          const short = it.price - (this.tokens.tokens ?? 0);
-          const b = el('button', 'buy', el('div', 'act', c), full ? P.full : short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
-          b.dataset.buy = it.id; b.disabled = short > 0 || full;
-          const gives = it.gives ? itemName(ITEM[it.gives]) : '';
-          el('p', 'hint', sec, kind === 'dog' ? P.unlockDog(gives) : kind === 'exotic' ? P.unlockExotic() : P.unlock(gives));
-          continue;
-        }
         const cur = decor[slot]?.id || null;
-        const emptyExo = kind === 'exotic' && !cur; // купено място, още без животно: без име, докато не се избере
-        h.textContent = emptyExo ? `${title} · ${P.noAnimal}` : `${title} · ${petTitle(slot, s.petNames, cur)}${cur ? '' : ` (${P.home})`}`;
-        // име
-        const form = el('form', 'pname', sec);
-        if (emptyExo) form.style.display = 'none';
-        const inp = el('input', null, form);
-        inp.name = `pet-${slot}`; inp.maxLength = PET_NAME_MAX; inp.placeholder = petName(slot, null, cur); inp.value = s.petNames?.[slot] || '';
-        inp.setAttribute('aria-label', P.name);
-        el('button', null, form, P.rename).type = 'submit';
-        form.onsubmit = async (e) => {
-          e.preventDefault();
-          if (!this.tokens.backend.pet) return;
-          const r = await this.tokens.backend.pet(slot, inp.value);
-          if (r && !r.ok) this.flash(T.shop.errors[r.error] || r.error);
-        };
+        el('h3', null, sec, `${titleOf(slot)} · ${petTitle(slot, s.petNames, cur)}${cur ? '' : ` (${P.home})`}`);
+        nameForm(sec, slot, cur);
         const all = ITEMS.filter((x) => x.group === S.group), crew = all.filter((x) => x.by);
-        const addCard = (grid, it) => {
-          const c = card(grid, it, slot, cur === it.id);
-          const have = owns(s, it.id);
-          el('div', 'pr', c, it.price === 0 ? T.shop.free : have ? T.shop.owned : `<i style="background-image:url(${this.coin})"></i>${fmt(it.price)}`);
-          // вече е на друго място от същия вид (позволено е, но личи)
-          const other = slotsOf(kind).find((sl) => sl !== slot && decor[sl]?.id === it.id);
-          if (other) el('div', 'in', c).textContent = P.inSlot(titleOf(other));
-          const act = el('div', 'act', c);
-          if (!have) {
-            const short = it.price - (this.tokens.tokens ?? 0);
-            const b = el('button', 'buy', act, short > 0 ? T.shop.need(fmt(short)) : T.shop.buy);
-            b.dataset.buy = it.id; b.dataset.slot = slot; b.disabled = short > 0;
-          } else {
-            const b = el('button', cur === it.id ? 'on' : '', act, cur === it.id ? T.shop.equipped : T.shop.equip);
-            b.dataset.equip = it.id; b.dataset.slot = slot; b.disabled = cur === it.id || (!cur && full);
-          }
-        };
-        if (kind === 'exotic') { // свободен избор: видовете един по един, всеки с цветовете си; на всяко място – кое да е
-          if (!cur) el('p', 'hint', sec, P.pickOne);
-          for (const sp of exoSpecies) {
-            el('h4', null, sec, P.species[sp]);
-            const g = el('div', 'grid', sec);
-            for (const it of all.filter((x) => x.sp === sp)) addCard(g, it);
-          }
-        } else {
-          const grid = el('div', 'grid', sec);
-          let crewGrid = null;
-          if (crew.length) { el('h4', null, sec, P.crew); crewGrid = el('div', 'grid', sec); }
-          for (const it of [...all.filter((x) => !x.by), ...crew]) addCard(it.by ? crewGrid : grid, it);
-        }
-        // у дома / обратно в офиса (връща се с безплатната шарка/порода); при екзотичните животното се избира с бутоните горе
-        if (cur || kind !== 'exotic') {
-          const b = el('button', null, el('div', 'act', sec), cur ? P.away : P.back);
-          b.dataset.slot = slot;
-          if (cur) b.dataset.remove = '1';
-          else { b.dataset.equip = S.def || ITEM[S.need].gives; b.disabled = full; }
-        }
+        const grid = el('div', 'grid', sec);
+        let crewGrid = null;
+        if (crew.length) { el('h4', null, sec, P.crew); crewGrid = el('div', 'grid', sec); }
+        for (const it of [...all.filter((x) => !x.by), ...crew]) card(it.by ? crewGrid : grid, it, slot, cur, kind);
+        // у дома / обратно в офиса (връща се с безплатната шарка/порода)
+        const b = el('button', null, el('div', 'act', sec), cur ? P.away : P.back);
+        b.dataset.slot = slot;
+        if (cur) b.dataset.remove = '1';
+        else { b.dataset.equip = S.def || ITEM[S.need].gives; b.disabled = full; }
+      }
+      if (locked.length) { // заключените места на вида – заедно в един ред
+        const sec = el('section', 'pet', this.body);
+        el('h3', null, sec, P.more[kind]);
+        const row = el('div', 'slotrow', sec);
+        for (const slot of locked) lockedCard(row, slot);
+        const first = ITEM[SLOTS[locked[0]].need];
+        el('p', 'hint', sec, kind === 'dog' ? P.unlockDog(itemName(ITEM[first.gives])) : P.unlockCat);
       }
     }
     el('p', 'hint', el('section', null, this.body), P.limit);
@@ -551,6 +568,8 @@ export class Shop {
     if (!b || b.disabled) return;
     const be = this.tokens.backend;
     let r = null;
+    if (b.dataset.sel) { this.exoSel = b.dataset.sel; this.key = ''; this.hoverId = null; this.tokens.setPreview(null); this.render(); return; } // избор на екзотично място
+    if (b.dataset.buy && SLOTS[ITEM[b.dataset.buy]?.slot]?.pet === 'exotic') this.exoSel = ITEM[b.dataset.buy].slot; // новото място се избира веднага
     if (b.dataset.wx) {
       b.disabled = true;
       try {

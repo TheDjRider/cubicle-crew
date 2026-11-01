@@ -150,24 +150,24 @@ export const ITEMS = [
   I('cat1.extra', 'catslot', 600, 'Котка', { slot: 'cat', gives: 'cat.grey', alt: true }),
   I('dog.extra', 'catslot', 600, 'Куче', { slot: 'dog', gives: 'dog.bueno', alt: true }),
   // екзотични места: всяко струва 1000; купуването само отключва мястото – животното (вид и цвят) се избира после, свободно,
-  // и може да са три еднакви. Видовете са безплатни, по дизайн на контрибютър.
+  // и може да са три еднакви. По един цвят от вид е безплатен, останалите са 300 / 500 (екзотични са!); купен цвят важи за всички места.
   I('exotic1.extra', 'catslot', 1000, 'Екзотично място 1', { slot: 'exotic' }),
   I('exotic2.extra', 'catslot', 1000, 'Екзотично място 2', { slot: 'exotic2' }),
   I('exotic3.extra', 'catslot', 1000, 'Екзотично място 3', { slot: 'exotic3' }),
   // животни (sp = вид, рисува се от Critter в characters.js; c/hi/m/e/eye + p/p2 маркировки, nose = нос за тъмните). Първият на вида е
   // старото id (записите остават валидни); нови цветове – нови id-та, никога преименуване
   I('exotic.fennec', 'exotic', 0, 'Фенек – пясъчен', { sp: 'fennec', c: '#d8b27c', hi: '#ecce9c', m: '#f4e8d4', e: '#c89a60', eye: '#1c1410', p: '#2a2220', p2: '#e8b0a0', by: 'TheDjRider' }),
-  I('exotic.fennec.cream', 'exotic', 0, 'Фенек – кремав', { sp: 'fennec', c: '#ecdcc0', hi: '#f8eedc', m: '#fbf4e8', e: '#d8c4a0', eye: '#1c1410', p: '#2a2220', p2: '#e8b0a0', by: 'TheDjRider' }),
-  I('exotic.fennec.pale', 'exotic', 0, 'Фенек – блед', { sp: 'fennec', c: '#f2e8d8', hi: '#fcf8ee', m: '#ffffff', e: '#e2d4ba', eye: '#1c1410', p: '#2a2220', p2: '#e8b0a0', by: 'TheDjRider' }),
+  I('exotic.fennec.cream', 'exotic', 300, 'Фенек – кремав', { sp: 'fennec', c: '#ecdcc0', hi: '#f8eedc', m: '#fbf4e8', e: '#d8c4a0', eye: '#1c1410', p: '#2a2220', p2: '#e8b0a0', by: 'TheDjRider' }),
+  I('exotic.fennec.pale', 'exotic', 500, 'Фенек – блед', { sp: 'fennec', c: '#f2e8d8', hi: '#fcf8ee', m: '#ffffff', e: '#e2d4ba', eye: '#1c1410', p: '#2a2220', p2: '#e8b0a0', by: 'TheDjRider' }),
   I('exotic.capybara', 'exotic', 0, 'Капибара – кафява', { sp: 'capybara', c: '#8a5e3c', hi: '#a47650', m: '#6e4a2e', e: '#5e3e26', eye: '#1c1410', p: '#a88460', by: 'TheDjRider' }),
-  I('exotic.capybara.red', 'exotic', 0, 'Капибара – червеникавокафява', { sp: 'capybara', c: '#a65a38', hi: '#c27650', m: '#85402a', e: '#6e3420', eye: '#1c1410', p: '#c48862', by: 'TheDjRider' }),
-  I('exotic.capybara.yellow', 'exotic', 0, 'Капибара – жълтеникавокафява', { sp: 'capybara', c: '#b3905a', hi: '#cbaa72', m: '#8e6d3e', e: '#7a5c32', eye: '#1c1410', p: '#d2b888', by: 'TheDjRider' }),
-  I('exotic.capybara.gray', 'exotic', 0, 'Капибара – сивкавокафява', { sp: 'capybara', c: '#7f7064', hi: '#988878', m: '#5e5248', e: '#4f443a', eye: '#1c1410', p: '#a89c8c', by: 'TheDjRider' }),
+  I('exotic.capybara.red', 'exotic', 300, 'Капибара – червеникавокафява', { sp: 'capybara', c: '#a65a38', hi: '#c27650', m: '#85402a', e: '#6e3420', eye: '#1c1410', p: '#c48862', by: 'TheDjRider' }),
+  I('exotic.capybara.yellow', 'exotic', 500, 'Капибара – жълтеникавокафява', { sp: 'capybara', c: '#b3905a', hi: '#cbaa72', m: '#8e6d3e', e: '#7a5c32', eye: '#1c1410', p: '#d2b888', by: 'TheDjRider' }),
+  I('exotic.capybara.gray', 'exotic', 300, 'Капибара – сивкавокафява', { sp: 'capybara', c: '#7f7064', hi: '#988878', m: '#5e5248', e: '#4f443a', eye: '#1c1410', p: '#a89c8c', by: 'TheDjRider' }),
   I('exotic.wombat', 'exotic', 0, 'Вомбат – тъмносив', { sp: 'wombat', c: '#5c585c', hi: '#78747c', m: '#403c42', e: '#34303a', eye: '#d8c8a8', p: '#f4eee0', by: 'TheDjRider' }),
-  I('exotic.wombat.black', 'exotic', 0, 'Вомбат – лъскаво черен', { sp: 'wombat', c: '#26222a', hi: '#524a60', m: '#16121a', e: '#14101a', eye: '#d8c8a8', nose: '#5a4e52', p: '#f4eee0', by: 'TheDjRider' }),
-  I('exotic.wombat.sandy', 'exotic', 0, 'Вомбат – пясъчен', { sp: 'wombat', c: '#b89a6c', hi: '#d0b284', m: '#8e7650', e: '#7a6440', eye: '#1c1410', p: '#5e4a34', by: 'TheDjRider' }),
-  I('exotic.wombat.cream', 'exotic', 0, 'Вомбат – кремав', { sp: 'wombat', c: '#d8c8a8', hi: '#ece0c4', m: '#b4a280', e: '#9c8a68', eye: '#1c1410', p: '#5e4a34', by: 'TheDjRider' }),
-  I('exotic.wombat.tan', 'exotic', 0, 'Вомбат – светлокафяв', { sp: 'wombat', c: '#a8804e', hi: '#c09862', m: '#84603a', e: '#6e4e2c', eye: '#1c1410', p: '#5e4a34', by: 'TheDjRider' }),
+  I('exotic.wombat.black', 'exotic', 500, 'Вомбат – лъскаво черен', { sp: 'wombat', c: '#26222a', hi: '#524a60', m: '#16121a', e: '#14101a', eye: '#d8c8a8', nose: '#5a4e52', p: '#f4eee0', by: 'TheDjRider' }),
+  I('exotic.wombat.sandy', 'exotic', 300, 'Вомбат – пясъчен', { sp: 'wombat', c: '#b89a6c', hi: '#d0b284', m: '#8e7650', e: '#7a6440', eye: '#1c1410', p: '#5e4a34', by: 'TheDjRider' }),
+  I('exotic.wombat.cream', 'exotic', 500, 'Вомбат – кремав', { sp: 'wombat', c: '#d8c8a8', hi: '#ece0c4', m: '#b4a280', e: '#9c8a68', eye: '#1c1410', p: '#5e4a34', by: 'TheDjRider' }),
+  I('exotic.wombat.tan', 'exotic', 300, 'Вомбат – светлокафяв', { sp: 'wombat', c: '#a8804e', hi: '#c09862', m: '#84603a', e: '#6e4e2c', eye: '#1c1410', p: '#5e4a34', by: 'TheDjRider' }),
   // by = GitHub име на контрибютър, нарисувал предмета (любимец по негов дизайн, вж. CONTRIBUTING.md): името на
   // любимеца е фиксирано в T.pets.breeds, авторът се вижда в магазина и при посочване
   // кучета (породи) – рисуват се от Dog в characters.js. m = муцуна, e = уши, ears flop|up|half, tail long|curl|stub|plume,

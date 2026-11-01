@@ -304,10 +304,17 @@
   .shop-panel .petsum button:hover { border-color: #6b6b80; color: var(--ui-text); }
   .shop-panel .petsum span.all { color: #ffe27a; border-color: #6b5a2a; }
   .shop-panel h2.kind { margin: 18px 0 2px; padding-bottom: 3px; font-size: 13px; font-weight: 600; color: var(--ui-text); border-bottom: 1px solid #2c2640; }
-  .shop-panel .species { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
-  .shop-panel .species .sp { flex: 1 1 84px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; background: #1f1a2c; border: 1px solid #2c2640; border-radius: 3px; font-size: 11px; text-align: center; }
-  .shop-panel .species .sp.gives { border-color: #c8a0ff; }
-  .shop-panel .species .sp small { color: #c8a0ff; }
+  /* места за любимци в един ред: избрано място (екзотични) и заключени карти за покупка */
+  .shop-panel .slotrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; align-items: start; }
+  @media (max-width: 899px), (max-height: 539px) { .shop-panel .slotrow { gap: 5px; } .shop-panel .slotcard .ph { width: 54px; height: 44px; } .shop-panel .slotcard .pick b, .shop-panel .slotcard .nm { font-size: 11px; } }
+  .shop-panel .slotcard { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; background: #1f1a2c; border: 1px solid #2c2640; border-radius: 3px; text-align: center; }
+  .shop-panel .slotcard.sel { border-color: #c8a0ff; box-shadow: inset 0 0 0 1px #c8a0ff; }
+  .shop-panel .slotcard .pick { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; padding: 0; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+  .shop-panel .slotcard .pick b { font-size: 12px; }
+  .shop-panel .slotcard .pick span { font-size: 11px; color: var(--ui-dim); }
+  .shop-panel .slotcard .home { font-size: 11px; padding: 0 6px; }
+  .shop-panel .slotcard .ph { display: flex; align-items: center; justify-content: center; width: 66px; height: 54px; font-size: 22px; color: var(--ui-dim); border: 1px dashed #3a3452; border-radius: 3px; }
+  .shop-panel .slotcard.locked .ph { margin: 2px 0; }
   .shop-panel .card .in { font-size: 11px; color: var(--ui-dim); }
   /* любимци: име */
   .shop-panel .pname { display: flex; gap: 6px; margin: 0 0 8px; max-width: 320px; }
