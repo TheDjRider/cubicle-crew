@@ -614,7 +614,7 @@ const AGY_TOOLS = {
   find_by_name: 'Glob', list_dir: 'Glob', list_directory: 'Glob',
   search_web: 'WebSearch', google_web_search: 'WebSearch',
   read_url_content: 'WebFetch', web_fetch: 'WebFetch', browser_subagent: 'WebFetch',
-  invoke_subagent: 'Agent', define_subagent: 'Agent', manage_subagents: 'Agent', send_message: 'Agent',
+  invoke_subagent: 'Agent', define_subagent: 'Agent', manage_subagents: 'Agent', send_message: 'Write',
   ask_question: 'AskUserQuestion', notify_user: 'AskUserQuestion',
   manage_task: 'Bash', command_status: 'Bash', send_command_input: 'Bash', schedule: 'Bash',
 };
@@ -684,7 +684,11 @@ function agyTool(name, rawArgs) {
 /** Обновява метаданните (модел, проект, контекст, стъпка) от един ред на transcript.jsonl. */
 function agyApplyMeta(g, o, setCtx) {
   if (!o || typeof o !== 'object') return;
-  if (g.first === null) g.first = String(o.source || '');
+  if (g.first === null) {
+    g.first = String(o.source || '');
+    const m = o.type === 'SYSTEM_MESSAGE' && typeof o.content === 'string' && o.content.match(/\bsender=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (m) g.sender = m[1].toLowerCase();
+  }
   if (o.type === 'USER_INPUT' && typeof o.content === 'string') {
     // „…changed setting `Model Selection` from X to Gemini 3.8 Flash (Medium). No need…“ – точката в 3.8 не е край
     const m = o.content.match(/`Model Selection` from .*? to (.+?)\.(?:\s|$)/);
@@ -716,7 +720,7 @@ function agyLabel(g, file) {
 
 /** Стъпката и „чака ли те“ по последния ред (при заварване на вече започната сесия). */
 function agyStepFrom(g, o) {
-  if (o.type === 'USER_INPUT' || o.type === 'GENERIC') { g.step = 'THINKING'; g.ask = false; }
+  if (o.type === 'USER_INPUT' || o.type === 'GENERIC' || o.type === 'SYSTEM_MESSAGE') { g.step = 'THINKING'; g.ask = false; }
   else if (o.type === 'PLANNER_RESPONSE') {
     const calls = Array.isArray(o.tool_calls) ? o.tool_calls : [];
     g.step = calls.length ? 'TOOLS' : 'DONE';
@@ -728,11 +732,10 @@ function agyOf(file, setCtx = null) {
   let g = agyState.get(file);
   if (g) return g;
   const convId = path.basename(path.dirname(path.dirname(path.dirname(file)))) || path.basename(file, '.jsonl');
-  const link = agyChildOf.get(convId);
   g = {
     id: 'agy:' + convId, convId, label: 'antigravity', labelSrc: null, promptAt: 0, first: null, model: null, ctx: 0,
-    parent: link?.parent || null, parentToolUseId: link?.toolUseId || null, desc: link?.desc || null,
-    open: [], step: 'DONE', ask: false, lastAt: 0,
+    parent: null, parentToolUseId: null, desc: null,
+    open: [], subs: new Map(), sender: null, step: 'DONE', ask: false, lastAt: 0,
   };
   // При заварване на вече започната сесия четем началото и края на файла (без да излъчваме старата история),
   // за да знаем веднага проекта, модела, контекста и дали сесията в момента мисли или почива.
@@ -766,6 +769,7 @@ function agyOf(file, setCtx = null) {
     } finally { fs.closeSync(fd); }
   } catch { /* */ }
   agyLabel(g, file);
+  agyLink(g, Date.now());
   if (agyState.size >= 300) { // първо заспалите, после най-отдавна пипнатите – живите остават
     const now = Date.now();
     for (const [k, v] of [...agyState].sort((x, y) => x[1].lastAt - y[1].lastAt)) {
@@ -785,26 +789,24 @@ export function agyTouch(file, mtimeMs, setCtx) {
 
 /** Живите сесии на Antigravity (за scanSessions() в server.js – като ocLive). procs: брой пуснати agy | 'pending' | null. */
 export function agyLiveList(now = Date.now(), procs = agyProcs) {
+  agySweepSubs(now);
   if (procs === 'pending' || procs === 0) return []; // не е пуснат (или още не знаем – никой не влиза, за да не излезе веднага)
   const cands = [];
   for (const g of agyState.values()) {
     const idle = now - g.lastAt;
     if (idle > AGY_LIVE_MS) continue;
     const status = g.ask ? 'waiting'
-      : (g.step !== 'DONE' || g.open.length > 0) && idle < AGY_BUSY_CAP_MS ? 'busy'
+      : g.subs.size > 0 || ((g.step !== 'DONE' || g.open.length > 0) && idle < AGY_BUSY_CAP_MS) ? 'busy'
       : 'idle';
-    if (g.parent && status === 'idle') continue;
+    // под-агентите не са в списъка на живите сесии (както при Claude Code) – идват и си тръгват по събитията си.
+    // Иначе клиентът ги създаваше като главни сесии, а щом изпаднат от списъка след „busy“ – „прекъснати“ (посивели 15 мин).
+    if (g.parent || g.sender) continue;
     cands.push({ g, status });
   }
-  // таван: най-много толкова главни сесии, колкото пуснати agy (заетите първо, после най-скоро пипнатите);
-  // под-агентите остават само ако родителят им е вътре
-  let keep = cands;
-  if (typeof procs === 'number') {
-    const ids = new Set(cands.filter((c) => !c.g.parent)
-      .sort((a, b) => (a.status === 'idle') - (b.status === 'idle') || b.g.lastAt - a.g.lastAt)
-      .slice(0, procs).map((c) => c.g.id));
-    keep = cands.filter((c) => ids.has(c.g.parent || c.g.id));
-  }
+  // таван: най-много толкова сесии, колкото пуснати agy (заетите първо, после най-скоро пипнатите)
+  const keep = typeof procs === 'number'
+    ? cands.sort((a, b) => (a.status === 'idle') - (b.status === 'idle') || b.g.lastAt - a.g.lastAt).slice(0, procs)
+    : cands;
   return keep.map(({ g, status }) => {
     const e = { agent: g.id, label: g.label, status, provider: 'antigravity' };
     if (g.model) e.model = g.model;
@@ -813,38 +815,79 @@ export function agyLiveList(now = Date.now(), procs = agyProcs) {
   });
 }
 
+let agyEmit = null; // последният emit от server.js – за затварянето на invoke_subagent от под-агента / по време
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const agyById = (id) => { for (const g of agyState.values()) if (g.id === id) return g; return null; };
+
+function agyBase(g, now) {
+  const b = { agent: g.id, label: g.label, subagent: !!g.parent, provider: 'antigravity', ts: now };
+  if (g.model) b.model = g.model;
+  if (g.parent) b.parent = g.parent;
+  if (g.parentToolUseId) b.parent_tool_use_id = g.parentToolUseId;
+  if (g.desc) b.desc = g.desc;
+  return b;
+}
+
+/** Под-агентът свърши -> invoke_subagent на родителя приключва (родителят спира да „делегира“, под-агентът си тръгва). */
+function agySubDone(parentId, convId, now) {
+  const p = parentId && agyById(parentId);
+  const it = p?.subs.get(convId);
+  if (!it) return;
+  p.subs.delete(convId);
+  agyEmit?.({ ...agyBase(p, now), type: 'tool_end', tool_use_id: it.id });
+}
+
+/** invoke_subagent, чийто под-агент заглъхна (3 мин без ред) или така и не се появи (1 мин) – затваряме. */
+function agySweepSubs(now) {
+  for (const p of agyState.values()) {
+    for (const [cid, it] of p.subs) {
+      const c = agyById('agy:' + cid);
+      if (c ? now - c.lastAt > AGY_BUSY_CAP_MS : now - it.at > 4 * AGY_SUB_MS) agySubDone(p.id, cid, now);
+    }
+  }
+}
+
+/** Свързва под-агента с родителя: по резултата на invoke_subagent (conversationId), по sender= в първия му ред или
+ *  (последно) по време – само за разговор, който не е започнат от човек (първият ред не е USER_EXPLICIT): иначе втори
+ *  прозорец на agy, отворен до 15 s след invoke_subagent, ставаше „под-агент“. */
+function agyLink(g, now) {
+  let link = agyChildOf.get(g.convId);
+  if (!link && g.sender && g.sender !== g.convId) {
+    const p = agyById('agy:' + g.sender);
+    const it = p?.open.find((x) => x.isSub && !x.child); // резултатът на invoke_subagent още не е записан
+    if (it) it.child = g.convId;
+    link = { parent: 'agy:' + g.sender, toolUseId: it?.id || null, desc: it?.desc || null, model: it?.model || null };
+  }
+  if (!link && agyTasks.length && g.first !== null && g.first !== 'USER_EXPLICIT') {
+    const t = agyTasks.findLast((x) => !x.claimed && x.parent !== g.id && now - x.ts < AGY_SUB_MS);
+    if (t) { t.claimed = true; link = { parent: t.parent, toolUseId: t.toolUseId, desc: t.desc, model: t.model }; }
+  }
+  if (!link) return;
+  g.parent = link.parent; g.parentToolUseId = link.toolUseId; g.desc = link.desc;
+  const p = agyById(link.parent);
+  if (p && g.labelSrc !== 'history') { g.label = p.label; g.labelSrc = 'parent'; } // под-агентът работи по проекта на родителя
+  if (!g.model) g.model = link.model || p?.model || null;
+}
+
 /** Един ред от transcript.jsonl на Antigravity -> събития към офиса. */
 export function agyLine(file, line, emit, usage, setCtx = () => {}) {
   let o;
   try { o = JSON.parse(line); } catch { return; }
+  agyEmit = emit;
   const g = agyOf(file, setCtx);
   const now = Date.now();
   g.lastAt = now;
   agyApplyMeta(g, o, setCtx);
   agyLabel(g, file);
-  // Ако сесията е под-агент, чиято връзка е дошла малко по-късно (от invoke_subagent). Евристиката по време – само за
-  // разговор, който не е започнат от човек (първият ред не е USER_EXPLICIT): иначе втори прозорец на agy, отворен
-  // до 15 s след invoke_subagent, ставаше „под-агент“.
-  if (!g.parent) {
-    const link = agyChildOf.get(g.convId);
-    if (link) { g.parent = link.parent; g.parentToolUseId = link.toolUseId; g.desc = link.desc; }
-    else if (agyTasks.length && g.first !== null && g.first !== 'USER_EXPLICIT') {
-      const recent = agyTasks.findLast((t) => !t.claimed && t.parent !== g.id && now - t.ts < AGY_SUB_MS);
-      if (recent) { recent.claimed = true; g.parent = recent.parent; g.parentToolUseId = recent.toolUseId; g.desc = recent.desc; }
-    }
-  }
-  const base = () => {
-    const b = { agent: g.id, label: g.label, subagent: !!g.parent, provider: 'antigravity', ts: now };
-    if (g.model) b.model = g.model;
-    if (g.parent) b.parent = g.parent;
-    if (g.parentToolUseId) b.parent_tool_use_id = g.parentToolUseId;
-    if (g.desc) b.desc = g.desc;
-    return b;
-  };
+  if (!g.parent) agyLink(g, now);
+  const base = () => agyBase(g, now);
   if (o.type === 'USER_INPUT') {
     for (const it of g.open.splice(0)) emit({ ...base(), type: 'tool_end', tool_use_id: it.id });
     g.step = 'THINKING'; g.ask = false;
     emit({ ...base(), type: 'user_prompt' });
+  } else if (o.type === 'SYSTEM_MESSAGE') {
+    // съобщение от под-агент / задача от родителя / таймер – агентът ще отговори (мисли)
+    g.step = 'THINKING'; g.ask = false;
   } else if (o.type === 'PLANNER_RESPONSE') {
     for (const it of g.open.splice(0)) emit({ ...base(), type: 'tool_end', tool_use_id: it.id });
     g.ask = false;
@@ -863,30 +906,37 @@ export function agyLine(file, line, emit, usage, setCtx = () => {}) {
         if (!c?.name) return;
         const [tool, detail, isAsk, isSub] = agyTool(c.name, c.args);
         const id = c.id || `${g.convId}:${o.step_index ?? 0}:${i}`;
+        const model = isSub ? (agyArgs(c.args).Model || null) : null;
         if (isAsk) g.ask = true;
         if (isSub) {
-          agyTasks.push({ parent: g.id, toolUseId: id, desc: detail || null, ts: now, claimed: false });
+          agyTasks.push({ parent: g.id, toolUseId: id, desc: detail || null, model, ts: now, claimed: false });
           while (agyTasks.length > 50) agyTasks.shift();
         }
-        g.open.push({ id, isSub, desc: detail || null });
+        g.open.push({ id, isSub, desc: detail || null, model });
         emit({ ...base(), type: 'tool_start', id, tool, detail });
       });
     } else {
       g.step = 'DONE';
       emit({ ...base(), type: 'say' });
+      if (g.parent) agySubDone(g.parent, g.convId, now); // под-агентът отговори без инструменти = свърши
     }
   } else if (o.type === 'GENERIC') {
     g.ask = false;
     const done = g.open.shift();
     if (done) {
+      // „Created the following subagent: { "conversationId": "…" }“ – invoke_subagent се връща веднага, а под-агентът
+      // работи на заден план: инструментът остава отворен (родителят „делегира“), докато под-агентът не свърши
+      let cid = null;
       if (done.isSub && typeof o.content === 'string') {
-        const m = o.content.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-        if (m && m[0] !== g.convId) {
-          agyChildOf.set(m[0], { parent: g.id, toolUseId: done.id, desc: done.desc });
-          while (agyChildOf.size > 200) agyChildOf.delete(agyChildOf.keys().next().value);
-        }
+        cid = (o.content.match(/"conversationId"\s*:\s*"([0-9a-f-]{36})"/i) || [])[1] || done.child || (o.content.match(UUID_RE) || [])[0] || null;
+        if (cid) cid = cid.toLowerCase();
       }
-      emit({ ...base(), type: 'tool_end', tool_use_id: done.id });
+      if (cid && cid !== g.convId) {
+        agyChildOf.set(cid, { parent: g.id, toolUseId: done.id, desc: done.desc, model: done.model });
+        while (agyChildOf.size > 200) agyChildOf.delete(agyChildOf.keys().next().value);
+        done.at = now;
+        g.subs.set(cid, done);
+      } else emit({ ...base(), type: 'tool_end', tool_use_id: done.id });
     }
     if (!g.open.length) g.step = 'THINKING';
   }

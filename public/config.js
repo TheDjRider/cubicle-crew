@@ -266,6 +266,7 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.7': [['Под-агентите на Antigravity си тръгват', 'Под-агентите влизат като под-агенти, мислят, докато главният агент ги чака, и си тръгват, щом свършат – вече не остават посивели на бюрата. Главният агент е лилав (делегира), докато те работят.']],
       '2.19.6': [
         ['Antigravity CLI в офиса', 'Сесиите на agy идват сами – с проекта, модела, който си избрал в agy (напр. Gemini 3.8 Flash), инструментите и контекста. Стоят в офиса само докато agy е пуснат.'],
         ['По-леко с големите файлове', 'Огромните транскрипти се четат на части и не спират офиса; двоен клик на „Към терминала“ пуска само един помощен процес.'],
@@ -581,6 +582,7 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.7': [['Antigravity sub-agents leave', 'Sub-agents walk in as sub-agents, keep thinking while the main agent waits for them and leave once they are done – no more greyed-out leftovers at the desks. The main agent is purple (delegating) while they work.']],
       '2.19.6': [
         ['Antigravity CLI in the office', 'agy sessions walk in by themselves – with the project, the model you picked in agy (e.g. Gemini 3.8 Flash), tools and the context gauge. They stay only while agy is running.'],
         ['Lighter on big files', 'Huge transcripts are read in chunks and no longer stall the office; double-clicking "Jump to the terminal" starts only one helper process.'],

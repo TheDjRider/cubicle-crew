@@ -203,7 +203,8 @@ export class Model {
     if (this.asking(a, now)) return 'waiting'; // висящ въпрос към теб – докато не отговориш, редове няма
     const tools = [...a.pending.values()];
     const delegatingPending = tools.some((p) => DELEGATE_TOOLS.has(p.tool));
-    if (now - a.lastEvent > CFG.IDLE_MS && !a.busy) {
+    // под-агент, чийто родител още чака резултата му, работи (мисли между стъпките) – без 8-секундното правило
+    if (now - a.lastEvent > CFG.IDLE_MS && !a.busy && !(a.subagent && !a.done && this.parentWaits(a))) {
       if (delegatingPending && this.liveChildren(a) > 0) return 'delegating';
       a.pending.clear();
       return 'idle';
@@ -219,6 +220,11 @@ export class Model {
     if (a.statusWaiting != null || a.ended || now - a.lastEvent > QUESTION_STAY_MS) return false;
     for (const p of a.pending.values()) if (TOOL_STATE[p.tool] === 'waiting') return true;
     return false;
+  }
+
+  /** Родителят още държи отворен инструмента, който е пуснал този под-агент. */
+  parentWaits(a) {
+    return !!(a.parentToolUseId && a.parent && this.agents.get(a.parent)?.pending.has(a.parentToolUseId));
   }
 
   /** Текущият инструмент (за балончето). */
@@ -246,8 +252,9 @@ export class Model {
       else if (a.crashed && !a.crashSeen && now - a.crashed < CRASH_STAY_MS) { /* прекъсната – чака да я видиш */ }
       else if (a.subagent) {
         if (a.done && now - a.doneAt > CFG.CHILD_EXIT_DELAY_MS && quiet > CFG.CHILD_EXIT_DELAY_MS) leave = true;
-        // дълъг tool (напр. Bash) без нови редове – чакаме повече, преди да приемем, че е приключил
-        else if (quiet > (a.lastType === 'tool_start' ? CFG.CHILD_DONE_IDLE_MS * 6 : CFG.CHILD_DONE_IDLE_MS)) leave = true;
+        // дълъг tool (напр. Bash) без нови редове или родителят още чака резултата му (Task/Agent отворен – под-агентът
+        // мисли; при Antigravity flash_lite мълчи и по минута) – чакаме повече, преди да приемем, че е приключил
+        else if (quiet > (a.lastType === 'tool_start' || this.parentWaits(a) ? CFG.CHILD_DONE_IDLE_MS * 6 : CFG.CHILD_DONE_IDLE_MS)) leave = true;
       } else if (a.ended ? quiet > CFG.IDLE_MS : !a.live && quiet > CFG.GONE_AFTER_MS) leave = true; // жива сесия не си тръгва
       if (leave) this.leave(a.id);
     }

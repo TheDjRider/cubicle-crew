@@ -71,3 +71,29 @@ test('Antigravity: нов разговор от човек до 15 s след in
   assert.equal(sev[0].parent, 'agy:22222222-2222-2222-2222-222222222222');
   for (const f of [pf, human, sub]) pruneProviders(f);
 });
+
+test('Antigravity: под-агент по sender= и conversationId – родителят делегира, докато под-агентът свърши', () => {
+  const P = '55555555-5555-5555-5555-555555555555', C = '66666666-6666-6666-6666-666666666666';
+  const pf = conv(P), cf = conv(C), ev = [], push = (e) => ev.push(e), noop = () => {};
+  const line = (f, o) => { fs.appendFileSync(f, JSON.stringify(o) + '\n'); agyLine(f, JSON.stringify(o), push, noop); };
+  line(pf, { step_index: 0, source: 'USER_EXPLICIT', type: 'USER_INPUT', created_at: new Date().toISOString(), content: 'x' });
+  line(pf, { step_index: 1, source: 'MODEL', type: 'PLANNER_RESPONSE', tool_calls: [{ name: 'invoke_subagent', args: { Model: '"flash_lite"', Prompt: '"Ти си Alpha"' } }] });
+  // под-агентът тръгва преди резултата на invoke_subagent – точна връзка по sender=
+  line(cf, { step_index: 0, source: 'SYSTEM', type: 'SYSTEM_MESSAGE', content: `<SYSTEM_MESSAGE>\n[Message] timestamp=x sender=${P} priority=HIGH content=задача\n</SYSTEM_MESSAGE>` });
+  line(pf, { step_index: 2, source: 'MODEL', type: 'GENERIC', status: 'DONE', content: `Created the following subagent: { "conversationId": "${C}" }` });
+  line(cf, { step_index: 1, source: 'MODEL', type: 'PLANNER_RESPONSE', tool_calls: [{ name: 'view_file', args: { AbsolutePath: '"C:\\x\\a.js"' } }] });
+  const start = ev.find((e) => e.agent === 'agy:' + P && e.tool === 'Agent');
+  const sub = ev.find((e) => e.agent === 'agy:' + C);
+  assert.equal(sub.parent, 'agy:' + P);
+  assert.equal(sub.parent_tool_use_id, start.id);
+  assert.equal(sub.model, 'flash_lite');
+  assert.equal(sub.label, ev[0].label); // проектът на родителя
+  assert.ok(!ev.some((e) => e.type === 'tool_end' && e.tool_use_id === start.id)); // invoke_subagent още е отворен
+  const live = agyLiveList(Date.now(), 1);
+  assert.equal(live.find((x) => x.agent === 'agy:' + P)?.status, 'busy');
+  assert.ok(!live.some((x) => x.agent === 'agy:' + C)); // под-агентите не са в списъка на живите сесии
+  line(cf, { step_index: 2, source: 'MODEL', type: 'GENERIC', status: 'DONE', content: 'ok' });
+  line(cf, { step_index: 3, source: 'MODEL', type: 'PLANNER_RESPONSE', content: 'Готово.' });
+  assert.ok(ev.some((e) => e.agent === 'agy:' + P && e.type === 'tool_end' && e.tool_use_id === start.id));
+  for (const f of [pf, cf]) pruneProviders(f);
+});
