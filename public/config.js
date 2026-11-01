@@ -347,7 +347,7 @@ const T_BG = {
     // порода със собствено име (вместо това на мястото)
     breeds: { 'dog.bueno': 'Буено', 'exotic.fennec': 'Сахара', 'exotic.fennec.cream': 'Лате', 'exotic.fennec.pale': 'Перла', 'exotic.capybara': 'Мочи', 'exotic.capybara.red': 'Ръжди', 'exotic.capybara.yellow': 'Меденик', 'exotic.capybara.gray': 'Пепел', 'exotic.wombat': 'Пушек', 'exotic.wombat.black': 'Оникс', 'exotic.wombat.sandy': 'Дюна', 'exotic.wombat.cream': 'Бисквита', 'exotic.wombat.tan': 'Карамел' },
     kinds: { cat: 'Офисна котка', dog: 'Офисно куче', exotic: 'Екзотичен любимец' },
-    tip: 'Клик – погали · двоен клик – име и външен вид',
+    tip: 'Клик – погали · задръж и влачи – вдигни · двоен клик – име и външен вид',
   },
   // начална настройка (първо пускане)
   setup: {
@@ -680,7 +680,7 @@ const T_EN = {
     names: { cat: 'Misty', cat2: 'Tiger', cat3: 'Luna', dog: 'Rex', exotic: 'Sahara', exotic2: 'Mochi', exotic3: 'Cubey' },
     breeds: { 'dog.bueno': 'Bueno', 'exotic.fennec': 'Sahara', 'exotic.fennec.cream': 'Latte', 'exotic.fennec.pale': 'Pearl', 'exotic.capybara': 'Mochi', 'exotic.capybara.red': 'Rusty', 'exotic.capybara.yellow': 'Honey', 'exotic.capybara.gray': 'Ash', 'exotic.wombat': 'Smokey', 'exotic.wombat.black': 'Onyx', 'exotic.wombat.sandy': 'Dune', 'exotic.wombat.cream': 'Biscuit', 'exotic.wombat.tan': 'Toffee' },
     kinds: { cat: 'Office cat', dog: 'Office dog', exotic: 'Exotic pet' },
-    tip: 'Click to pet · double-click to rename or change the look',
+    tip: 'Click to pet · hold and drag to pick up · double-click to rename or change the look',
   },
   setup: {
     hello: 'Welcome to Cubicle Crew!',

@@ -33,6 +33,7 @@ function clearHits() {
   if (!bridge?.clearHit || !bridge.onClearProbe) return;
   const g = canvas.getContext('2d', { alpha: true, willReadFrequently: true });
   const solidAt = (x, y) => {
+    if (office.heldPet) return true; // носен любимец: прозорецът не бива да става „прозрачен за мишката“ по средата на влаченето
     if (y < 26 || x < 6 || y > innerHeight - 6 || x > innerWidth - 6) return true;
     const el = document.elementFromPoint(x, y);
     if (el !== canvas) return !!el && el !== document.body && el !== document.documentElement && el.id !== 'stage';

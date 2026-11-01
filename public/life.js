@@ -160,7 +160,8 @@ export class Life {
   // ================================================================ любимци
   /** Свободен любимец (без задача); dogFirst – кучето е по-отзивчиво. */
   freePet(x, y, dogFirst) {
-    const ps = this.o.pets.filter((p) => p.placed && !p.busy && !p.hop);
+    const now = performance.now();
+    const ps = this.o.pets.filter((p) => p.placed && !p.busy && !p.hop && p.ready(now)); // не е вдигнат и не е току-що пуснат
     if (!ps.length) return null;
     if (dogFirst) { const d = ps.find((p) => p.kind === 'dog') || ps.find((p) => p.look?.sp === 'capybara'); if (d) return d; } // кучето, после спокойната капибара
     return ps.sort((p, q) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y))[0];
@@ -206,12 +207,12 @@ export class Life {
       this.nextFollow = now + rnd(3000, 6000);
       const lo = o.L.lounge;
       const w = o.live().find((a) => a.mode === 'walk' && a.x > lo.x && a.path.length);
-      const cat = w && o.pets.find((p) => (p.kind === 'cat' || p.look?.sp === 'fennec') && !p.busy && p.mode === 'sit'); // и фенекът върви след минаващите
+      const cat = w && o.pets.find((p) => (p.kind === 'cat' || p.look?.sp === 'fennec') && !p.busy && p.mode === 'sit' && p.ready(now)); // и фенекът върви след минаващите
       if (cat && Math.random() < 0.35) { const end = w.path[w.path.length - 1]; cat.goNear(end.x + (Math.random() < 0.5 ? -12 : 12), end.y + 6); }
     }
     if (now < this.nextPet) return;
     this.nextPet = now + (this.demo ? rnd(14000, 26000) : rnd(30000, 75000));
-    const free = o.pets.filter((p) => p.placed && !p.busy && !p.hop);
+    const free = o.pets.filter((p) => p.placed && !p.busy && !p.hop && p.ready(now));
     if (!free.length) return;
     const p = pick(free);
     const sp = p.look?.sp;

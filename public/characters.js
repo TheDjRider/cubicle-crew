@@ -382,10 +382,37 @@ export class Actor {
 // ======================================================================
 // Любимци – просто разнообразие в зоната за почивка (котки и куче)
 // ======================================================================
+export const HELD_LIFT = 18; // колко над „пода“ си (сянката) виси вдигнат любимец
 class Pet {
   /** look = предмет от catalog.js; start = коя част от зоната (0..1) – за да не се появят една върху друга. */
-  constructor(look, start = 0.5) { this.look = look; this.start = start; this.x = 0; this.y = 0; this.tx = 0; this.ty = 0; this.mode = 'sit'; this.until = 0; this.flip = false; this.dist = 0; this.placed = false; }
+  constructor(look, start = 0.5) {
+    this.look = look; this.start = start; this.x = 0; this.y = 0; this.tx = 0; this.ty = 0; this.mode = 'sit'; this.until = 0; this.flip = false; this.dist = 0; this.placed = false;
+    this.held = null; this.fall = null; this.vx = 0; this.noErrandUntil = 0; this.dizzyUntil = 0; this.landed = null; // вдигане с мишката (petdrag.js)
+  }
   get speed() { return 14; }
+  /** Вдигнат е (държан или още пада) – рисува се с позата „виси“ и е най-отгоре. */
+  get hanging() { return !!this.held || (!!this.fall && !this.fall.hit); }
+  /** Свободен за задачи от life.js: не е вдигнат и не е току-що пуснат. */
+  ready(now) { return !this.held && !this.fall && now >= this.noErrandUntil; }
+  /** Хванат е със zone = 'head' | 'body' | 'tail': всичко, с което е бил зает, се прекъсва. */
+  grab(now, zone) {
+    this.job = null; this.path = []; this.hop = null; this.food = null; this.carry = null; this.fall = null;
+    this.keyOverride = null; this.perched = false; this.lift = 0;
+    this.held = { zone, t: now }; this.pose = zone; this.mode = 'held'; this.vx = 0; this.heldAt = now; this.placed = true;
+  }
+  /** Държан е: ръката е в (x, y); любимецът виси HELD_LIFT над „пода“ си (сянката), люлее се според скоростта. */
+  dragTo(x, y, now) {
+    const dt = Math.max(0.004, (now - (this.heldAt || now)) / 1000);
+    this.vx += ((x - this.x) / dt - this.vx) * 0.3;
+    this.heldAt = now;
+    if (Math.abs(this.vx) > 30) this.flip = this.vx < 0; // гледа накъдето го носят
+    this.x = x; this.y = y + HELD_LIFT; this.lift = HELD_LIFT;
+  }
+  /** Пуснат е: пада към (x1, y1) – пода или бюрото/дивана (arc > 0 = малка дъга, когато целта не е точно под него). */
+  release(now, x1, y1, o = {}) {
+    this.held = null; this.away = true; // извън зоната си не се „телепортира“ обратно, а се връща пеша (вж. update)
+    this.fall = { t0: now, x0: this.x, y0: this.y, l0: this.lift || 0, x1, y1, dur: o.dur || 280, arc: o.arc || 0, then: o.then, hit: false };
+  }
   /** Накъде да тръгне (people = хората в зоната за почивка – кучето понякога отива при тях). */
   target(area) { return { x: area.x0 + Math.random() * (area.x1 - area.x0), y: area.y0 + Math.random() * (area.y1 - area.y0) }; }
   rest() { return Math.random() < 0.35 ? 'sleep' : 'sit'; }
@@ -437,6 +464,24 @@ class Pet {
     if (now - j.since > (j.ms ?? 1e9) || j.end?.(now)) this.home(now);
   }
   update(dt, now, L, people = [], walkers = []) {
+    if (this.held) return; // държан е – движи го мишката (dragTo)
+    if (this.fall) { // пуснат: пада, удря и подскача веднъж; после си сяда
+      const f = this.fall;
+      if (!f.hit) {
+        const k = Math.min(1, (now - f.t0) / f.dur);
+        this.x = f.x0 + (f.x1 - f.x0) * k; this.y = f.y0 + (f.y1 - f.y0) * k;
+        this.lift = Math.max(0, f.l0 * (1 - k * k)) + (f.arc ? Math.sin(k * Math.PI) * f.arc : 0);
+        if (k >= 1) { f.hit = true; f.t1 = now; this.x = f.x1; this.y = f.y1; this.lift = 0; this.mode = 'sit'; this.landed = { at: now }; }
+      } else {
+        const b = Math.min(1, (now - f.t1) / 170);
+        this.lift = Math.round(Math.sin(b * Math.PI) * 3);
+        if (b >= 1) {
+          this.fall = null; this.lift = 0; this.mode = 'sit'; this.until = now + 3500 + Math.random() * 2000; this.noErrandUntil = now + 8000;
+          f.then?.(this, now);
+        }
+      }
+      return;
+    }
     if (this.hop) { // подскок: дъга, нищо друго междувременно
       const k = Math.min(1, (now - this.hop.t0) / 350), h = this.hop;
       this.x = h.x0 + (h.x1 - h.x0) * k; this.y = h.y0 + (h.y1 - h.y0) * k; this.lift = Math.round(Math.sin(k * Math.PI) * 7);
@@ -483,7 +528,21 @@ class Pet {
   /** Лакомство в купичката (x, y = пред нея): тръгва веднага. */
   feed(x, y) { this.food = { x, y }; this.feedFlip = false; } // застава отляво и гледа надясно, към купичката
   /** Попадение с мишката (логически пиксели) – за името при посочване. */
-  hit(x, y) { return x >= this.x - 8 && x <= this.x + 8 && y >= this.y - 14 && y <= this.y + 2; }
+  hit(x, y, pad = 0) { return x >= this.x - 8 - pad && x <= this.x + 8 + pad && y >= this.y - 14 - pad && y <= this.y + 2 + pad; }
+  /** Рисуване: вдигнатият виси (поза според хващането), иначе обичайното draw(); замаян – клатушка и звездички. */
+  render(ctx, now) {
+    const dizzy = now < this.dizzyUntil;
+    if (dizzy && !this.hanging) { ctx.save(); ctx.translate(Math.round(Math.sin(now / 70)), 0); }
+    if (this.hanging) drawHeld(ctx, this, now); else this.draw(ctx, now);
+    if (dizzy && !this.hanging) ctx.restore();
+    if (dizzy) { // три звездички обикалят над главата
+      const sx = Math.round(this.x), sy = Math.round(this.y - (this.lift || 0)) - (this.hanging ? 4 : 17);
+      for (let i = 0; i < 3; i++) {
+        const a = now / 200 + i * 2.09, px = sx + Math.round(Math.cos(a) * 6), py = sy + Math.round(Math.sin(a) * 2);
+        R(ctx, '#ffe27a', px - 1, py, 3, 1); R(ctx, '#ffe27a', px, py - 1, 1, 3); R(ctx, '#fff6c8', px, py, 1, 1);
+      }
+    }
+  }
 }
 
 export class Cat extends Pet {
@@ -804,6 +863,81 @@ function catPattern(ctx, lk, mode, x, y, now, f) {
       else { mottle(ctx, x - 5, y - 6, 9, 4, P, P2); mottle(ctx, x + 3, y - 8, 4, 1, P, P2); }
       break;
   }
+}
+
+// ======================================================================
+// Вдигнат любимец: три пози според това, за къде е хванат – за главата/врата (виси надолу), за тялото (банан с висящи
+// крака) и за опашката (с главата надолу). Рисува се от малка „анатомия“ на вида + цветовете на самото животно, така че
+// нови видове и цветове получават позите без нова картина. (x, ay) е мястото, където го държи ръката, сянката е на пода.
+// bl/bt = дължина/дебелина на тялото, hw/hh = глава, legs = дължина на краката, tail = [ширина, дължина].
+// ======================================================================
+const ANAT = {
+  cat:      { bl: 8, bt: 5, hw: 5, hh: 4, ear: 'point', legs: 3, tail: [1, 6] },
+  dog:      { bl: 9, bt: 5, hw: 5, hh: 4, ear: 'flop', legs: 3, tail: [1, 5] },
+  fennec:   { bl: 7, bt: 4, hw: 5, hh: 4, ear: 'tall', legs: 3, tail: [3, 5] },
+  capybara: { bl: 11, bt: 6, hw: 6, hh: 5, ear: 'small', legs: 2, tail: [0, 0] },
+  wombat:   { bl: 10, bt: 6, hw: 6, hh: 5, ear: 'small', legs: 2, tail: [1, 1] },
+};
+const DOG_TAIL = { long: [1, 5], curl: [2, 3], stub: [1, 1], plume: [2, 5] };
+function drawHeld(ctx, p, now) {
+  const lk = p.look, key = lk.sp || p.kind, A = { ...(ANAT[key] || ANAT.cat) };
+  if (p.kind === 'dog') { A.bl += clamp(lk.len || 0, -1, 3); if (lk.legs === 'short') A.legs = 2; A.tail = DOG_TAIL[lk.tail] || A.tail; }
+  const { bl, bt, hw, hh, ear, legs } = A, [tw, tl] = A.tail;
+  const x = Math.round(p.x), gy = Math.round(p.y), ay = gy - Math.round(p.lift || 0);
+  const C = lk.c, H = lk.hi || C, M = lk.m || H, E = lk.e || C, EY = lk.eye || '#1a1214', NS = lk.nose || NOSE;
+  const INNER = lk.p2 || '#e8b0a0', TIP = lk.p || '#2a2220';
+  // люлеене: според скоростта на ръката + лек покой; долните части се клатят най-много
+  const s = clamp(Math.round(-(p.vx || 0) / 45), -2, 2), w = Math.round(Math.sin(now / 280 + p.x * 0.3) * 0.9), sh = s + w;
+  const r = (c, dx, dy, ww, hh2) => R(ctx, c, x + dx, ay + dy, ww, hh2);
+  // висящ крайник: len пиксела надолу, всеки по-нисък ред е изместен още малко (sh = пълното изместване накрая)
+  const limb = (c, dx, dy, len, shift, ww = 1) => { for (let i = 0; i < len; i++) r(c, dx + Math.round(shift * (i + 1) / len), dy + i, ww, 1); };
+  ctx.save();
+  if (p.flip) { ctx.translate(x * 2, 0); ctx.scale(-1, 1); }
+  R(ctx, 'rgba(16,10,24,0.3)', x - 4, gy, 9, 1); // сянка на пода
+  const head = (dx, dy, inv = false) => {
+    r(C, dx, dy, hw, hh); r(H, dx + 1, dy, hw - 2, 1);
+    r(M, dx + hw - 2, inv ? dy : dy + hh - 2, 2, 2); r(NS, dx + hw - 1, inv ? dy : dy + hh - 2, 1, 1); // муцуна и нос
+    r(EY, dx + hw - 3, inv ? dy + hh - 2 : dy + 1, 1, 1);                                              // око
+    // ушите са от страната на „горе“ на главата (при обърната – надолу)
+    if (ear === 'point') { const y0 = inv ? dy + hh : dy - 1; r(C, dx, y0, 1, 1); r(C, dx + hw - 2, y0, 1, 1); }
+    else if (ear === 'tall') { const y0 = inv ? dy + hh : dy - 3; r(C, dx, y0, 2, 3); r(INNER, inv ? dx + 1 : dx + 1, inv ? y0 : y0 + 1, 1, 2); r(C, dx + hw - 3, y0, 2, 3); r(INNER, dx + hw - 3, inv ? y0 : y0 + 1, 1, 2); }
+    else if (ear === 'flop') { const y0 = inv ? dy + hh - 4 : dy + 1; r(E, dx - 1, y0, 1, 3); r(E, dx + hw, y0, 1, 3); }
+    else { const y0 = inv ? dy + hh : dy - 1; r(E, dx, y0, 2, 1); r(E, dx + hw - 2, y0, 2, 1); }
+  };
+  const tail = (dx, dy, shift, tipTop = false) => { // опашка, висяща надолу; фенекът има тъмен връх (при хваната за опашката – горе, при ръката)
+    if (!tl) return;
+    limb(C, dx - (tw >> 1), dy, tl, shift, tw);
+    if (key === 'fennec') limb(TIP, dx - (tw >> 1) + (tipTop ? 0 : Math.round(shift * 0.6)), tipTop ? dy : dy + tl - 2, 2, tipTop ? 0 : Math.round(shift * 0.4), tw);
+  };
+  const hx = -(hw >> 1), tx = -(bt >> 1);
+  const pose = p.pose || 'head';
+  if (pose === 'head') { // за главата/врата: виси надолу, краката и опашката са отпуснати
+    head(hx, 0);
+    const ty = hh - 1, bx = Math.round(sh * 0.4);
+    r(C, tx + bx, ty, bt, bl); r(H, tx + bx, ty, 1, bl - 1); r(M, tx + bx + bt - 2, ty + 1, 2, bl - 2);
+    limb(C, tx + bx + bt, ty + 1, legs, sh + 1);                 // предни крака
+    limb(C, tx + bx - 1, ty + bl - 3, legs, sh - 1);             // задни
+    tail(tx + bx + (bt >> 1), ty + bl, sh * 1.5 - 1);
+  } else if (pose === 'tail') { // за опашката: с главата надолу
+    tail(tx + (bt >> 1), 0, 0, true); // опашката е опъната от ръката
+    const ty = tl, bx = Math.round(sh * 0.8);
+    r(C, tx + bx, ty, bt, bl); r(H, tx + bx, ty, 1, bl - 1); r(M, tx + bx + bt - 2, ty + 1, 2, bl - 2);
+    head(hx + bx, ty + bl - 1, true);
+    limb(C, tx + bx + bt, ty + bl - 4, legs, sh + 1);            // предните крака висят до главата
+    limb(C, tx + bx - 1, ty + 1, legs + 1, sh - 1);              // задните – до опашката
+  } else { // за тялото: банан – краищата се свеждат надолу, краката висят
+    const mid = (bl - 1) / 2, x0 = -(bl >> 1), dEnd = 3;
+    for (let i = 0; i < bl; i++) {
+      const d = Math.round(Math.pow((i - mid) / mid, 2) * dEnd);
+      r(C, x0 + i, d, 1, bt); r(H, x0 + i, d, 1, 1);
+      if (i > 0 && i < bl - 1) r(M, x0 + i, d + bt - 1, 1, 1);
+    }
+    const dAt = (i) => Math.round(Math.pow((i - mid) / mid, 2) * dEnd);
+    head(x0 + bl - 2, dEnd, false);
+    tail(x0, dEnd + 1, sh * 1.5 - 1);
+    for (const [i, k] of [[1, -1], [2, 0], [bl - 3, 0], [bl - 2, 1]]) limb(C, x0 + i, dAt(i) + bt, legs, sh + k);
+  }
+  ctx.restore();
 }
 
 export { rgba };

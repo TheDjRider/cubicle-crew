@@ -236,6 +236,38 @@ export class UI {
     };
     this.canvas.addEventListener('mousemove', (e) => { this.mouse = toLogical(e); });
     this.canvas.addEventListener('mouseleave', () => { this.mouse = null; });
+    // вдигане на любимец: натиснат + движение (или задържане) = носи се; пускане = пада; обикновеният клик си остава „погали“
+    let press = null;
+    const beginDrag = () => {
+      if (!press || press.started) return;
+      press.started = true; clearTimeout(press.timer);
+      this.skipClick = true; // кликът след пускането не бива да гали
+      this.office.grabPet(press.pet, press.zone); // позата е за мястото, където е натиснато (не където е отишла мишката)
+      this.office.dragPet(press.pet, press.m);
+      this.canvas.style.cursor = 'grabbing'; this.tip.hidden = true;
+    };
+    const endDrag = () => {
+      if (!press) return;
+      clearTimeout(press.timer);
+      const p = press; press = null;
+      if (p.started) { this.office.dropPet(p.pet); setTimeout(() => { this.skipClick = false; }, 0); }
+    };
+    this.canvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || PARAMS.lan || prefs.focus || this.office.heldPet) return;
+      const m = toLogical(e);
+      if (this.office.hitTest(m.x, m.y)) return; // агент, не любимец
+      const pet = this.office.petAt(m.x, m.y, 3);
+      if (pet) press = { pet, m, zone: this.office.petZone(pet, m), cx: e.clientX, cy: e.clientY, started: false, timer: setTimeout(beginDrag, 200) };
+    });
+    addEventListener('mousemove', (e) => {
+      if (!press) return;
+      if (press.started && e.buttons === 0) { endDrag(); return; } // бутонът е пуснат извън прозореца
+      press.m = toLogical(e);
+      if (!press.started) { if (Math.hypot(e.clientX - press.cx, e.clientY - press.cy) > 4) beginDrag(); return; }
+      this.office.dragPet(press.pet, press.m);
+    });
+    addEventListener('mouseup', endDrag);
+    addEventListener('blur', endDrag);
     // двоен клик върху агент -> неговият терминал
     this.canvas.addEventListener('dblclick', (e) => {
       const m = toLogical(e), a = this.office.hitTest(m.x, m.y);
@@ -244,6 +276,7 @@ export class UI {
       if (pet) this.onPet?.(pet.slot);
     });
     this.canvas.addEventListener('click', (e) => {
+      if (this.skipClick) { this.skipClick = false; return; } // това е краят на влачене, не клик
       const m = toLogical(e);
       const a = this.office.hitTest(m.x, m.y);
       const pan = (m.x / (this.office.room?.W || 356)) * 1.4 - 0.7, calm = prefs.focus; // звук при клик (не във „Фокус“)
@@ -458,6 +491,7 @@ export class UI {
 
   updateTooltip(now) {
     const m = this.mouse;
+    if (this.office.heldPet) { this.tip.hidden = true; this.canvas.style.cursor = 'grabbing'; return; } // носи се любимец
     if (!m) { this.tip.hidden = true; this.canvas.style.cursor = ''; this.hoverId = null; return; }
     const a = this.office.hitTest(m.x, m.y);
     this.hoverId = a ? a.id : null;
@@ -494,7 +528,7 @@ export class UI {
     else if (this.pokeHover?.hit !== pk.name) this.pokeHover = { hit: pk.name, since: now };
     if (pk && now - this.pokeHover.since < 600) pk = null;
     if (pk) html = this.pokeTip(pk);
-    this.canvas.style.cursor = a || pet || pk || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
+    this.canvas.style.cursor = pet && !PARAMS.lan ? 'grab' : a || pet || pk || this.onPlaque(m) || this.onSwitch(m) || this.onSwitch(m, 'lampSwitch') || this.onBoard(m) ? 'pointer' : '';
     if (!html) { this.tip.hidden = true; return; }
     if (this.tip._html !== html) { this.tip.innerHTML = html; this.tip._html = html; }
     this.tip.hidden = false;
