@@ -110,7 +110,7 @@ export class Lan {
   filter(m) {
     if (!m || typeof m !== 'object') return null;
     if (m.type === 'wallet' || m.type === 'weather') return m;
-    if (m.type === 'sessions') return { type: 'sessions', list: (m.list || []).map(({ agent, label, status, provider, ctx, ctxMax }) => ({ agent, label, status, ...(provider ? { provider } : {}), ...(ctx ? { ctx, ctxMax } : {}) })) };
+    if (m.type === 'sessions') return { type: 'sessions', list: (m.list || []).map(({ agent, label, status, provider, ctx, ctxMax, prev }) => ({ agent, label, status, ...(provider ? { provider } : {}), ...(ctx ? { ctx, ctxMax } : {}), ...(prev ? { prev } : {}) })) };
     if (!m.agent) return null; // permission, update, agents… – не
     const { detail, desc, ...rest } = m;
     return rest;

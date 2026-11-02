@@ -123,10 +123,11 @@ export class Model {
 
   /** Списък на живите сесии от сървъра: липсващите идват (почиват), затворените си тръгват. */
   sessions(list, now = performance.now()) {
-    const ids = new Set();
+    const ids = new Set(), cleared = new Set();
     for (const s of Array.isArray(list) ? list : []) {
       if (!s || typeof s.agent !== 'string') continue;
       ids.add(s.agent);
+      if (typeof s.prev === 'string') cleared.add(s.prev); // /clear: същият терминал продължи с нова сесия
       if (!this.agents.has(s.agent)) {
         this.ingest({
           agent: s.agent, label: s.label, type: 'presence',
@@ -149,8 +150,10 @@ export class Model {
       else if (!a.statusWaiting && was) this.clearAsk(a);
     }
     for (const a of this.agents.values()) if (a.live && !ids.has(a.id)) {
-      // сесията изчезна насред работа (незавършен инструмент / Claude още „мислеше“) – остава посивяла, докато я видиш
-      if (a.busy || [...a.pending.values()].some((p) => !DELEGATE_TOOLS.has(p.tool))) { a.crashed = now; a.crashSeen = false; a.pending.clear(); }
+      // сесията изчезна насред работа (незавършен инструмент / Claude още „мислеше“) – остава посивяла, докато я видиш;
+      // след /clear обаче е приключила чисто – просто си тръгва
+      if (cleared.has(a.id)) { a.crashed = 0; a.pending.clear(); }
+      else if (a.busy || [...a.pending.values()].some((p) => !DELEGATE_TOOLS.has(p.tool))) { a.crashed = now; a.crashSeen = false; a.pending.clear(); }
       a.live = false; a.ended = true; a.busy = false; a.statusWaiting = false; this.clearAsk(a);
     }
   }

@@ -307,8 +307,12 @@ function lastWrite(sid) {
   for (const [f, st] of tracked) if (st.mtime > t && path.basename(f, '.jsonl') === sid) t = st.mtime;
   return t;
 }
+// /clear: същият процес (pid) продължава с нов sessionId – старата сесия е приключила чисто, не е прекъсната
+const sidOfPid = new Map(); // pid -> последният му sessionId
+const prevOf = new Map();   // нов sessionId -> предишният на същия pid
 function scanSessions() {
   const now = Date.now();
+  const pids = new Set();
   const read = (dir) => { try { return fs.readdirSync(dir).filter((n) => n.endsWith('.json')).map((n) => path.join(dir, n)); } catch { return []; } };
   // основната папка + sessions/ до всеки допълнителен корен (WSL не – достъпът е бавен, а pid-овете са на Linux)
   const files = read(SESSIONS).map((f) => ({ f, r: null }));
@@ -329,7 +333,13 @@ function scanSessions() {
     }
     if (list.some((x) => x.agent === s.sessionId)) continue;
     if (!r || ownDomain(dom)) { pidOf.set(s.sessionId, s.pid); seenPids.add(s.sessionId); } // „Към терминала“ – само за наш процес
+    const pk = `${dom}|${s.pid}`;
+    pids.add(pk);
+    const was = sidOfPid.get(pk);
+    if (was && was !== s.sessionId) prevOf.set(s.sessionId, was);
+    sidOfPid.set(pk, s.sessionId);
     const item = { agent: s.sessionId, label: r?.label || (s.cwd ? path.basename(s.cwd) : s.sessionId.slice(0, 8)), status: s.status || null };
+    if (prevOf.has(s.sessionId)) item.prev = prevOf.get(s.sessionId); // незадължително поле: сесията дойде след /clear на prev
     if (r?.provider) item.provider = r.provider;
     // status "waiting" + waitingFor ("permission prompt", …) – Claude Code чака теб (молба за разрешение и т.н.)
     if (typeof s.waitingFor === 'string' && s.waitingFor) item.waitingFor = s.waitingFor.slice(0, 40);
@@ -338,6 +348,9 @@ function scanSessions() {
     list.push(item);
   }
   for (const k of pidOf.keys()) if (!seenPids.has(k)) pidOf.delete(k);
+  for (const pk of sidOfPid.keys()) if (!pids.has(pk)) sidOfPid.delete(pk);
+  const cur = new Set(sidOfPid.values());
+  for (const sid of prevOf.keys()) if (!cur.has(sid)) prevOf.delete(sid);
   for (const x of external.list()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   for (const x of ocLive.list) if (!list.some((y) => y.agent === x.agent)) list.push(x);
   for (const x of agyLiveList()) if (!list.some((y) => y.agent === x.agent)) list.push(x);
