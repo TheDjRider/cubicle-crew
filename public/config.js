@@ -266,6 +266,7 @@ const T_BG = {
     updSelf: 'Изтегля се, проверява се и се инсталира върху тази – приложението се рестартира само.', updManual: 'Изтегли инсталатора и го пусни – той обновява старата версия.',
     install: 'Изтегли и инсталирай', download: 'Изтегли', notes: 'Какво има в нея', later: 'По-късно',
     items: {
+      '2.19.9': [['/clear не е срив', 'След /clear старата сесия просто си тръгва, вместо да остане посивяла и заспала на бюрото.']],
       '2.19.8': [['По-чист изход', 'Приложението вече не записва грешка в лога, когато инсталатор или обновяване го затвори, докато е включен прозрачният фон.']],
       '2.19.7': [['Под-агентите на Antigravity си тръгват', 'Под-агентите влизат като под-агенти, мислят, докато главният агент ги чака, и си тръгват, щом свършат – вече не остават посивели на бюрата. Главният агент е лилав (делегира), докато те работят.']],
       '2.19.6': [
@@ -583,6 +584,7 @@ const T_EN = {
     updSelf: 'It downloads, gets checked and installs over this one – the app restarts by itself.', updManual: 'Download the installer and run it – it updates the old version.',
     install: 'Download and install', download: 'Download', notes: "What's in it", later: 'Later',
     items: {
+      '2.19.9': [['/clear is not a crash', 'After /clear the old session simply leaves instead of staying greyed out and asleep at its desk.']],
       '2.19.8': [['Cleaner exit', 'The app no longer writes an error to its log when an installer or update closes it while the transparent background is on.']],
       '2.19.7': [['Antigravity sub-agents leave', 'Sub-agents walk in as sub-agents, keep thinking while the main agent waits for them and leave once they are done – no more greyed-out leftovers at the desks. The main agent is purple (delegating) while they work.']],
       '2.19.6': [

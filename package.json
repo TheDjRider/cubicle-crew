@@ -1,6 +1,6 @@
 {
   "name": "cubicle-crew",
-  "version": "2.19.8",
+  "version": "2.19.9",
   "type": "module",
   "bin": {
     "cubicle-crew": "bin/cubicle-crew.js"
